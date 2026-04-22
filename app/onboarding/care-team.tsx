@@ -10,7 +10,7 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus } from 'lucide-react-native';
-import { useTheme, radius, spacing, typography, shadows } from '../../theme';
+import { makeStyles, shadows, spacing, typography, useTheme } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { BackButton } from '../../components/ui/BackButton';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
@@ -39,6 +39,7 @@ const PALETTE = ['#2C6E6B', '#E07A5F', '#F6C06A', '#5A8F6E', '#A8C4C2'];
 export default function ScreenCareTeam() {
   const router = useRouter();
   const { colors } = useTheme();
+  const styles = useStyles();
   const setAnswer = useProfileStore((s) => s.setOnboardingAnswer);
 
   const [members, setMembers] = useState<Member[]>([
@@ -308,6 +309,7 @@ function InputField({
   placeholder: string;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <TextInput
       value={value}
@@ -327,27 +329,27 @@ function InputField({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },
   safe: { flex: 1 },
   topBar: {
-    paddingTop: spacing.s3,
-    paddingHorizontal: spacing.s6,
+    paddingTop: theme.spacing.s3,
+    paddingHorizontal: theme.spacing.s6,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   content: {
-    paddingHorizontal: spacing.s6,
-    paddingTop: spacing.s4,
-    paddingBottom: spacing.s6,
+    paddingHorizontal: theme.spacing.s6,
+    paddingTop: theme.spacing.s4,
+    paddingBottom: theme.spacing.s6,
   },
   memberCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     padding: 16,
-    borderRadius: radius.lg,
+    borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
   },
   avatar: {
@@ -364,31 +366,31 @@ const styles = StyleSheet.create({
   },
   addingCard: {
     padding: 16,
-    borderRadius: radius.lg,
+    borderRadius: theme.radius.lg,
     borderWidth: 2,
     gap: 8,
   },
   input: {
     height: 44,
     paddingHorizontal: 12,
-    borderRadius: radius.md,
+    borderRadius: theme.radius.md,
     borderWidth: StyleSheet.hairlineWidth,
   },
   smallBtn: {
     flex: 1,
     height: 40,
-    borderRadius: 9999,
+    borderRadius: theme.radius.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
   addDashed: {
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderRadius: radius.lg,
+    borderRadius: theme.radius.lg,
     paddingVertical: 20,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 6,
   },
-});
+}));

@@ -27,7 +27,7 @@ import {
   Sparkles,
   Trophy,
 } from 'lucide-react-native';
-import { useTheme, radius, spacing, typography, shadows } from '../../theme';
+import { makeStyles, shadows, spacing, typography, useTheme } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { BackButton } from '../../components/ui/BackButton';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
@@ -81,6 +81,7 @@ const FEATURES: Array<{ Icon: IconRef; t: string }> = [
 export default function ScreenPaywall() {
   const router = useRouter();
   const { colors } = useTheme();
+  const styles = useStyles();
 
   const [selected, setSelected] = useState<Plan['id']>('annual');
   const [loading, setLoading] = useState(false);
@@ -244,6 +245,7 @@ export default function ScreenPaywall() {
 }
 
 function PlusBadge() {
+  const styles = useStyles();
   return (
     <View style={{ alignItems: 'center' }}>
       <View style={styles.plusBadge}>
@@ -283,6 +285,7 @@ function ProgressStrip({
   stagesTotal: number;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   const target = total > 0 ? xp / total : 0;
   const fill = useSharedValue(0);
   useEffect(() => {
@@ -375,6 +378,7 @@ function PlanCard({
   onSelect: () => void;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   const opacity = useSharedValue(0);
   const ty = useSharedValue(10);
   useEffect(() => {
@@ -480,33 +484,33 @@ function PlanCard({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },
   safe: { flex: 1 },
   topBar: {
-    paddingTop: spacing.s3,
-    paddingHorizontal: spacing.s6,
+    paddingTop: theme.spacing.s3,
+    paddingHorizontal: theme.spacing.s6,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   content: {
-    paddingHorizontal: spacing.s6,
-    paddingTop: spacing.s4,
-    paddingBottom: spacing.s6,
+    paddingHorizontal: theme.spacing.s6,
+    paddingTop: theme.spacing.s4,
+    paddingBottom: theme.spacing.s6,
   },
   plusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 9999,
+    borderRadius: theme.radius.full,
     overflow: 'hidden',
   },
   progress: {
-    marginTop: spacing.s5,
+    marginTop: theme.spacing.s5,
     padding: 16,
-    borderRadius: radius.lg,
+    borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
   },
   progressRow: {
@@ -543,7 +547,7 @@ const styles = StyleSheet.create({
   },
   plan: {
     padding: 16,
-    borderRadius: radius.lg,
+    borderRadius: theme.radius.lg,
     position: 'relative',
   },
   planBadge: {
@@ -552,7 +556,7 @@ const styles = StyleSheet.create({
     left: 16,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 9999,
+    borderRadius: theme.radius.full,
     overflow: 'hidden',
   },
   radio: {
@@ -563,4 +567,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+}));

@@ -10,7 +10,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { Zap, Heart, Sparkles } from "lucide-react-native";
-import { useTheme, spacing, typography } from "../../theme";
+import { makeStyles, spacing, typography, useTheme } from "../../theme";
 import { SceneTransition } from "../../components/navigation/SceneTransition";
 import { SympnoteHero } from "../../components/brand/SympnoteHero";
 import { PrimaryButton } from "../../components/ui/PrimaryButton";
@@ -21,6 +21,7 @@ const FULL_HEADLINE = "Your doctor's visit,\nfinally prepared.";
 export default function ScreenHook() {
   const router = useRouter();
   const { colors } = useTheme();
+  const styles = useStyles();
   const reduced = useReducedMotion();
 
   const [typed, setTyped] = useState(reduced ? FULL_HEADLINE : "");
@@ -144,6 +145,7 @@ export default function ScreenHook() {
 
 function TrustChip({ icon, label }: { icon: React.ReactNode; label: string }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View
       style={[
@@ -162,12 +164,12 @@ function TrustChip({ icon, label }: { icon: React.ReactNode; label: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },
   safe: { flex: 1 },
   topBar: {
-    paddingHorizontal: spacing.s6,
-    paddingTop: spacing.s4,
+    paddingHorizontal: theme.spacing.s6,
+    paddingTop: theme.spacing.s4,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -175,14 +177,14 @@ const styles = StyleSheet.create({
   brandRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.s2,
+    gap: theme.spacing.s2,
   },
   heroArea: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: spacing.s6,
-    marginTop: -spacing.s6,
+    paddingHorizontal: theme.spacing.s6,
+    marginTop: -theme.spacing.s6,
   },
   headlineSlot: {
     alignSelf: "stretch",
@@ -200,22 +202,22 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   chips: {
-    marginTop: spacing.s6,
+    marginTop: theme.spacing.s6,
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
-    gap: spacing.s2,
+    gap: theme.spacing.s2,
   },
   trustChip: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 9999,
+    borderRadius: theme.radius.full,
     borderWidth: StyleSheet.hairlineWidth,
   },
   ctaArea: {
-    paddingHorizontal: spacing.s6,
-    paddingBottom: spacing.s10,
+    paddingHorizontal: theme.spacing.s6,
+    paddingBottom: theme.spacing.s10,
   },
-});
+}));

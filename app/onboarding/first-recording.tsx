@@ -34,7 +34,7 @@ import Svg, {
   RadialGradient,
   Stop,
 } from 'react-native-svg';
-import { useTheme, radius, spacing, typography, shadows } from '../../theme';
+import { makeStyles, radius, shadows, spacing, typography, useTheme } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { BackButton } from '../../components/ui/BackButton';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
@@ -96,6 +96,7 @@ type Phase = 'idle' | 'recording' | 'processing' | 'structured' | 'error';
 export default function ScreenFirstRecording() {
   const router = useRouter();
   const { colors } = useTheme();
+  const styles = useStyles();
   const reduced = useReducedMotion();
 
   const [phase, setPhase] = useState<Phase>('idle');
@@ -479,6 +480,7 @@ function MicOrb({
   onPress: () => void;
   reduced: boolean;
 }) {
+  const styles = useStyles();
   const active = phase === 'recording';
   const pulse1 = useSharedValue(0);
   const pulse2 = useSharedValue(0);
@@ -607,6 +609,7 @@ function MicOrbGradient({ active }: { active: boolean }) {
 
 function ShimmerLines() {
   const { colors } = useTheme();
+  const styles = useStyles();
   const t = useSharedValue(0);
   const reduced = useReducedMotion();
   useEffect(() => {
@@ -655,6 +658,7 @@ function ShimmerLines() {
 
 function TranscriptCard({ text, typing }: { text: string; typing: boolean }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View
       style={[
@@ -700,6 +704,7 @@ function StructuredCard({
   burst: boolean;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View
       style={[
@@ -786,6 +791,7 @@ function FieldRow({
   index: number;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   const opacity = useSharedValue(0);
   const ty = useSharedValue(8);
   useEffect(() => {
@@ -856,6 +862,7 @@ function ErrorCard({
   onStartOver: () => void;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   const disabled = retryInSec > 0;
   return (
     <View
@@ -948,28 +955,28 @@ function ErrorCard({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },
   safe: { flex: 1 },
   topBar: {
-    paddingTop: spacing.s3,
-    paddingHorizontal: spacing.s6,
+    paddingTop: theme.spacing.s3,
+    paddingHorizontal: theme.spacing.s6,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   content: {
-    paddingHorizontal: spacing.s6,
-    paddingTop: spacing.s4,
-    paddingBottom: spacing.s6,
+    paddingHorizontal: theme.spacing.s6,
+    paddingTop: theme.spacing.s4,
+    paddingBottom: theme.spacing.s6,
   },
   micArea: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.s6,
+    paddingVertical: theme.spacing.s6,
   },
   micPulse: {
-    borderRadius: 9999,
+    borderRadius: theme.radius.full,
   },
   micCore: {
     width: 120,
@@ -1001,16 +1008,16 @@ const styles = StyleSheet.create({
   },
   subSlot: {
     height: 60,
-    marginTop: spacing.s5,
+    marginTop: theme.spacing.s5,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.s4,
+    paddingHorizontal: theme.spacing.s4,
   },
   encryptedRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacing.s3,
+    marginTop: theme.spacing.s3,
   },
   shimmer: {
     height: 14,
@@ -1019,9 +1026,9 @@ const styles = StyleSheet.create({
   },
   card: {
     padding: 16,
-    borderRadius: radius.lg,
+    borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
-    marginTop: spacing.s4,
+    marginTop: theme.spacing.s4,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -1047,11 +1054,11 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: radius.sm,
+    borderRadius: theme.radius.sm,
   },
   xpBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 9999,
+    borderRadius: theme.radius.full,
   },
-});
+}));

@@ -21,7 +21,7 @@ import {
   ClipboardList,
   Sparkles,
 } from 'lucide-react-native';
-import { useTheme, radius, spacing, typography } from '../../theme';
+import { makeStyles, spacing, typography, useTheme } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { BackButton } from '../../components/ui/BackButton';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
@@ -52,6 +52,7 @@ const STEPS: Array<{ t: string; Icon: IconRef }> = [
 export default function ScreenAnalyzing() {
   const router = useRouter();
   const { colors } = useTheme();
+  const styles = useStyles();
   const reduced = useReducedMotion();
 
   const [done, setDone] = useState([false, false, false]);
@@ -160,6 +161,7 @@ function OrbitOrb({
   ready: boolean;
   reduced: boolean;
 }) {
+  const styles = useStyles();
   const spin1 = useSharedValue(0);
   const spin2 = useSharedValue(0);
   const pulse = useSharedValue(0);
@@ -280,6 +282,7 @@ function CheckRow({
   success: string;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View
       style={[
@@ -331,29 +334,29 @@ function CheckRow({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },
   safe: { flex: 1 },
   topBar: {
-    paddingTop: spacing.s3,
-    paddingHorizontal: spacing.s6,
+    paddingTop: theme.spacing.s3,
+    paddingHorizontal: theme.spacing.s6,
   },
   hero: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.s6,
+    paddingHorizontal: theme.spacing.s6,
   },
   orbFrame: {
     width: 220,
     height: 220,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.s10,
+    marginBottom: theme.spacing.s10,
   },
   orbitRing: {
     position: 'absolute',
-    borderRadius: 9999,
+    borderRadius: theme.radius.full,
   },
   orb: {
     width: 140,
@@ -364,7 +367,7 @@ const styles = StyleSheet.create({
   },
   textSlot: {
     height: 40,
-    marginBottom: spacing.s8,
+    marginBottom: theme.spacing.s8,
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
@@ -379,7 +382,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     padding: 12,
-    borderRadius: radius.md,
+    borderRadius: theme.radius.md,
   },
   checkIcon: {
     width: 32,
@@ -388,4 +391,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
+}));

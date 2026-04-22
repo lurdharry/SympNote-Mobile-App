@@ -32,7 +32,7 @@ import {
   Target,
   Timer,
 } from 'lucide-react-native';
-import { useTheme, radius, spacing, typography, shadows } from '../../theme';
+import { makeStyles, shadows, spacing, typography, useTheme } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { BackButton } from '../../components/ui/BackButton';
 import { TypingDots } from '../../components/ui/TypingDots';
@@ -117,6 +117,7 @@ const PLAN_UNLOCKS: Record<string, PlanItem> = {
 export default function ScreenQualifier() {
   const router = useRouter();
   const { colors } = useTheme();
+  const styles = useStyles();
   const setAnswer = useProfileStore((s) => s.setOnboardingAnswer);
 
   const [step, setStep] = useState(0);
@@ -266,6 +267,7 @@ function mapToProfileKey(qid: string): string | null {
 
 function ProgressBar({ step, total }: { step: number; total: number }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.progressRow}>
       {Array.from({ length: total }).map((_, i) => (
@@ -295,6 +297,7 @@ function ProgressBar({ step, total }: { step: number; total: number }) {
 
 function PlanCard({ items, total }: { items: PlanItem[]; total: number }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View
       style={[
@@ -375,6 +378,7 @@ function PlanCard({ items, total }: { items: PlanItem[]; total: number }) {
 
 function PlanRow({ item, index }: { item: PlanItem; index: number }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   const opacity = useSharedValue(0);
   const ty = useSharedValue(6);
   useEffect(() => {
@@ -429,6 +433,7 @@ function PlanRow({ item, index }: { item: PlanItem; index: number }) {
 
 function AssistantAvatar() {
   const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.avatar}>
       <LinearGradient
@@ -444,6 +449,7 @@ function AssistantAvatar() {
 
 function AssistantBubble({ children }: { children: React.ReactNode }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   const opacity = useSharedValue(0);
   const ty = useSharedValue(6);
   useEffect(() => {
@@ -485,6 +491,7 @@ function AssistantBubble({ children }: { children: React.ReactNode }) {
 }
 
 function UserBubble({ children }: { children: React.ReactNode }) {
+  const styles = useStyles();
   const opacity = useSharedValue(0);
   const ty = useSharedValue(6);
   useEffect(() => {
@@ -526,6 +533,7 @@ function UserBubble({ children }: { children: React.ReactNode }) {
 
 function TypingBubble() {
   const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.bubbleRow}>
       <AssistantAvatar />
@@ -557,6 +565,7 @@ function ChipTray({
   disabled: boolean;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View style={styles.chipWrap}>
       {options.map((opt) => (
@@ -600,6 +609,7 @@ function DateTray({
   disabled: boolean;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
 
   const scheduled = useMemo(() => {
     const d = new Date();
@@ -717,15 +727,15 @@ function DateTray({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },
   safe: { flex: 1 },
   topBar: {
-    paddingTop: spacing.s3,
-    paddingHorizontal: spacing.s5,
+    paddingTop: theme.spacing.s3,
+    paddingHorizontal: theme.spacing.s5,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.s3,
+    gap: theme.spacing.s3,
   },
   progressRow: {
     flex: 1,
@@ -739,7 +749,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   planCard: {
-    borderRadius: radius.lg,
+    borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
@@ -791,7 +801,7 @@ const styles = StyleSheet.create({
     maxWidth: '82%',
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: radius.lg,
+    borderRadius: theme.radius.lg,
     overflow: 'hidden',
   },
   assistantBubble: {
@@ -803,9 +813,9 @@ const styles = StyleSheet.create({
     maxWidth: '75%',
   },
   tray: {
-    paddingHorizontal: spacing.s5,
+    paddingHorizontal: theme.spacing.s5,
     paddingTop: 10,
-    paddingBottom: spacing.s4,
+    paddingBottom: theme.spacing.s4,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   chipWrap: {
@@ -824,7 +834,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     padding: 12,
-    borderRadius: radius.md,
+    borderRadius: theme.radius.md,
     borderWidth: StyleSheet.hairlineWidth,
   },
   dateIconTile: {
@@ -849,4 +859,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
-});
+}));

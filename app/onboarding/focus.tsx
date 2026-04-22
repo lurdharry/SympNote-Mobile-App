@@ -26,7 +26,7 @@ import {
   Hospital,
   Search,
 } from 'lucide-react-native';
-import { useTheme, radius, spacing, typography } from '../../theme';
+import { makeStyles, spacing, typography, useTheme } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { BackButton } from '../../components/ui/BackButton';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
@@ -64,6 +64,7 @@ const OPTIONS: Option[] = [
 export default function ScreenFocus() {
   const router = useRouter();
   const { colors } = useTheme();
+  const styles = useStyles();
   const setAnswer = useProfileStore((s) => s.setOnboardingAnswer);
 
   const [sel, setSel] = useState<string | null>(null);
@@ -156,6 +157,7 @@ function FocusTile({
   index: number;
   onPress: () => void;
 }) {
+  const styles = useStyles();
   const opacity = useSharedValue(0);
   const ty = useSharedValue(12);
   const scale = useSharedValue(1);
@@ -296,23 +298,23 @@ function FocusTile({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },
   safe: { flex: 1 },
   topBar: {
-    paddingTop: spacing.s3,
-    paddingHorizontal: spacing.s6,
+    paddingTop: theme.spacing.s3,
+    paddingHorizontal: theme.spacing.s6,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   content: {
-    paddingHorizontal: spacing.s6,
-    paddingTop: spacing.s4,
-    paddingBottom: spacing.s6,
+    paddingHorizontal: theme.spacing.s6,
+    paddingTop: theme.spacing.s4,
+    paddingBottom: theme.spacing.s6,
   },
   grid: {
-    marginTop: spacing.s5,
+    marginTop: theme.spacing.s5,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
@@ -382,4 +384,4 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
-});
+}));
