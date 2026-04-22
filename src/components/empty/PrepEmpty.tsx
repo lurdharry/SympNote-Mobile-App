@@ -9,7 +9,7 @@ import Animated, {
   withDelay,
   withTiming,
 } from 'react-native-reanimated';
-import { fontScale, makeStyles, moderateScale, scale, useTheme } from '../../theme';
+import { fontScale, makeStyles, moderateScale, useTheme } from '../../theme';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 /**
@@ -127,6 +127,5 @@ const useStyles = makeStyles((theme) => ({
     color: theme.colors.textTertiary,
     marginTop: theme.spacing.s2,
     textAlign: 'center',
-    maxWidth: scale(280),
   },
 }));

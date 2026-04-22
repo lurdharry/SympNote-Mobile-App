@@ -33,16 +33,8 @@ const REFERENCE_HEIGHT = 844;
 
 const { width: rawWidth, height: rawHeight } = Dimensions.get('window');
 
-/**
- * Cap the scale factors so tablets and tiny legacy devices don't
- * produce ridiculous results. Clamp to the iPhone SE → iPhone 15 Pro
- * Max width band; anything outside renders at the closest edge.
- */
-const SCALE_WIDTH = Math.min(Math.max(rawWidth, 320), 430);
-const SCALE_HEIGHT = Math.min(Math.max(rawHeight, 568), 932);
-
-const widthRatio = SCALE_WIDTH / REFERENCE_WIDTH;
-const heightRatio = SCALE_HEIGHT / REFERENCE_HEIGHT;
+const widthRatio = rawWidth / REFERENCE_WIDTH;
+const heightRatio = rawHeight / REFERENCE_HEIGHT;
 
 /** Snap to nearest pixel so rendered values don't sit on a half-pixel. */
 const snap = (v: number) => PixelRatio.roundToNearestPixel(v);

@@ -6,7 +6,6 @@ import Animated, { FadeIn, useAnimatedStyle } from 'react-native-reanimated';
 import {
   makeStyles,
   moderateScale,
-  scale,
   spacing,
   typography,
   useTheme,
@@ -149,7 +148,6 @@ const useStyles = makeStyles((theme) => ({
   },
   checkList: {
     width: '100%',
-    maxWidth: scale(300),
     gap: moderateScale(10),
   },
   ctaSlot: {
