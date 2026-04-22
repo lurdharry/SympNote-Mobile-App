@@ -9,7 +9,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X as XIcon } from 'lucide-react-native';
-import { makeStyles, spacing, typography, useTheme } from '../theme';
+import { makeStyles, moderateScale, spacing, typography, useTheme } from '../theme';
 import { SceneTransition } from '../components/navigation/SceneTransition';
 import { TypewriterText } from '../components/animated/TypewriterText';
 import { IdlePhase } from '../components/recording/IdlePhase';
@@ -210,12 +210,12 @@ const useStyles = makeStyles((theme) => ({
     paddingHorizontal: theme.spacing.s6,
     paddingTop: theme.spacing.s4,
     paddingBottom: theme.spacing.s3,
-    gap: 12,
+    gap: moderateScale(12),
   },
   closeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: moderateScale(20),
     alignItems: 'center',
     justifyContent: 'center',
   },

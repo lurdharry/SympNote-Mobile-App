@@ -11,7 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X as XIcon } from 'lucide-react-native';
-import { makeStyles, shadows, spacing, typography, useTheme } from '../theme';
+import { makeStyles, moderateScale, scale, shadows, spacing, typography, useTheme, verticalScale } from '../theme';
 import { SceneTransition } from '../components/navigation/SceneTransition';
 import { PrimaryButton } from '../components/ui/PrimaryButton';
 import { useAppointmentsStore } from '../stores/useAppointmentsStore';
@@ -241,12 +241,12 @@ const useStyles = makeStyles((theme) => ({
     paddingHorizontal: theme.spacing.s6,
     paddingTop: theme.spacing.s4,
     paddingBottom: theme.spacing.s3,
-    gap: 12,
+    gap: moderateScale(12),
   },
   closeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: moderateScale(20),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -258,7 +258,7 @@ const useStyles = makeStyles((theme) => ({
   input: {
     borderRadius: theme.radius.md,
     borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(12),
   },
 }));
