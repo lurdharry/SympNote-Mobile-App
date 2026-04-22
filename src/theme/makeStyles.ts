@@ -1,7 +1,7 @@
 import { useMemo, useRef } from "react";
 import { ImageStyle, StyleSheet, TextStyle, ViewStyle } from "react-native";
 import { isEqual } from "lodash";
-import { useTheme } from "./index";
+import { useTheme } from "./useTheme";
 import { ColorPalette } from "./colors";
 import { typography } from "./typography";
 import { spacing } from "./spacing";
