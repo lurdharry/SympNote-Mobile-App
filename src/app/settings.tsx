@@ -41,7 +41,7 @@ import { hapticLight, hapticSuccess } from "../services/haptics";
 import { useProfileStore } from "../stores/useProfileStore";
 import { useRecordingsStore } from "../stores/useRecordingsStore";
 import { useAppointmentsStore } from "../stores/useAppointmentsStore";
-import { computeStreak } from "../utils/insights";
+import { BadgeKey, useSettingsStats } from "../hooks/useSettingsStats";
 
 /**
  * Settings — modal overlay from Home avatar. Per design handoff.
@@ -82,28 +82,14 @@ export default function ScreenSettings() {
 
   const [voiceOnly, setVoiceOnly] = React.useState(false);
 
-  // Real gamification derived from store state. XP is the only place
-  // we assign point values:
-  //   10 XP per recording    (the core action the app rewards)
-  //   50 XP per summary      (generating a visit brief is the payoff)
-  // Level goes up every 100 XP. Badges unlock when their criterion is
-  // met. Streak = consecutive days with at least one recording.
-  const streak = React.useMemo(() => computeStreak(recordings), [recordings]);
-  const summariesCount = React.useMemo(
-    () => appointments.filter((a) => !!a.summary).length,
-    [appointments]
-  );
-  const xp = recordings.length * 10 + summariesCount * 50;
-  const level = Math.floor(xp / 100) + 1;
-  const xpIntoLevel = xp % 100;
-  const xpForNextLevel = 100 * level;
-  const levelProgress = (xpIntoLevel / 100) * 100;
-  const badges: Array<{ key: BadgeKey; label: string; unlocked: boolean }> = [
-    { key: 'first',  label: 'First note', unlocked: recordings.length >= 1 },
-    { key: 'streak', label: '5-day',      unlocked: streak >= 5 },
-    { key: 'prep',   label: 'Prep pro',   unlocked: summariesCount >= 1 },
-    { key: 'thirty', label: '30 notes',   unlocked: recordings.length >= 30 },
-  ];
+  const {
+    streak,
+    xp,
+    level,
+    xpForNextLevel,
+    levelProgress,
+    badges,
+  } = useSettingsStats();
 
   const close = () => {
     hapticLight();
@@ -493,7 +479,6 @@ function levelTitle(level: number): string {
  * badge gets the themed color without Settings having to pass tints
  * through the badge data.
  */
-type BadgeKey = 'first' | 'streak' | 'prep' | 'thirty';
 type BadgeStyle = { Icon: typeof Mic; tint: string };
 const BADGE_STYLES: Record<
   BadgeKey,

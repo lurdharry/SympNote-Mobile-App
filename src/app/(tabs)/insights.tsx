@@ -18,24 +18,17 @@ import {
 import { makeStyles, shadows, spacing, typography, useTheme } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { hapticLight } from '../../services/haptics';
-import { useRecordingsStore } from '../../stores/useRecordingsStore';
 import {
-  computeHeatmap,
-  filterByRange,
   formatTotalDuration,
-  peakHeatmapRow,
   rangeLabel,
-  summarize,
-  symptomFrequencies,
   SymptomFrequency,
-  InsightsRange,
 } from '../../utils/insights';
 import { DAY_COLS, RANGES, ROW_LABELS } from '../../constants/insights';
 import {
   DEMO_CORRELATIONS as CORRELATIONS,
   DEMO_HEATMAP,
-  DEMO_SYMPTOMS,
 } from '../../constants/demo/insights';
+import { useInsightsData } from '../../hooks/useInsightsData';
 
 /**
  * Insights — Phase 2 (partial real data).
@@ -49,39 +42,13 @@ import {
  *    early users will have.
  */
 
-type Range = InsightsRange;
-
 type SymptomRow = SymptomFrequency;
 
 export default function TabInsights() {
   const { colors } = useTheme();
   const styles = useStyles();
-  const [range, setRange] = useState<Range>('30d');
-
-  const recordings = useRecordingsStore((s) => s.recordings);
-
-  // Switch from demo to real data once the user has enough recordings
-  // in the selected range that trends become meaningful (>=3 entries).
-  const { summary, symptoms, heatmap, peakLabel, isReal } = useMemo(() => {
-    const inRange = filterByRange(recordings, range);
-    if (inRange.length < 3) {
-      return {
-        summary: null,
-        symptoms: DEMO_SYMPTOMS,
-        heatmap: null as number[][] | null,
-        peakLabel: null as string | null,
-        isReal: false,
-      };
-    }
-    const grid = computeHeatmap(inRange);
-    return {
-      summary: summarize(inRange),
-      symptoms: symptomFrequencies(inRange, range, 4),
-      heatmap: grid,
-      peakLabel: peakHeatmapRow(grid),
-      isReal: true,
-    };
-  }, [recordings, range]);
+  const { range, setRange, summary, symptoms, heatmap, peakLabel, isReal } =
+    useInsightsData();
 
   return (
     <SceneTransition mode="crossfade-parallax-up">

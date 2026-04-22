@@ -30,22 +30,16 @@ import {
 import { makeStyles, shadows, spacing, typography, useTheme } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { TagChip } from '../../components/ui/TagChip';
-import { useAppointmentsStore } from '../../stores/useAppointmentsStore';
-import { useRecordingsStore } from '../../stores/useRecordingsStore';
 import {
   daysUntil,
   formatDate,
   formatTime,
-  timeGreeting,
 } from '../../utils/date';
 import { hapticHeavy, hapticLight } from '../../services/haptics';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { topTrendingSymptom } from '../../utils/insights';
-import {
-  DEMO_QUICK_TILES as DEMO_QUICK,
-  DEMO_TODAY_ENTRIES as DEMO_TODAY,
-  DemoEntry,
-} from '../../constants/demo/home';
+import { DEMO_QUICK_TILES as DEMO_QUICK, DemoEntry } from '../../constants/demo/home';
+import { useHomeDashboard } from '../../hooks/useHomeDashboard';
+import { Appointment } from '../../stores/types';
 
 /**
  * Home — daily surface (per design handoff).
@@ -68,66 +62,13 @@ export default function TabHome() {
   const { colors } = useTheme();
   const styles = useStyles();
 
-  const appointments = useAppointmentsStore((s) => s.appointments);
-  const recordings = useRecordingsStore((s) => s.recordings);
-
-  const next = useMemo(() => {
-    const now = Date.now();
-    return appointments
-      .filter((a) => new Date(a.date).getTime() >= now)
-      .sort(
-        (x, y) => new Date(x.date).getTime() - new Date(y.date).getTime()
-      )[0];
-  }, [appointments]);
-
-  const todayEntries = useMemo<DemoEntry[]>(() => {
-    if (recordings.length === 0) return DEMO_TODAY;
-    const now = new Date();
-    const todays = recordings.filter((r) => {
-      const d = new Date(r.createdAt);
-      return (
-        d.getFullYear() === now.getFullYear() &&
-        d.getMonth() === now.getMonth() &&
-        d.getDate() === now.getDate()
-      );
-    });
-    if (todays.length === 0) return DEMO_TODAY;
-    return todays.slice(0, 5).map<DemoEntry>((r) => {
-      const d = new Date(r.createdAt);
-      const h = d.getHours();
-      const hour12 = ((h + 11) % 12) + 1;
-      return {
-        time: `${hour12.toString().padStart(2, '0')}:${d
-          .getMinutes()
-          .toString()
-          .padStart(2, '0')}`,
-        period: h >= 12 ? 'PM' : 'AM',
-        text: r.transcript.slice(0, 110),
-        tags: r.tags.slice(0, 2).map((t) => ({ t, c: '#2C6E6B' })),
-        dur: `${Math.floor(r.durationSec / 60)}:${(r.durationSec % 60)
-          .toString()
-          .padStart(2, '0')}`,
-        kind: 'voice',
-      };
-    });
-  }, [recordings]);
-
-  const dateEyebrow = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-  });
-  const greeting = timeGreeting().replace('.', ''); // "Good morning"
-
-  /**
-   * Real insight — only shown when we have enough data to say something
-   * truthful. Otherwise the card is hidden entirely rather than faking
-   * a pattern.
-   */
-  const nudge = useMemo(() => {
-    if (recordings.length < 3) return null;
-    return topTrendingSymptom(recordings, '30d');
-  }, [recordings]);
+  const {
+    nextAppointment: next,
+    todayEntries,
+    nudge,
+    dateEyebrow,
+    greeting,
+  } = useHomeDashboard();
 
   return (
     <SceneTransition mode="crossfade-parallax-up">
@@ -361,9 +302,7 @@ function UpNextCard({
   appointment,
   onPress,
 }: {
-  appointment:
-    | ReturnType<typeof useAppointmentsStore.getState>['appointments'][number]
-    | undefined;
+  appointment: Appointment | undefined;
   onPress: () => void;
 }) {
   const { colors } = useTheme();
