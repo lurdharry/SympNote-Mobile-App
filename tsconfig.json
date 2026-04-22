@@ -6,7 +6,7 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": [
