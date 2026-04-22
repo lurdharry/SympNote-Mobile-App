@@ -25,6 +25,11 @@ export type Option = { t: string; v: string };
 
 export type Question = {
   id: string;
+  /**
+   * Key to persist the answer label under in `onboardingAnswers`.
+   * Downstream screens (analyzing, paywall progress) read by this key.
+   */
+  profileKey: string;
   ask: string;
   options?: Option[];
   kind?: 'date';
@@ -33,6 +38,7 @@ export type Question = {
 export const QUESTIONS: Question[] = [
   {
     id: 'doctor',
+    profileKey: 'regularity',
     ask: 'First — do you see a doctor regularly?',
     options: [
       { t: 'Yes, often', v: 'often' },
@@ -42,6 +48,7 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: 'pain',
+    profileKey: 'hardest',
     ask: "What's hardest about doctor visits for you?",
     options: [
       { t: 'Remembering symptoms', v: 'memory' },
@@ -52,6 +59,7 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: 'forget',
+    profileKey: 'forgetting',
     ask: 'And honestly — how often do you forget something important?',
     options: [
       { t: 'Almost always', v: 'always' },
@@ -62,10 +70,32 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: 'next',
+    profileKey: 'nextAppointment',
     ask: "When's your next appointment? We'll count down and prep you.",
     kind: 'date',
   },
 ];
+
+/**
+ * Choreography timings for the qualifier chat flow. Tune in one place
+ * rather than hunting magic numbers across the screen and its
+ * sub-components.
+ */
+export const QUALIFIER_TIMINGS = {
+  /** Assistant typing indicator before each new question. */
+  typingMs: 650,
+  /** Pause between user answer and next question. */
+  advanceMs: 450,
+  /** Extra pause on the final answer before routing forward. */
+  completeMs: 600,
+  /** Stagger between consecutive plan-row reveals. */
+  planRowStaggerMs: 60,
+  planRowDurationMs: 320,
+  /** Assistant bubble entrance. */
+  bubbleDurationMs: 320,
+  /** User bubble entrance. */
+  userBubbleDurationMs: 280,
+} as const;
 
 export type PlanItem = { Icon: IconRef; title: string; sub: string };
 
