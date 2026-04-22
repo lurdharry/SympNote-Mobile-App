@@ -177,9 +177,12 @@ function FocusCard({
     transform: [{ scale: 0.6 + selected$.value * 0.4 }],
   }));
 
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: selected$.value * 0.4,
-    transform: [{ scale: 1 + selected$.value * 0.2 }],
+  // Real blurred glow under the tile — uses a native shadow in the
+  // option's gradient-tail color so it reads as actual light, not a
+  // hard-edged rectangle. Grows as the card becomes selected.
+  const tileWrapStyle = useAnimatedStyle(() => ({
+    shadowOpacity: selected$.value * 0.55,
+    shadowRadius: 4 + selected$.value * 18,
   }));
 
   return (
@@ -197,16 +200,15 @@ function FocusCard({
         accessibilityState={{ selected }}
       >
         <Animated.View style={[styles.card, cardStyle]}>
-          {/* Gradient icon tile on the left */}
-          <View style={styles.tileWrap}>
-            <Animated.View
-              pointerEvents="none"
-              style={[
-                styles.tileGlow,
-                { backgroundColor: option.grad[1] },
-                glowStyle,
-              ]}
-            />
+          {/* Gradient icon tile on the left — with a native blurred
+              shadow in the option's tint as the selection "glow". */}
+          <Animated.View
+            style={[
+              styles.tileWrap,
+              { shadowColor: option.grad[1] },
+              tileWrapStyle,
+            ]}
+          >
             <View style={styles.tile}>
               <LinearGradient
                 colors={option.grad}
@@ -220,7 +222,7 @@ function FocusCard({
                 strokeWidth={2}
               />
             </View>
-          </View>
+          </Animated.View>
 
           {/* Content */}
           <View style={styles.content2}>
@@ -328,15 +330,10 @@ const useStyles = makeStyles((theme) => ({
     borderWidth: StyleSheet.hairlineWidth,
   },
   tileWrap: {
-    position: 'relative',
-  },
-  tileGlow: {
-    position: 'absolute',
-    top: -moderateScale(6),
-    left: -moderateScale(6),
-    right: -moderateScale(6),
-    bottom: -moderateScale(6),
-    borderRadius: moderateScale(18),
+    borderRadius: moderateScale(14),
+    // Zero offset so the shadow reads as a centered halo, not a drop.
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0,
   },
   tile: {
     width: moderateScale(52),
