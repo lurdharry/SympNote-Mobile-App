@@ -94,7 +94,7 @@ export default function RecordModal() {
                     typography.label,
                     {
                       color: colors.accent,
-                      fontFamily: 'Inter_600SemiBold',
+                      fontFamily: 'DMSans_600SemiBold',
                       letterSpacing: 0.4,
                     },
                   ]}

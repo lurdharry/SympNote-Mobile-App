@@ -215,7 +215,7 @@ function Bullet({
           <Text
             style={{
               color: variant === 'flag' ? colors.error : colors.textPrimary,
-              fontFamily: 'Inter_600SemiBold',
+              fontFamily: 'DMSans_600SemiBold',
             }}
           >
             {hook}:{' '}

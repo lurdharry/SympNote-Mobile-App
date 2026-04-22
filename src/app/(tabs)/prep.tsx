@@ -157,7 +157,7 @@ export default function TabPrep() {
                   typography.body,
                   {
                     color: colors.textSecondary,
-                    fontFamily: 'Inter_600SemiBold',
+                    fontFamily: 'DMSans_600SemiBold',
                   },
                 ]}
               >
@@ -266,7 +266,7 @@ function AppointmentCard({
                     typography.caption,
                     {
                       color: row.color,
-                      fontFamily: 'Inter_700Bold',
+                      fontFamily: 'DMSans_700Bold',
                     },
                   ]}
                 >
@@ -386,7 +386,7 @@ function AppointmentCard({
                     typography.label,
                     {
                       color: colors.textPrimary,
-                      fontFamily: 'Inter_600SemiBold',
+                      fontFamily: 'DMSans_600SemiBold',
                     },
                   ]}
                 >
@@ -411,7 +411,7 @@ function AppointmentCard({
                     typography.label,
                     {
                       color: '#FFFFFF',
-                      fontFamily: 'Inter_600SemiBold',
+                      fontFamily: 'DMSans_600SemiBold',
                     },
                   ]}
                 >
@@ -469,7 +469,7 @@ function SectionTabs({
                 typography.label,
                 {
                   color: active ? '#FFFFFF' : colors.textSecondary,
-                  fontFamily: 'Inter_600SemiBold',
+                  fontFamily: 'DMSans_600SemiBold',
                 },
               ]}
             >
@@ -523,7 +523,7 @@ function SummarySection({
               typography.label,
               {
                 color: colors.textTertiary,
-                fontFamily: 'Inter_600SemiBold',
+                fontFamily: 'DMSans_600SemiBold',
                 letterSpacing: 1,
                 marginBottom: 4,
               },
@@ -570,7 +570,7 @@ function ConcernRow({
               typography.body,
               {
                 color: colors.textPrimary,
-                fontFamily: 'Inter_600SemiBold',
+                fontFamily: 'DMSans_600SemiBold',
               },
             ]}
           >
@@ -585,7 +585,7 @@ function ConcernRow({
         <Text
           style={{
             color: tone,
-            fontFamily: 'Inter_700Bold',
+            fontFamily: 'DMSans_700Bold',
             fontSize: 11,
             fontVariant: ['tabular-nums'],
           }}
@@ -689,7 +689,7 @@ function SeverityChart({
               typography.caption,
               {
                 color: colors.coral,
-                fontFamily: 'Inter_600SemiBold',
+                fontFamily: 'DMSans_600SemiBold',
               },
             ]}
           >
@@ -823,7 +823,7 @@ function QuestionsSection({
             <Text
               style={{
                 color: accent,
-                fontFamily: 'Inter_700Bold',
+                fontFamily: 'DMSans_700Bold',
                 fontSize: 11,
               }}
             >
@@ -870,7 +870,7 @@ function QuestionsSection({
             <Text
               style={{
                 color: accent,
-                fontFamily: 'Inter_700Bold',
+                fontFamily: 'DMSans_700Bold',
                 fontSize: 11,
               }}
             >
@@ -916,7 +916,7 @@ function QuestionsSection({
               typography.label,
               {
                 color: colors.textTertiary,
-                fontFamily: 'Inter_600SemiBold',
+                fontFamily: 'DMSans_600SemiBold',
               },
             ]}
           >
@@ -977,7 +977,7 @@ function MedsSection({
                 typography.body,
                 {
                   color: colors.textPrimary,
-                  fontFamily: 'Inter_600SemiBold',
+                  fontFamily: 'DMSans_600SemiBold',
                 },
               ]}
             >

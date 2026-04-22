@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: scaleW(20),
   },
   label: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: fontScale(15),
   },
 });

@@ -55,7 +55,7 @@ const useStyles = makeStyles((theme) => ({
   text: {
     ...theme.typography.body,
     color: '#FFFFFF',
-    fontFamily: 'Inter_500Medium',
+    fontFamily: 'DMSans_500Medium',
     lineHeight: fontScale(20),
   },
 }));

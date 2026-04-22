@@ -671,7 +671,7 @@ function CheckRow({
             styles.rowLabel,
             {
               color: done ? colors.textPrimary : colors.textTertiary,
-              fontFamily: done ? 'Inter_600SemiBold' : 'Inter_400Regular',
+              fontFamily: done ? 'DMSans_600SemiBold' : 'DMSans_400Regular',
             },
           ]}
         >
@@ -782,13 +782,13 @@ const useStyles = makeStyles((theme) => ({
     textAlign: 'right',
   },
   xpSlash: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: 'DMSans_500Medium',
     fontSize: moderateScale(13),
     color: '#B45309',
     opacity: 0.75,
   },
   xpSuffix: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: 'DMSans_700Bold',
     fontSize: moderateScale(11),
     letterSpacing: 1,
     color: '#7C2D12',
@@ -803,7 +803,7 @@ const useStyles = makeStyles((theme) => ({
   },
   xpBadgeText: {
     ...theme.typography.caption,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: 'DMSans_700Bold',
     fontSize: moderateScale(11),
     letterSpacing: 0.4,
   },
@@ -871,7 +871,7 @@ const useStyles = makeStyles((theme) => ({
   },
   xpChipText: {
     color: '#FFFFFF',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: 'DMSans_700Bold',
     fontSize: moderateScale(11),
     letterSpacing: 0.6,
   },

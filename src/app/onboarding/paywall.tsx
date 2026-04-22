@@ -226,7 +226,7 @@ function PlusBadge() {
             typography.label,
             {
               color: '#FFFFFF',
-              fontFamily: 'Inter_700Bold',
+              fontFamily: 'DMSans_700Bold',
               marginLeft: 6,
             },
           ]}
@@ -285,7 +285,7 @@ function ProgressStrip({
             typography.label,
             {
               color: colors.textTertiary,
-              fontFamily: 'Inter_600SemiBold',
+              fontFamily: 'DMSans_600SemiBold',
             },
           ]}
         >
@@ -296,7 +296,7 @@ function ProgressStrip({
             typography.label,
             {
               color: colors.accent,
-              fontFamily: 'Inter_700Bold',
+              fontFamily: 'DMSans_700Bold',
               fontVariant: ['tabular-nums'],
             },
           ]}
@@ -388,7 +388,7 @@ function PlanCard({
                 typography.caption,
                 {
                   color: '#FFFFFF',
-                  fontFamily: 'Inter_700Bold',
+                  fontFamily: 'DMSans_700Bold',
                 },
               ]}
             >

@@ -75,7 +75,7 @@ const useStyles = makeStyles((theme) => ({
   title: {
     ...theme.typography.label,
     color: theme.colors.textPrimary,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'DMSans_600SemiBold',
   },
   sub: {
     ...theme.typography.caption,

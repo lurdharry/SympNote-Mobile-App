@@ -67,8 +67,8 @@ export default function TabsLayout() {
                           {
                             color: tint,
                             fontFamily: isActive
-                              ? 'Inter_600SemiBold'
-                              : 'Inter_400Regular',
+                              ? 'DMSans_600SemiBold'
+                              : 'DMSans_400Regular',
                           },
                         ]}
                       >

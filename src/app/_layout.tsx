@@ -5,13 +5,13 @@ import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as SplashScreen from "expo-splash-screen";
 import * as SystemUI from "expo-system-ui";
+import { useFonts } from "expo-font";
 import {
-  useFonts,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from "@expo-google-fonts/inter";
+  DMSans_400Regular,
+  DMSans_500Medium,
+  DMSans_600SemiBold,
+  DMSans_700Bold,
+} from "@expo-google-fonts/dm-sans";
 import { Fraunces_300Light, Fraunces_500Medium } from "@expo-google-fonts/fraunces";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StyleSheet, View } from "react-native";
@@ -23,10 +23,10 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
+    DMSans_400Regular,
+    DMSans_500Medium,
+    DMSans_600SemiBold,
+    DMSans_700Bold,
     Fraunces_300Light,
     Fraunces_500Medium,
   });

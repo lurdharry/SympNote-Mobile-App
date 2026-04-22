@@ -599,7 +599,7 @@ function FlyingWord({
       <Text
         style={{
           color: toneColor,
-          fontFamily: 'Inter_600SemiBold',
+          fontFamily: 'DMSans_600SemiBold',
           fontSize: fontScale(13),
           letterSpacing: 0.2,
         }}

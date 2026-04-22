@@ -284,7 +284,7 @@ export default function ScreenSettings() {
                 <Text
                   style={{
                     color: "#FFFFFF",
-                    fontFamily: "Inter_700Bold",
+                    fontFamily: "DMSans_700Bold",
                     fontSize: 22,
                   }}
                 >
@@ -369,7 +369,7 @@ export default function ScreenSettings() {
                       typography.caption,
                       {
                         color: colors.accent,
-                        fontFamily: "Inter_700Bold",
+                        fontFamily: "DMSans_700Bold",
                       },
                     ]}
                   >
@@ -380,7 +380,7 @@ export default function ScreenSettings() {
                   <Text
                     style={[
                       typography.body,
-                      { color: colors.textPrimary, fontFamily: "Inter_600SemiBold" },
+                      { color: colors.textPrimary, fontFamily: "DMSans_600SemiBold" },
                     ]}
                   >
                     {levelTitle(level)}
@@ -437,7 +437,7 @@ export default function ScreenSettings() {
             >
               <LogOut size={16} color={colors.coral} strokeWidth={2} />
               <Text
-                style={[typography.label, { color: colors.coral, fontFamily: "Inter_600SemiBold" }]}
+                style={[typography.label, { color: colors.coral, fontFamily: "DMSans_600SemiBold" }]}
               >
                 Sign out
               </Text>
@@ -577,7 +577,7 @@ function SettingsRowItem({
               typography.body,
               {
                 color: colors.textPrimary,
-                fontFamily: "Inter_500Medium",
+                fontFamily: "DMSans_500Medium",
               },
             ]}
           >
@@ -596,7 +596,7 @@ function SettingsRowItem({
                   typography.caption,
                   {
                     color: "#FFFFFF",
-                    fontFamily: "Inter_700Bold",
+                    fontFamily: "DMSans_700Bold",
                   },
                 ]}
               >
@@ -678,7 +678,7 @@ const useStyles = makeStyles((theme) => ({
     gap: moderateScale(8),
   },
   sectionTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "DMSans_600SemiBold",
     fontSize: fontScale(13),
     lineHeight: fontScale(16),
     letterSpacing: 1.1,

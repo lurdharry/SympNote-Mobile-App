@@ -213,7 +213,7 @@ export default function TabHistory() {
                       typography.label,
                       {
                         color: '#FFFFFF',
-                        fontFamily: 'Inter_600SemiBold',
+                        fontFamily: 'DMSans_600SemiBold',
                       },
                     ]}
                   >
@@ -240,7 +240,7 @@ export default function TabHistory() {
                         typography.label,
                         {
                           color: isActive ? '#FFFFFF' : tg.c,
-                          fontFamily: 'Inter_600SemiBold',
+                          fontFamily: 'DMSans_600SemiBold',
                         },
                       ]}
                     >
@@ -264,7 +264,7 @@ export default function TabHistory() {
                       typography.label,
                       {
                         color: colors.textTertiary,
-                        fontFamily: 'Inter_600SemiBold',
+                        fontFamily: 'DMSans_600SemiBold',
                         letterSpacing: 1,
                       },
                     ]}
@@ -380,7 +380,7 @@ export default function TabHistory() {
                     typography.body,
                     {
                       color: colors.textPrimary,
-                      fontFamily: 'Inter_600SemiBold',
+                      fontFamily: 'DMSans_600SemiBold',
                     },
                   ]}
                 >

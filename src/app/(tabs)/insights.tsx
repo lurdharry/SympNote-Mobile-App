@@ -102,7 +102,7 @@ export default function TabInsights() {
                           color: active
                             ? colors.accent
                             : colors.textSecondary,
-                          fontFamily: 'Inter_600SemiBold',
+                          fontFamily: 'DMSans_600SemiBold',
                         },
                       ]}
                     >
@@ -144,7 +144,7 @@ export default function TabInsights() {
                       typography.label,
                       {
                         color: '#F6C06A',
-                        fontFamily: 'Inter_600SemiBold',
+                        fontFamily: 'DMSans_600SemiBold',
                         letterSpacing: 0.8,
                       },
                     ]}
@@ -154,7 +154,7 @@ export default function TabInsights() {
                   <Text
                     style={[
                       typography.h2,
-                      { color: '#FFFFFF', fontFamily: 'Inter_600SemiBold' },
+                      { color: '#FFFFFF', fontFamily: 'DMSans_600SemiBold' },
                     ]}
                   >
                     {summary
@@ -223,7 +223,7 @@ export default function TabInsights() {
                     typography.label,
                     {
                       color: colors.accent,
-                      fontFamily: 'Inter_600SemiBold',
+                      fontFamily: 'DMSans_600SemiBold',
                     },
                   ]}
                 >
@@ -267,7 +267,7 @@ export default function TabInsights() {
                       <Text
                         style={{
                           color: colors.textPrimary,
-                          fontFamily: 'Inter_600SemiBold',
+                          fontFamily: 'DMSans_600SemiBold',
                         }}
                       >
                         {peakLabel}
@@ -311,7 +311,7 @@ function SectionLabel({ label }: { label: string }) {
         typography.label,
         {
           color: colors.textTertiary,
-          fontFamily: 'Inter_600SemiBold',
+          fontFamily: 'DMSans_600SemiBold',
           letterSpacing: 1.1,
           marginBottom: 8,
           textTransform: 'uppercase',
@@ -361,7 +361,7 @@ function SymptomRowView({
           <Text
             style={[
               typography.body,
-              { color: colors.textPrimary, fontFamily: 'Inter_600SemiBold' },
+              { color: colors.textPrimary, fontFamily: 'DMSans_600SemiBold' },
             ]}
             numberOfLines={1}
           >
@@ -458,7 +458,7 @@ function CorrelationCard({
           <Text
             style={[
               typography.caption,
-              { color: '#2C6E6B', fontFamily: 'Inter_600SemiBold' },
+              { color: '#2C6E6B', fontFamily: 'DMSans_600SemiBold' },
             ]}
           >
             {corr.a}
@@ -474,7 +474,7 @@ function CorrelationCard({
           <Text
             style={[
               typography.caption,
-              { color: '#E07A5F', fontFamily: 'Inter_600SemiBold' },
+              { color: '#E07A5F', fontFamily: 'DMSans_600SemiBold' },
             ]}
           >
             {corr.b}
@@ -483,7 +483,7 @@ function CorrelationCard({
         <Text
           style={{
             color: severityColor,
-            fontFamily: 'Inter_700Bold',
+            fontFamily: 'DMSans_700Bold',
             fontSize: 11,
             marginLeft: 'auto',
           }}
@@ -676,7 +676,7 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: moderateScale(3),
   },
   heatLabel: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: fontScale(11),
     color: '#8A9290',
     textAlign: 'center',

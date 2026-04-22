@@ -73,6 +73,6 @@ const styles = StyleSheet.create({
     gap: moderateScale(2),
   },
   text: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: 'DMSans_700Bold',
   },
 });

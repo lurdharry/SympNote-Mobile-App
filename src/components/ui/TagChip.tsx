@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   text: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: 'DMSans_500Medium',
     fontSize: fontScale(11),
     lineHeight: fontScale(14),
   },

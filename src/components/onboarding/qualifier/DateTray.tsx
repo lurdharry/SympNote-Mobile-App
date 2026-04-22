@@ -273,7 +273,7 @@ const useStyles = makeStyles((theme) => ({
   eyebrow: {
     ...theme.typography.caption,
     color: theme.colors.textTertiary,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'DMSans_600SemiBold',
     letterSpacing: 1.1,
     textTransform: 'uppercase',
   },
@@ -299,7 +299,7 @@ const useStyles = makeStyles((theme) => ({
     ...theme.typography.label,
     color: theme.colors.accent,
     marginTop: moderateScale(4),
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'DMSans_600SemiBold',
     letterSpacing: 0.3,
   },
   pickerBay: {
@@ -327,7 +327,7 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: theme.colors.bgPrimary,
   },
   chipLabel: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: fontScale(12),
     letterSpacing: 0.2,
   },
@@ -342,7 +342,7 @@ const useStyles = makeStyles((theme) => ({
   ctaLabel: {
     ...theme.typography.body,
     color: '#FFFFFF',
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: fontScale(16),
     letterSpacing: -0.1,
   },

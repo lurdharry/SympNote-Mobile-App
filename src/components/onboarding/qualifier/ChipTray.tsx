@@ -178,7 +178,7 @@ const useStyles = makeStyles((theme) => ({
   label: {
     ...theme.typography.label,
     color: theme.colors.textPrimary,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: fontScale(14),
   },
 }));

@@ -160,7 +160,7 @@ export default function TabHome() {
                         typography.label,
                         {
                           color: colors.textPrimary,
-                          fontFamily: 'Inter_600SemiBold',
+                          fontFamily: 'DMSans_600SemiBold',
                         },
                       ]}
                     >
@@ -244,7 +244,7 @@ export default function TabHome() {
                     typography.body,
                     {
                       color: colors.textPrimary,
-                      fontFamily: 'Inter_500Medium',
+                      fontFamily: 'DMSans_500Medium',
                     },
                   ]}
                 >
@@ -359,7 +359,7 @@ function UpNextCard({
               {
                 color: 'rgba(246,192,106,0.9)',
                 letterSpacing: 1.4,
-                fontFamily: 'Inter_600SemiBold',
+                fontFamily: 'DMSans_600SemiBold',
               },
             ]}
           >
@@ -400,7 +400,7 @@ function UpNextCard({
                   typography.h3,
                   {
                     color: '#FFFFFF',
-                    fontFamily: 'Inter_600SemiBold',
+                    fontFamily: 'DMSans_600SemiBold',
                   },
                 ]}
               >
@@ -414,7 +414,7 @@ function UpNextCard({
                   typography.label,
                   {
                     color: '#FFFFFF',
-                    fontFamily: 'Inter_600SemiBold',
+                    fontFamily: 'DMSans_600SemiBold',
                   },
                 ]}
               >
@@ -457,7 +457,7 @@ function TimelineRow({
             typography.body,
             {
               color: colors.textPrimary,
-              fontFamily: 'Inter_600SemiBold',
+              fontFamily: 'DMSans_600SemiBold',
               fontVariant: ['tabular-nums'],
               lineHeight: 18,
             },
@@ -590,7 +590,7 @@ function SectionLabel({ label }: { label: string }) {
         typography.label,
         {
           color: colors.textTertiary,
-          fontFamily: 'Inter_600SemiBold',
+          fontFamily: 'DMSans_600SemiBold',
           letterSpacing: 1.1,
           marginBottom: 8,
         },
@@ -621,7 +621,7 @@ const useStyles = makeStyles((theme) => ({
   },
   avatarLetter: {
     color: '#FFFFFF',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: 'DMSans_700Bold',
     fontSize: fontScale(16),
   },
   upNextCard: {

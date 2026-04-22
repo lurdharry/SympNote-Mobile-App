@@ -96,7 +96,7 @@ export default function ScreenCareTeam() {
                   typography.label,
                   {
                     color: colors.accent,
-                    fontFamily: 'Inter_600SemiBold',
+                    fontFamily: 'DMSans_600SemiBold',
                   },
                 ]}
               >
@@ -166,7 +166,7 @@ export default function ScreenCareTeam() {
                           typography.label,
                           {
                             color: colors.textTertiary,
-                            fontFamily: 'Inter_600SemiBold',
+                            fontFamily: 'DMSans_600SemiBold',
                           },
                         ]}
                       >
@@ -215,7 +215,7 @@ export default function ScreenCareTeam() {
                           typography.label,
                           {
                             color: colors.textPrimary,
-                            fontFamily: 'Inter_600SemiBold',
+                            fontFamily: 'DMSans_600SemiBold',
                           },
                         ]}
                       >
@@ -238,7 +238,7 @@ export default function ScreenCareTeam() {
                           typography.label,
                           {
                             color: '#FFFFFF',
-                            fontFamily: 'Inter_600SemiBold',
+                            fontFamily: 'DMSans_600SemiBold',
                           },
                         ]}
                       >
@@ -264,7 +264,7 @@ export default function ScreenCareTeam() {
                       typography.body,
                       {
                         color: colors.textSecondary,
-                        fontFamily: 'Inter_600SemiBold',
+                        fontFamily: 'DMSans_600SemiBold',
                       },
                     ]}
                   >
@@ -363,7 +363,7 @@ const useStyles = makeStyles((theme) => ({
   avatarLetter: {
     color: '#FFFFFF',
     fontSize: fontScale(15),
-    fontFamily: 'Inter_700Bold',
+    fontFamily: 'DMSans_700Bold',
   },
   addingCard: {
     padding: moderateScale(16),

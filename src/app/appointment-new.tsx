@@ -77,7 +77,7 @@ export default function AppointmentNew() {
                   typography.label,
                   {
                     color: colors.accent,
-                    fontFamily: 'Inter_600SemiBold',
+                    fontFamily: 'DMSans_600SemiBold',
                     letterSpacing: 0.4,
                   },
                 ]}
@@ -187,7 +187,7 @@ function Field({
           typography.label,
           {
             color: colors.textTertiary,
-            fontFamily: 'Inter_600SemiBold',
+            fontFamily: 'DMSans_600SemiBold',
             letterSpacing: 0.3,
             marginBottom: 6,
           },

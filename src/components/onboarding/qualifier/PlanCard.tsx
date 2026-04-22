@@ -83,7 +83,7 @@ const useStyles = makeStyles((theme) => ({
   heading: {
     ...theme.typography.caption,
     color: theme.colors.accent,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: 'DMSans_700Bold',
     letterSpacing: 1.2,
   },
   counter: {

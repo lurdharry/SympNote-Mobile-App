@@ -73,7 +73,7 @@ export default function ScreenFocus() {
                 typography.label,
                 {
                   color: colors.accent,
-                  fontFamily: 'Inter_600SemiBold',
+                  fontFamily: 'DMSans_600SemiBold',
                   letterSpacing: 1.1,
                 },
               ]}
@@ -250,7 +250,7 @@ function FocusTile({
           <Text
             style={[
               styles.label,
-              { color: option.fg, fontFamily: 'Inter_600SemiBold' },
+              { color: option.fg, fontFamily: 'DMSans_600SemiBold' },
             ]}
           >
             {option.t}
@@ -343,7 +343,7 @@ const useStyles = makeStyles((theme) => ({
   sub: {
     fontSize: fontScale(11),
     lineHeight: fontScale(14),
-    fontFamily: 'Inter_500Medium',
+    fontFamily: 'DMSans_500Medium',
   },
   checkBadge: {
     position: 'absolute',

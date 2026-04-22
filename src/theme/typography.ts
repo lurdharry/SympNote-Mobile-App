@@ -13,7 +13,7 @@ type TypeToken = TextStyle;
  */
 export const typography: Record<string, TypeToken> = {
   display: {
-    fontFamily: 'Inter_700Bold',
+    fontFamily: 'DMSans_700Bold',
     fontSize: fontScale(40),
     lineHeight: fontScale(48),
     letterSpacing: -0.4,
@@ -44,59 +44,59 @@ export const typography: Record<string, TypeToken> = {
     fontVariant: ['tabular-nums'],
   },
   h1: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: fontScale(28),
     lineHeight: fontScale(34),
     letterSpacing: -0.28,
   },
   h2: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: fontScale(22),
     lineHeight: fontScale(28),
     letterSpacing: -0.22,
   },
   h3: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: fontScale(18),
     lineHeight: fontScale(24),
     letterSpacing: -0.18,
   },
   bodyLarge: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: fontScale(17),
     lineHeight: fontScale(24),
   },
   body: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: fontScale(15),
     lineHeight: fontScale(22),
   },
   bodySmall: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: fontScale(13),
     lineHeight: fontScale(18),
   },
   label: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: 'DMSans_500Medium',
     fontSize: fontScale(13),
     lineHeight: fontScale(16),
     textTransform: 'uppercase',
     letterSpacing: 0.26,
   },
   caption: {
-    fontFamily: 'Inter_400Regular',
+    fontFamily: 'DMSans_400Regular',
     fontSize: fontScale(11),
     lineHeight: fontScale(14),
   },
   number: {
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'DMSans_600SemiBold',
     fontVariant: ['tabular-nums'],
   },
 };
 
 export const fontMap = {
-  Inter_400Regular: 'Inter_400Regular',
-  Inter_500Medium: 'Inter_500Medium',
-  Inter_600SemiBold: 'Inter_600SemiBold',
-  Inter_700Bold: 'Inter_700Bold',
+  DMSans_400Regular: 'DMSans_400Regular',
+  DMSans_500Medium: 'DMSans_500Medium',
+  DMSans_600SemiBold: 'DMSans_600SemiBold',
+  DMSans_700Bold: 'DMSans_700Bold',
 } as const;

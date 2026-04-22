@@ -502,7 +502,7 @@ function StructuredCard({
             typography.label,
             {
               color: colors.accent,
-              fontFamily: 'Inter_700Bold',
+              fontFamily: 'DMSans_700Bold',
               letterSpacing: 0.8,
               flex: 1,
             },
@@ -522,7 +522,7 @@ function StructuredCard({
                 typography.label,
                 {
                   color: '#FFFFFF',
-                  fontFamily: 'Inter_700Bold',
+                  fontFamily: 'DMSans_700Bold',
                 },
               ]}
             >
@@ -609,7 +609,7 @@ function FieldRow({
           typography.body,
           {
             color: colors.textPrimary,
-            fontFamily: 'Inter_600SemiBold',
+            fontFamily: 'DMSans_600SemiBold',
             flex: 1,
           },
         ]}
@@ -652,7 +652,7 @@ function ErrorCard({
             color: colors.coral,
             letterSpacing: 0.8,
             marginBottom: 6,
-            fontFamily: 'Inter_700Bold',
+            fontFamily: 'DMSans_700Bold',
           },
         ]}
       >
@@ -686,7 +686,7 @@ function ErrorCard({
               typography.label,
               {
                 color: disabled ? colors.textTertiary : '#FFFFFF',
-                fontFamily: 'Inter_600SemiBold',
+                fontFamily: 'DMSans_600SemiBold',
               },
             ]}
           >
@@ -713,7 +713,7 @@ function ErrorCard({
               typography.label,
               {
                 color: colors.textPrimary,
-                fontFamily: 'Inter_600SemiBold',
+                fontFamily: 'DMSans_600SemiBold',
               },
             ]}
           >

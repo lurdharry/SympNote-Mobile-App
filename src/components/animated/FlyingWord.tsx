@@ -81,7 +81,7 @@ export function FlyingWord({
         style={[
           {
             color,
-            fontFamily: 'Inter_600SemiBold',
+            fontFamily: 'DMSans_600SemiBold',
             fontSize,
           },
           textStyle,

@@ -122,7 +122,7 @@ const useStyles = makeStyles((theme) => ({
   },
   label: {
     color: '#FFFFFF',
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: 'DMSans_600SemiBold',
     fontSize: fontScale(17),
     letterSpacing: -0.17,
   },
