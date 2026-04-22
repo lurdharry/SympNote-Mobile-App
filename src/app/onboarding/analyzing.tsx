@@ -4,9 +4,11 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
+  FadeIn,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
+  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import { RadialGradient } from 'react-native-svg';
@@ -41,6 +43,26 @@ import { ANALYZING_STEPS } from '../../constants/analyzing';
 type IconRef = typeof Brain;
 const STEPS = ANALYZING_STEPS;
 
+/** Types `text` out one character at a time. Resets on text change. */
+function useTypewriter(text: string, charMs: number, enabled: boolean) {
+  const [typed, setTyped] = useState('');
+  useEffect(() => {
+    if (!enabled) {
+      setTyped(text);
+      return;
+    }
+    setTyped('');
+    let i = 0;
+    const id = setInterval(() => {
+      i += 1;
+      setTyped(text.slice(0, i));
+      if (i >= text.length) clearInterval(id);
+    }, charMs);
+    return () => clearInterval(id);
+  }, [text, charMs, enabled]);
+  return typed;
+}
+
 export default function ScreenAnalyzing() {
   const router = useRouter();
   const { colors } = useTheme();
@@ -51,6 +73,32 @@ export default function ScreenAnalyzing() {
   const [activeText, setActiveText] = useState(0);
   const [ready, setReady] = useState(false);
   const [confetti, setConfetti] = useState(false);
+
+  // Typewriter: types the active step's label out char by char.
+  // Each step has ~1100ms before advancing, so at 32ms/char a 24-char
+  // label finishes typing in ~770ms and rests briefly before swapping.
+  const typedText = useTypewriter(STEPS[activeText]!.t, 32, !reduced);
+
+  // Blinking caret — toggles opacity via a reanimated loop so the
+  // cursor feels alive rather than pasted in.
+  const caretOpacity = useSharedValue(1);
+  useEffect(() => {
+    if (reduced) {
+      caretOpacity.value = 1;
+      return;
+    }
+    caretOpacity.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 420, easing: Easing.inOut(Easing.quad) }),
+        withTiming(0.15, { duration: 420, easing: Easing.inOut(Easing.quad) })
+      ),
+      -1,
+      false
+    );
+  }, [reduced, caretOpacity]);
+  const caretStyle = useAnimatedStyle(() => ({
+    opacity: caretOpacity.value,
+  }));
 
   useEffect(() => {
     const timers: ReturnType<typeof setTimeout>[] = [];
@@ -98,24 +146,29 @@ export default function ScreenAnalyzing() {
 
             <View style={styles.textSlot}>
               {ready ? (
-                <Text
+                <Animated.Text
+                  key="ready"
+                  entering={FadeIn.duration(320)}
                   style={[
                     typography.h1,
                     { color: colors.textPrimary, textAlign: 'center' },
                   ]}
                 >
                   Your plan is ready
-                </Text>
+                </Animated.Text>
               ) : (
                 <Text
-                  key={activeText}
                   style={[
                     typography.h2,
                     { color: colors.textPrimary, textAlign: 'center' },
                   ]}
                 >
-                  {STEPS[activeText]!.t}
-                  <Text style={{ color: colors.accent }}>▍</Text>
+                  {typedText}
+                  <Animated.Text
+                    style={[{ color: colors.accent }, caretStyle]}
+                  >
+                    ▍
+                  </Animated.Text>
                 </Text>
               )}
             </View>
