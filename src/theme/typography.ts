@@ -1,83 +1,92 @@
 import { TextStyle } from 'react-native';
+import { fontScale } from './responsive';
 
 type TypeToken = TextStyle;
 
+/**
+ * Every font size + line height is passed through `fontScale` so the
+ * text rhythm matches the running device. Line-height is scaled with
+ * the same ratio as font-size to keep the visual baseline grid stable.
+ *
+ * Letter-spacing stays absolute because sub-pixel kerning doesn't need
+ * to track device width — it's a function of the glyphs.
+ */
 export const typography: Record<string, TypeToken> = {
   display: {
     fontFamily: 'Inter_700Bold',
-    fontSize: 40,
-    lineHeight: 48,
+    fontSize: fontScale(40),
+    lineHeight: fontScale(48),
     letterSpacing: -0.4,
   },
   displaySerif: {
     fontFamily: 'Fraunces_500Medium',
-    fontSize: 44,
-    lineHeight: 50,
+    fontSize: fontScale(44),
+    lineHeight: fontScale(50),
     letterSpacing: -0.8,
   },
   displaySerifLarge: {
     fontFamily: 'Fraunces_500Medium',
-    fontSize: 56,
-    lineHeight: 60,
+    fontSize: fontScale(56),
+    lineHeight: fontScale(60),
     letterSpacing: -1.2,
   },
   serifHeadline: {
     fontFamily: 'Fraunces_500Medium',
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: fontScale(28),
+    lineHeight: fontScale(34),
     letterSpacing: -0.4,
   },
   numberEditorial: {
     fontFamily: 'Fraunces_300Light',
-    fontSize: 36,
-    lineHeight: 36,
+    fontSize: fontScale(36),
+    lineHeight: fontScale(36),
     letterSpacing: -1,
     fontVariant: ['tabular-nums'],
   },
   h1: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 28,
-    lineHeight: 34,
+    fontSize: fontScale(28),
+    lineHeight: fontScale(34),
     letterSpacing: -0.28,
   },
   h2: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 22,
-    lineHeight: 28,
+    fontSize: fontScale(22),
+    lineHeight: fontScale(28),
     letterSpacing: -0.22,
   },
   h3: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: fontScale(18),
+    lineHeight: fontScale(24),
     letterSpacing: -0.18,
   },
   bodyLarge: {
     fontFamily: 'Inter_400Regular',
-    fontSize: 17,
-    lineHeight: 24,
+    fontSize: fontScale(17),
+    lineHeight: fontScale(24),
   },
   body: {
     fontFamily: 'Inter_400Regular',
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: fontScale(15),
+    lineHeight: fontScale(22),
   },
   bodySmall: {
     fontFamily: 'Inter_400Regular',
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: fontScale(13),
+    lineHeight: fontScale(18),
   },
   label: {
     fontFamily: 'Inter_500Medium',
-    fontSize: 13,
-    lineHeight: 16,
+    fontSize: fontScale(13),
+    lineHeight: fontScale(16),
     textTransform: 'uppercase',
     letterSpacing: 0.26,
   },
   caption: {
     fontFamily: 'Inter_400Regular',
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: fontScale(11),
+    lineHeight: fontScale(14),
   },
   number: {
     fontFamily: 'Inter_600SemiBold',

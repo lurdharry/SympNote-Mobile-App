@@ -1,11 +1,18 @@
 import {
+  AlertTriangle,
   Bell,
   BookOpen,
   Brain,
   Calendar,
+  CalendarCheck,
+  CalendarX,
+  Check,
+  Circle,
+  CircleAlert,
   Hourglass,
   MessageCircle,
   NotebookPen,
+  PenLine,
   Pin,
   Sparkles,
   Sprout,
@@ -21,7 +28,19 @@ export const FULL_HEADLINE = "Your doctor's visit,\nfinally prepared.";
 
 /* -------------------- Qualifier (screen 02) -------------------- */
 
-export type Option = { t: string; v: string };
+export type Option = {
+  t: string;
+  v: string;
+  /** Lucide icon rendered in the chip's left-tile. Optional so date
+   *  trays and other free-form answer UIs don't need one. */
+  Icon?: IconRef;
+  /**
+   * Tint applied to the chip's icon tile. Defaults to accent if
+   *  omitted. Pick semantically: teal for positive, gold for neutral,
+   *  coral for concern.
+   */
+  tint?: string;
+};
 
 export type Question = {
   id: string;
@@ -41,9 +60,9 @@ export const QUESTIONS: Question[] = [
     profileKey: 'regularity',
     ask: 'First — do you see a doctor regularly?',
     options: [
-      { t: 'Yes, often', v: 'often' },
-      { t: 'Sometimes', v: 'sometimes' },
-      { t: 'Rarely', v: 'rarely' },
+      { t: 'Yes, often',  v: 'often',     Icon: CalendarCheck, tint: '#2C6E6B' },
+      { t: 'Sometimes',   v: 'sometimes', Icon: Calendar,      tint: '#6CA4A0' },
+      { t: 'Rarely',      v: 'rarely',    Icon: CalendarX,     tint: '#C88A4A' },
     ],
   },
   {
@@ -51,10 +70,10 @@ export const QUESTIONS: Question[] = [
     profileKey: 'hardest',
     ask: "What's hardest about doctor visits for you?",
     options: [
-      { t: 'Remembering symptoms', v: 'memory' },
-      { t: 'Explaining clearly', v: 'clarity' },
-      { t: 'Feeling rushed', v: 'time' },
-      { t: 'Taking notes', v: 'notes' },
+      { t: 'Remembering symptoms', v: 'memory',  Icon: Brain,         tint: '#2C6E6B' },
+      { t: 'Explaining clearly',   v: 'clarity', Icon: MessageCircle, tint: '#6CA4A0' },
+      { t: 'Feeling rushed',       v: 'time',    Icon: Timer,         tint: '#C88A4A' },
+      { t: 'Taking notes',         v: 'notes',   Icon: PenLine,       tint: '#5A8F6E' },
     ],
   },
   {
@@ -62,10 +81,10 @@ export const QUESTIONS: Question[] = [
     profileKey: 'forgetting',
     ask: 'And honestly — how often do you forget something important?',
     options: [
-      { t: 'Almost always', v: 'always' },
-      { t: 'Often', v: 'often' },
-      { t: 'Sometimes', v: 'sometimes' },
-      { t: 'Rarely', v: 'rarely' },
+      { t: 'Almost always', v: 'always',    Icon: AlertTriangle, tint: '#E07A5F' },
+      { t: 'Often',         v: 'often',     Icon: CircleAlert,   tint: '#C88A4A' },
+      { t: 'Sometimes',     v: 'sometimes', Icon: Circle,        tint: '#6CA4A0' },
+      { t: 'Rarely',        v: 'rarely',    Icon: Check,         tint: '#5A8F6E' },
     ],
   },
   {
@@ -95,6 +114,9 @@ export const QUALIFIER_TIMINGS = {
   bubbleDurationMs: 320,
   /** User bubble entrance. */
   userBubbleDurationMs: 280,
+  /** Chip entrance duration + stagger between consecutive chips. */
+  chipDurationMs: 280,
+  chipStaggerMs: 40,
 } as const;
 
 export type PlanItem = { Icon: IconRef; title: string; sub: string };
