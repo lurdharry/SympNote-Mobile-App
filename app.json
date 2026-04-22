@@ -16,7 +16,9 @@
     },
     "android": {
       "package": "com.sympnote.app",
-      "permissions": ["RECORD_AUDIO"]
+      "permissions": [
+        "RECORD_AUDIO"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -26,16 +28,23 @@
         {
           "microphonePermission": "Sympnote uses the microphone so we can transcribe what you're saying about your symptoms.",
           "speechRecognitionPermission": "Sympnote transcribes your voice on-device so your symptoms are ready to share with your doctor.",
-          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
         }
       ],
       [
         "expo-build-properties",
         {
-          "ios": { "deploymentTarget": "16.0" },
-          "android": { "minSdkVersion": 30 }
+          "ios": {
+            "deploymentTarget": "16.0"
+          },
+          "android": {
+            "minSdkVersion": 30
+          }
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true
