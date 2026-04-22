@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { useTheme } from '../../theme';
 
-export default function OnboardingLayout() {
+const OnboardingLayout: React.FC = () => {
   const { colors } = useTheme();
   return (
     <Stack
@@ -14,3 +14,4 @@ export default function OnboardingLayout() {
     />
   );
 }
+export default OnboardingLayout;

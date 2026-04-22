@@ -25,7 +25,7 @@ type Props = {
  * reverse animation — the card contracts back into its list row before
  * router.back() fires.
  */
-export function SharedElementScene({ children, style }: Props) {
+export const SharedElementScene: React.FC<Props> = ({ children, style }) => {
   const { origin, registerSceneCloser } = useTransition();
   const reduced = useReducedMotion();
   const { width, height } = useWindowDimensions();

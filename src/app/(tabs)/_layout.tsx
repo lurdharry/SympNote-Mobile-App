@@ -12,7 +12,7 @@ import { TABS } from '../../constants/tabs';
  * a modal from the Home avatar, not a tab.
  */
 
-export default function TabsLayout() {
+const TabsLayout: React.FC = () => {
   const { colors, isDark } = useTheme();
   const styles = useStyles();
 
@@ -90,6 +90,8 @@ export default function TabsLayout() {
     </Tabs>
   );
 }
+
+export default TabsLayout;
 
 const useStyles = makeStyles((theme) => ({
   wrap: { overflow: 'hidden' },

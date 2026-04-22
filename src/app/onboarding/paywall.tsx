@@ -1,14 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useEffect, useState } from "react";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -16,41 +9,39 @@ import Animated, {
   withDelay,
   withSpring,
   withTiming,
-} from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Check, Flame, Mic, Trophy } from 'lucide-react-native';
-import { makeStyles, moderateScale, scale, shadows, spacing, typography, useTheme, verticalScale } from '../../theme';
-import { SceneTransition } from '../../components/navigation/SceneTransition';
-import { BackButton } from '../../components/ui/BackButton';
-import { PrimaryButton } from '../../components/ui/PrimaryButton';
-import { purchase, Plan } from '../../services/subscription';
-import { useProfileStore } from '../../stores/useProfileStore';
-import { useRecordingsStore } from '../../stores/useRecordingsStore';
-import { hapticHeavy } from '../../services/haptics';
-import { computeOnboardingProgress } from '../../utils/onboarding';
-import { PAYWALL_PLANS, PLAN_FEATURES, PlanDef } from '../../constants/plans';
-
-/**
- * Screen 07 — Paywall (gamified with streak/reward framing).
- *
- *  - "SYMPNOTE PLUS" badge
- *  - XP progress strip (90/100 XP), pulls the user into the streak metaphor
- *  - Feature list (unlimited, AI summary, private, export)
- *  - 3 plan cards, annual has floating BEST VALUE · SAVE 50% badge
- *  - "Start 3-day free trial" CTA + cancel caption
- *  - __DEV__ skip link at the bottom
- */
+} from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
+import { Check, Flame, Mic, Trophy } from "lucide-react-native";
+import {
+  makeStyles,
+  moderateScale,
+  scale,
+  shadows,
+  spacing,
+  typography,
+  useTheme,
+  verticalScale,
+} from "../../theme";
+import { SceneTransition } from "../../components/navigation/SceneTransition";
+import { BackButton } from "../../components/ui/BackButton";
+import { PrimaryButton } from "../../components/ui/PrimaryButton";
+import { purchase, Plan } from "../../services/subscription";
+import { useProfileStore } from "../../stores/useProfileStore";
+import { useRecordingsStore } from "../../stores/useRecordingsStore";
+import { hapticHeavy } from "../../services/haptics";
+import { computeOnboardingProgress } from "../../utils/onboarding";
+import { PAYWALL_PLANS, PLAN_FEATURES, PlanDef } from "../../constants/plans";
 
 type IconRef = typeof Mic;
 const PLANS = PAYWALL_PLANS;
 const FEATURES = PLAN_FEATURES;
 
-export default function ScreenPaywall() {
+const ScreenPaywall: React.FC = () => {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useStyles();
 
-  const [selected, setSelected] = useState<Plan['id']>('annual');
+  const [selected, setSelected] = useState<Plan["id"]>("annual");
   const [loading, setLoading] = useState(false);
 
   const complete = useProfileStore((s) => s.completeOnboarding);
@@ -71,9 +62,9 @@ export default function ScreenPaywall() {
       await purchase(selected);
       hapticHeavy();
       complete();
-      router.replace('/(tabs)/home');
+      router.replace("/(tabs)/home");
     } catch (e) {
-      Alert.alert('Purchase failed', String(e));
+      Alert.alert("Purchase failed", String(e));
     } finally {
       setLoading(false);
     }
@@ -82,25 +73,20 @@ export default function ScreenPaywall() {
   const skipDev = () => {
     if (!__DEV__) return;
     complete();
-    router.replace('/(tabs)/home');
+    router.replace("/(tabs)/home");
   };
 
   return (
     <SceneTransition mode="scale-fade">
       <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
-        <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
           <View style={styles.topBar}>
             <BackButton onPress={() => router.back()} />
-            <Text style={[typography.label, { color: colors.textTertiary }]}>
-              9 of 9
-            </Text>
+            <Text style={[typography.label, { color: colors.textTertiary }]}>9 of 9</Text>
             <View style={{ width: 40 }} />
           </View>
 
-          <ScrollView
-            contentContainerStyle={styles.content}
-            showsVerticalScrollIndicator={false}
-          >
+          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
             <PlusBadge />
 
             <Text
@@ -108,7 +94,7 @@ export default function ScreenPaywall() {
                 typography.h1,
                 {
                   color: colors.textPrimary,
-                  textAlign: 'center',
+                  textAlign: "center",
                   marginTop: spacing.s5,
                 },
               ]}
@@ -120,7 +106,7 @@ export default function ScreenPaywall() {
                 typography.body,
                 {
                   color: colors.textSecondary,
-                  textAlign: 'center',
+                  textAlign: "center",
                   marginTop: 8,
                 },
               ]}
@@ -138,19 +124,10 @@ export default function ScreenPaywall() {
             <View style={{ marginTop: spacing.s5, gap: 10 }}>
               {FEATURES.map((f, i) => (
                 <View key={i} style={styles.featureRow}>
-                  <View
-                    style={[
-                      styles.featureIcon,
-                      { backgroundColor: colors.accent + '1A' },
-                    ]}
-                  >
+                  <View style={[styles.featureIcon, { backgroundColor: colors.accent + "1A" }]}>
                     <f.Icon size={16} color={colors.accent} strokeWidth={2} />
                   </View>
-                  <Text
-                    style={[typography.body, { color: colors.textPrimary }]}
-                  >
-                    {f.t}
-                  </Text>
+                  <Text style={[typography.body, { color: colors.textPrimary }]}>{f.t}</Text>
                 </View>
               ))}
             </View>
@@ -170,7 +147,7 @@ export default function ScreenPaywall() {
             {__DEV__ && (
               <Pressable
                 onPress={skipDev}
-                style={{ marginTop: spacing.s6, alignSelf: 'center' }}
+                style={{ marginTop: spacing.s6, alignSelf: "center" }}
                 hitSlop={12}
               >
                 <Text
@@ -178,7 +155,7 @@ export default function ScreenPaywall() {
                     typography.caption,
                     {
                       color: colors.textTertiary,
-                      textDecorationLine: 'underline',
+                      textDecorationLine: "underline",
                     },
                   ]}
                 >
@@ -189,17 +166,8 @@ export default function ScreenPaywall() {
           </ScrollView>
 
           <View style={{ paddingHorizontal: spacing.s6, paddingTop: 8, gap: 8 }}>
-            <PrimaryButton
-              label="Start 3-day free trial"
-              onPress={buy}
-              loading={loading}
-            />
-            <Text
-              style={[
-                typography.caption,
-                { color: colors.textTertiary, textAlign: 'center' },
-              ]}
-            >
+            <PrimaryButton label="Start 3-day free trial" onPress={buy} loading={loading} />
+            <Text style={[typography.caption, { color: colors.textTertiary, textAlign: "center" }]}>
               Cancel anytime. No charge during trial.
             </Text>
           </View>
@@ -209,13 +177,13 @@ export default function ScreenPaywall() {
   );
 }
 
-function PlusBadge() {
+const PlusBadge: React.FC = () => {
   const styles = useStyles();
   return (
-    <View style={{ alignItems: 'center' }}>
+    <View style={{ alignItems: "center" }}>
       <View style={styles.plusBadge}>
         <LinearGradient
-          colors={['#F6C06A', '#E07A5F']}
+          colors={["#F6C06A", "#E07A5F"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
@@ -225,8 +193,8 @@ function PlusBadge() {
           style={[
             typography.label,
             {
-              color: '#FFFFFF',
-              fontFamily: 'DMSans_700Bold',
+              color: "#FFFFFF",
+              fontFamily: "DMSans_700Bold",
               marginLeft: 6,
             },
           ]}
@@ -238,17 +206,17 @@ function PlusBadge() {
   );
 }
 
-function ProgressStrip({
-  xp,
-  total,
-  stagesComplete,
-  stagesTotal,
-}: {
+interface ProgressStripProps {
   xp: number;
   total: number;
   stagesComplete: number;
   stagesTotal: number;
-}) {
+}
+
+const ProgressStrip: React.FC<ProgressStripProps> = ({ xp,
+  total,
+  stagesComplete,
+  stagesTotal }) => {
   const { colors } = useTheme();
   const styles = useStyles();
   const target = total > 0 ? xp / total : 0;
@@ -256,7 +224,7 @@ function ProgressStrip({
   useEffect(() => {
     fill.value = withDelay(
       200,
-      withTiming(target, { duration: 800, easing: Easing.out(Easing.cubic) })
+      withTiming(target, { duration: 800, easing: Easing.out(Easing.cubic) }),
     );
   }, [fill, target]);
   const style = useAnimatedStyle(() => ({
@@ -266,10 +234,10 @@ function ProgressStrip({
   const stagesRemaining = Math.max(0, stagesTotal - stagesComplete);
   const footCopy =
     stagesRemaining === 0
-      ? 'Setup complete — one last step to unlock unlimited.'
+      ? "Setup complete — one last step to unlock unlimited."
       : stagesRemaining === 1
-      ? `Almost there — 1 step from 100%.`
-      : `${stagesComplete} of ${stagesTotal} onboarding steps complete.`;
+        ? `Almost there — 1 step from 100%.`
+        : `${stagesComplete} of ${stagesTotal} onboarding steps complete.`;
 
   return (
     <View
@@ -285,7 +253,7 @@ function ProgressStrip({
             typography.label,
             {
               color: colors.textTertiary,
-              fontFamily: 'DMSans_600SemiBold',
+              fontFamily: "DMSans_600SemiBold",
             },
           ]}
         >
@@ -296,20 +264,18 @@ function ProgressStrip({
             typography.label,
             {
               color: colors.accent,
-              fontFamily: 'DMSans_700Bold',
-              fontVariant: ['tabular-nums'],
+              fontFamily: "DMSans_700Bold",
+              fontVariant: ["tabular-nums"],
             },
           ]}
         >
           {xp} / {total} XP
         </Text>
       </View>
-      <View
-        style={[styles.progressTrack, { backgroundColor: colors.bgMuted }]}
-      >
+      <View style={[styles.progressTrack, { backgroundColor: colors.bgMuted }]}>
         <Animated.View style={[styles.progressFill, style]}>
           <LinearGradient
-            colors={['#3BA79F', '#2C6E6B']}
+            colors={["#3BA79F", "#2C6E6B"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={StyleSheet.absoluteFill}
@@ -318,12 +284,7 @@ function ProgressStrip({
       </View>
       <View style={styles.progressFoot}>
         <Flame size={12} color={colors.coral} fill={colors.coral} />
-        <Text
-          style={[
-            typography.caption,
-            { color: colors.textSecondary, marginLeft: 6 },
-          ]}
-        >
+        <Text style={[typography.caption, { color: colors.textSecondary, marginLeft: 6 }]}>
           {footCopy}
         </Text>
       </View>
@@ -331,17 +292,17 @@ function ProgressStrip({
   );
 }
 
-function PlanCard({
-  plan,
-  index,
-  selected,
-  onSelect,
-}: {
+interface PlanCardProps {
   plan: PlanDef;
   index: number;
   selected: boolean;
   onSelect: () => void;
-}) {
+}
+
+const PlanCard: React.FC<PlanCardProps> = ({ plan,
+  index,
+  selected,
+  onSelect }) => {
   const { colors } = useTheme();
   const styles = useStyles();
   const opacity = useSharedValue(0);
@@ -349,12 +310,9 @@ function PlanCard({
   useEffect(() => {
     opacity.value = withDelay(
       240 + index * 80,
-      withTiming(1, { duration: 320, easing: Easing.out(Easing.cubic) })
+      withTiming(1, { duration: 320, easing: Easing.out(Easing.cubic) }),
     );
-    ty.value = withDelay(
-      240 + index * 80,
-      withSpring(0, { damping: 18, stiffness: 140 })
-    );
+    ty.value = withDelay(240 + index * 80, withSpring(0, { damping: 18, stiffness: 140 }));
   }, [index, opacity, ty]);
   const enter = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -378,7 +336,7 @@ function PlanCard({
         {plan.badge && (
           <View style={styles.planBadge}>
             <LinearGradient
-              colors={['#E07A5F', '#F6C06A']}
+              colors={["#E07A5F", "#F6C06A"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={StyleSheet.absoluteFill}
@@ -387,8 +345,8 @@ function PlanCard({
               style={[
                 typography.caption,
                 {
-                  color: '#FFFFFF',
-                  fontFamily: 'DMSans_700Bold',
+                  color: "#FFFFFF",
+                  fontFamily: "DMSans_700Bold",
                 },
               ]}
             >
@@ -398,39 +356,23 @@ function PlanCard({
         )}
         <View
           style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
           }}
         >
           <View>
-            <Text style={[typography.h3, { color: colors.textPrimary }]}>
-              {plan.label}
-            </Text>
+            <Text style={[typography.h3, { color: colors.textPrimary }]}>{plan.label}</Text>
             {plan.note && (
-              <Text
-                style={[
-                  typography.caption,
-                  { color: colors.textTertiary, marginTop: 2 },
-                ]}
-              >
+              <Text style={[typography.caption, { color: colors.textTertiary, marginTop: 2 }]}>
                 {plan.note}
               </Text>
             )}
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={[typography.h3, { color: colors.textPrimary }]}>
-                {plan.price}
-              </Text>
-              <Text
-                style={[
-                  typography.caption,
-                  { color: colors.textTertiary },
-                ]}
-              >
-                {plan.per}
-              </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <View style={{ alignItems: "flex-end" }}>
+              <Text style={[typography.h3, { color: colors.textPrimary }]}>{plan.price}</Text>
+              <Text style={[typography.caption, { color: colors.textTertiary }]}>{plan.per}</Text>
             </View>
             <View
               style={[
@@ -449,15 +391,17 @@ function PlanCard({
   );
 }
 
+export default ScreenPaywall;
+
 const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },
   safe: { flex: 1 },
   topBar: {
     paddingTop: theme.spacing.s3,
     paddingHorizontal: theme.spacing.s6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   content: {
     paddingHorizontal: theme.spacing.s6,
@@ -465,12 +409,12 @@ const useStyles = makeStyles((theme) => ({
     paddingBottom: theme.spacing.s6,
   },
   plusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: scale(10),
     paddingVertical: verticalScale(4),
     borderRadius: theme.radius.full,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   progress: {
     marginTop: theme.spacing.s5,
@@ -479,57 +423,57 @@ const useStyles = makeStyles((theme) => ({
     borderWidth: StyleSheet.hairlineWidth,
   },
   progressRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: verticalScale(8),
   },
   progressTrack: {
     height: verticalScale(8),
     borderRadius: moderateScale(4),
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   progressFill: {
-    height: '100%',
+    height: "100%",
     borderRadius: moderateScale(4),
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   progressFoot: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: verticalScale(8),
   },
   featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: moderateScale(12),
   },
   featureIcon: {
     width: moderateScale(28),
     height: moderateScale(28),
     borderRadius: moderateScale(8),
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   plan: {
     padding: moderateScale(16),
     borderRadius: theme.radius.lg,
-    position: 'relative',
+    position: "relative",
   },
   planBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: -verticalScale(10),
     left: scale(16),
     paddingHorizontal: scale(10),
     paddingVertical: verticalScale(4),
     borderRadius: theme.radius.full,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   radio: {
     width: moderateScale(24),
     height: moderateScale(24),
     borderRadius: moderateScale(12),
     borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 }));

@@ -26,7 +26,7 @@ import { PrimaryButton } from "../../components/ui/PrimaryButton";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { FULL_HEADLINE } from "../../constants/onboarding";
 
-export default function ScreenHook() {
+const ScreenHook: React.FC = () => {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useStyles();
@@ -159,28 +159,26 @@ type LucideIcon = typeof Zap;
  * three signals read as three different promises (speed · privacy ·
  * capability) instead of a row of identical stickers.
  */
-function TrustChip({
-  Icon,
-  label,
-  tint,
-}: {
+interface TrustChipProps {
   Icon: LucideIcon;
   label: string;
   tint: string;
-}) {
+}
+
+const TrustChip: React.FC<TrustChipProps> = ({ Icon, label, tint }) => {
   const { colors } = useTheme();
   const styles = useStyles();
   return (
     <View style={styles.trustChip}>
-      <View style={[styles.trustTile, { backgroundColor: tint + '1F' }]}>
+      <View style={[styles.trustTile, { backgroundColor: tint + "1F" }]}>
         <Icon size={moderateScale(11)} color={tint} strokeWidth={2.4} />
       </View>
-      <Text style={[styles.trustLabel, { color: colors.textPrimary }]}>
-        {label}
-      </Text>
+      <Text style={[styles.trustLabel, { color: colors.textPrimary }]}>{label}</Text>
     </View>
   );
 }
+
+export default ScreenHook;
 
 const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },

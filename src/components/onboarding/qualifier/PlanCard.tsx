@@ -13,7 +13,7 @@ type Props = {
 
 /** "Your Sympnote plan" card pinned under the top bar. Empty state
  *  shows placeholder copy; each answered question adds a PlanRow. */
-export function PlanCard({ items, total }: Props) {
+export const PlanCard: React.FC<Props> = ({ items, total }) => {
   const { colors } = useTheme();
   const styles = useStyles();
   return (

@@ -26,7 +26,7 @@ type Props = {
  * Detaches a word and arcs it to a target position using a parabolic path.
  * Scale and rotation animate during flight; onLand fires when settled.
  */
-export function FlyingWord({
+export const FlyingWord: React.FC<Props> = ({
   word,
   from,
   to,
@@ -36,7 +36,7 @@ export function FlyingWord({
   fontSize = 15,
   onLand,
   textStyle,
-}: Props) {
+}) => {
   const reduced = useReducedMotion();
   const t = useSharedValue(0);
 

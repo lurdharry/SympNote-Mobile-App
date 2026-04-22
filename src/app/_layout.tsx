@@ -21,7 +21,7 @@ import { RadialWipe } from "../components/navigation/RadialWipe";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-export default function RootLayout() {
+const RootLayout: React.FC = () => {
   const [fontsLoaded] = useFonts({
     DMSans_400Regular,
     DMSans_500Medium,
@@ -109,3 +109,4 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
 });
+export default RootLayout;

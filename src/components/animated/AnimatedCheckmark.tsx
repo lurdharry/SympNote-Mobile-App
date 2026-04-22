@@ -17,13 +17,13 @@ type Props = {
   playing?: boolean;
 };
 
-export function AnimatedCheckmark({
+export const AnimatedCheckmark: React.FC<Props> = ({
   size = 28,
   color = '#2C6E6B',
   strokeWidth = 3,
   delay = 0,
   playing = true,
-}: Props) {
+}) => {
   const reduced = useReducedMotion();
   const progress = useSharedValue(0);
 

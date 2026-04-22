@@ -14,7 +14,7 @@ const LABELS: Record<UrgencyLevel, string> = {
   urgent: 'Consider urgent',
 };
 
-export function UrgencyChip({ urgency }: Props) {
+export const UrgencyChip: React.FC<Props> = ({ urgency }) => {
   const { colors } = useTheme();
   const styles = useStyles();
   const tone =

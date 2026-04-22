@@ -12,7 +12,11 @@ import { QUALIFIER_TIMINGS } from '../../../constants/onboarding';
 import { AssistantAvatar } from './AssistantAvatar';
 
 /** Bot message bubble — gradient avatar on the left, soft-tinted surface. */
-export function AssistantBubble({ children }: { children: React.ReactNode }) {
+interface AssistantBubbleProps {
+  children: React.ReactNode;
+}
+
+export const AssistantBubble: React.FC<AssistantBubbleProps> = ({ children }) => {
   const styles = useStyles();
   const opacity = useSharedValue(0);
   const ty = useSharedValue(6);

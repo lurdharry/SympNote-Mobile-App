@@ -55,13 +55,13 @@ type Props = {
 const VERTEX_COUNT = 10;
 const TWO_PI = Math.PI * 2;
 
-export function VoiceReactiveOrb({
+export const VoiceReactiveOrb: React.FC<Props> = ({
   active,
   meterSv,
   onPress,
   size = moderateScale(220),
   disabled = false,
-}: Props) {
+}) => {
   const { colors } = useTheme();
   const reduced = useReducedMotion();
   const clock = useClock();

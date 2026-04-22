@@ -15,13 +15,13 @@ type Props = {
   padding?: number;
 };
 
-export function Card({
+export const Card: React.FC<Props> = ({
   children,
   onPress,
   style,
   elevated = false,
   padding = spacing.s5,
-}: Props) {
+}) => {
   const styles = useStyles();
   const scale = useSharedValue(1);
   const anim = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));

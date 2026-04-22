@@ -27,7 +27,6 @@ const initial: State = {
   onboardingAnswers: {},
   subscriptionStatus: "none",
   trialEndsAt: null,
-
   themePreference: "auto",
   hapticsEnabled: true,
   reduceMotionOverride: "auto",

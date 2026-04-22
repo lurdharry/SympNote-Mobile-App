@@ -18,7 +18,7 @@ import { formatDate, formatTime, formatDuration } from '../../utils/date';
 import { hapticLight } from '../../services/haptics';
 import { useTransition } from '../../components/navigation/TransitionContext';
 
-export default function RecordingDetail() {
+const RecordingDetail: React.FC = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { colors } = useTheme();
@@ -148,7 +148,12 @@ export default function RecordingDetail() {
   );
 }
 
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
+interface SectionProps {
+  label: string;
+  children: React.ReactNode;
+}
+
+const Section: React.FC<SectionProps> = ({ label, children }) => {
   const { colors } = useTheme();
   return (
     <View style={{ marginTop: spacing.s5 }}>
@@ -160,7 +165,11 @@ function Section({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-function ChipsOrDash({ items }: { items: string[] }) {
+interface ChipsOrDashProps {
+  items: string[];
+}
+
+const ChipsOrDash: React.FC<ChipsOrDashProps> = ({ items }) => {
   const { colors } = useTheme();
   if (items.length === 0) {
     return <Text style={[typography.body, { color: colors.textTertiary }]}>—</Text>;
@@ -186,7 +195,11 @@ function ChipsOrDash({ items }: { items: string[] }) {
   );
 }
 
-function LineOrDash({ text }: { text: string }) {
+interface LineOrDashProps {
+  text: string;
+}
+
+const LineOrDash: React.FC<LineOrDashProps> = ({ text }) => {
   const { colors } = useTheme();
   return (
     <Text
@@ -199,6 +212,8 @@ function LineOrDash({ text }: { text: string }) {
     </Text>
   );
 }
+
+export default RecordingDetail;
 
 const useStyles = makeStyles((theme) => ({
   content: {

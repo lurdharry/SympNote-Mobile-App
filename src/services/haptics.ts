@@ -1,11 +1,7 @@
-import * as Haptics from 'expo-haptics';
-import { Platform } from 'react-native';
-import { useProfileStore } from '../stores/useProfileStore';
+import * as Haptics from "expo-haptics";
+import { useProfileStore } from "../stores/useProfileStore";
 
 function enabled(): boolean {
-  if (Platform.OS === 'web') return false;
-  // Imperative read (not a hook) — these helpers are called from event
-  // handlers and effect cleanups, not from render.
   return useProfileStore.getState().hapticsEnabled;
 }
 

@@ -26,7 +26,7 @@ import { uuid } from '../utils/uuid';
  * forgiving: we try Date.parse of "doctorName [spec] YYYY-MM-DD HH:mm"
  * and fall back to a composed ISO string.
  */
-export default function AppointmentNew() {
+const AppointmentNew: React.FC = () => {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useStyles();
@@ -163,21 +163,21 @@ export default function AppointmentNew() {
   );
 }
 
-function Field({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  autoCapitalize = 'sentences',
-  helper,
-}: {
+interface FieldProps {
   label: string;
   value: string;
   onChangeText: (v: string) => void;
   placeholder?: string;
   autoCapitalize?: 'none' | 'sentences' | 'words';
   helper?: string;
-}) {
+}
+
+const Field: React.FC<FieldProps> = ({ label,
+  value,
+  onChangeText,
+  placeholder,
+  autoCapitalize = 'sentences',
+  helper }) => {
   const { colors } = useTheme();
   const styles = useStyles();
   return (
@@ -230,6 +230,8 @@ function Field({
     </View>
   );
 }
+
+export default AppointmentNew;
 
 const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },

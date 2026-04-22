@@ -26,7 +26,7 @@ type RingProps = {
   reduced: boolean;
 };
 
-function Ring({ cx, cy, size, color, offset, reduced }: RingProps) {
+const Ring: React.FC<RingProps> = ({ cx, cy, size, color, offset, reduced }) => {
   const rp = useSharedValue(offset);
   useEffect(() => {
     if (reduced) return;
@@ -68,11 +68,11 @@ type Props = {
   ringCount?: number;
 };
 
-export function PulsingOrb({
+export const PulsingOrb: React.FC<Props> = ({
   size = 220,
   colors = ['#A8C4C2', '#3E8580', '#2C6E6B'],
   ringCount = 3,
-}: Props) {
+}) => {
   const reduced = useReducedMotion();
   const t = useSharedValue(0);
 

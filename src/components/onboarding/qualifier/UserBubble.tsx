@@ -12,7 +12,11 @@ import { fontScale, makeStyles, moderateScale, scale, verticalScale } from '../.
 import { QUALIFIER_TIMINGS } from '../../../constants/onboarding';
 
 /** User message bubble — right-aligned, teal gradient. */
-export function UserBubble({ children }: { children: React.ReactNode }) {
+interface UserBubbleProps {
+  children: React.ReactNode;
+}
+
+export const UserBubble: React.FC<UserBubbleProps> = ({ children }) => {
   const styles = useStyles();
   const opacity = useSharedValue(0);
   const ty = useSharedValue(6);

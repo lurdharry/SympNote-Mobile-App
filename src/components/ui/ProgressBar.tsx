@@ -18,7 +18,7 @@ type Props = {
   height?: number;
 };
 
-export function ProgressBar({ total, current, height = moderateScale(4) }: Props) {
+export const ProgressBar: React.FC<Props> = ({ total, current, height = moderateScale(4) }) => {
   const reduced = useReducedMotion();
   const { colors } = useTheme();
   const progress = useSharedValue(0);

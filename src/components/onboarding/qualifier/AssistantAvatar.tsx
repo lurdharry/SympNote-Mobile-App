@@ -5,7 +5,7 @@ import { Sparkles } from 'lucide-react-native';
 import { makeStyles, moderateScale, useTheme } from '../../../theme';
 
 /** 28px round gradient tile with a gold sparkle — the assistant's "face". */
-export function AssistantAvatar() {
+export const AssistantAvatar: React.FC = () => {
   const { colors } = useTheme();
   const styles = useStyles();
   return (

@@ -10,7 +10,7 @@ type Props = {
 
 /** Segmented progress strip — fully filled past, half-filled current,
  *  empty future. */
-export function ProgressBar({ step, total }: Props) {
+export const ProgressBar: React.FC<Props> = ({ step, total }) => {
   const { colors } = useTheme();
   const styles = useStyles();
   return (

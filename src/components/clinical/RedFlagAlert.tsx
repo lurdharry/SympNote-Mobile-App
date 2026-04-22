@@ -19,7 +19,7 @@ type Props = {
  * Alert card listing things the patient should make sure their doctor
  * hears first. Styled with an error accent and a subtle pulsing left rule.
  */
-export function RedFlagAlert({ items }: Props) {
+export const RedFlagAlert: React.FC<Props> = ({ items }) => {
   const { colors } = useTheme();
   const styles = useStyles();
   const reduced = useReducedMotion();

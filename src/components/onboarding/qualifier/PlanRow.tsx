@@ -22,7 +22,7 @@ type Props = {
 
 /** A single unlocked row inside the plan card. Fades + slides in with a
  *  staggered delay proportional to its index. */
-export function PlanRow({ item, index }: Props) {
+export const PlanRow: React.FC<Props> = ({ item, index }) => {
   const { colors } = useTheme();
   const styles = useStyles();
   const opacity = useSharedValue(0);

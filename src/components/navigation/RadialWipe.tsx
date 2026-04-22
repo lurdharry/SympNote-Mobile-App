@@ -21,7 +21,7 @@ import { hapticHeavy } from '../../services/haptics';
  * via TransitionContext. Expands a Skia circle from a given point
  * and fires a haptic at midpoint.
  */
-export function RadialWipe() {
+export const RadialWipe: React.FC = () => {
   const { colors } = useTheme();
   const { wipeActive, _wipeCenter } = useTransition();
   const { width, height } = useWindowDimensions();

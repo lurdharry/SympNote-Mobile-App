@@ -48,11 +48,11 @@ function parseSections(text: string): Section[] {
   });
 }
 
-export function ClinicalSummary({
+export const ClinicalSummary: React.FC<Props> = ({
   text,
   stagger = true,
   initialDelay = 0,
-}: Props) {
+}) => {
   const sections = useMemo(() => parseSections(text), [text]);
 
   return (
@@ -69,14 +69,14 @@ export function ClinicalSummary({
   );
 }
 
-function SectionCard({
-  section,
-  delay,
-}: {
+interface SectionCardProps {
   section: Section;
   index: number;
   delay: number;
-}) {
+}
+
+const SectionCard: React.FC<SectionCardProps> = ({ section,
+  delay }) => {
   const { colors } = useTheme();
   const styles = useStyles();
   const reduced = useReducedMotion();
@@ -140,13 +140,13 @@ function SectionCard({
   );
 }
 
-function SectionBody({
-  body,
-  variant,
-}: {
+interface SectionBodyProps {
   body: string;
   variant: Section['variant'];
-}) {
+}
+
+const SectionBody: React.FC<SectionBodyProps> = ({ body,
+  variant }) => {
   const styles = useStyles();
   const lines = body
     .split('\n')
@@ -172,13 +172,13 @@ function SectionBody({
   );
 }
 
-function Bullet({
-  text,
-  variant,
-}: {
+interface BulletProps {
   text: string;
   variant: Section['variant'];
-}) {
+}
+
+const Bullet: React.FC<BulletProps> = ({ text,
+  variant }) => {
   const { colors } = useTheme();
   const styles = useStyles();
 

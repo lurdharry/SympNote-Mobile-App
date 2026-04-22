@@ -17,7 +17,7 @@ type Props = {
  * Captures its on-screen frame on press and stores it in TransitionContext
  * so the destination screen can reverse-animate back into it on dismiss.
  */
-export function SharedElementCard({ children, onPress, style }: Props) {
+export const SharedElementCard: React.FC<Props> = ({ children, onPress, style }) => {
   const ref = useRef<View>(null);
   const { setOrigin } = useTransition();
   const scale = useSharedValue(1);
