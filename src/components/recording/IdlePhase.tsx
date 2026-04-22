@@ -3,12 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { makeStyles } from '../../theme';
 import { VoiceReactiveOrb } from './VoiceReactiveOrb';
 import { hapticLight } from '../../services/haptics';
-
-const PROMPTS = [
-  'My knee has been hurting when I climb stairs...',
-  "I've been getting headaches in the afternoon...",
-  'I feel more tired than usual...',
-];
+import { RECORDING_PROMPTS as PROMPTS } from '../../constants/prompts';
 
 type Props = {
   onStart: () => void;

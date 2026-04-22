@@ -17,19 +17,12 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import {
-  BookOpen,
-  Brain,
-  Check,
-  CircleDot,
-  Heart,
-  Hospital,
-  Search,
-} from 'lucide-react-native';
+import { Check } from 'lucide-react-native';
 import { makeStyles, spacing, typography, useTheme } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { BackButton } from '../../components/ui/BackButton';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
+import { FOCUS_OPTIONS, FocusOption } from '../../constants/focus';
 import { useProfileStore } from '../../stores/useProfileStore';
 import { hapticLight } from '../../services/haptics';
 
@@ -42,24 +35,8 @@ import { hapticLight } from '../../services/haptics';
  * drops a colored accent-ring shadow.
  */
 
-type IconRef = typeof CircleDot;
-type Option = {
-  id: string;
-  t: string;
-  s: string;
-  Icon: IconRef;
-  grad: [string, string];
-  fg: string;
-};
-
-const OPTIONS: Option[] = [
-  { id: 'chronic', t: 'Chronic condition',  s: 'Ongoing, recurring',    Icon: CircleDot, grad: ['#2C6E6B', '#1F504E'], fg: '#fff' },
-  { id: 'new',     t: 'New symptom',         s: 'Unexplained, recent',   Icon: Search,    grad: ['#E07A5F', '#C45C3F'], fg: '#fff' },
-  { id: 'mental',  t: 'Mental health',       s: 'Mood, sleep, anxiety',  Icon: Brain,     grad: ['#A8C4C2', '#6FA19E'], fg: '#1F504E' },
-  { id: 'pre-op',  t: 'Procedure prep',      s: 'Before or after',       Icon: Hospital,  grad: ['#F6C06A', '#D9964A'], fg: '#5C3D12' },
-  { id: 'loved',   t: 'For someone else',    s: 'Caregiver mode',        Icon: Heart,     grad: ['#F5A3A3', '#D97575'], fg: '#fff' },
-  { id: 'general', t: 'General journal',     s: 'Just keeping track',    Icon: BookOpen,  grad: ['#C7B98F', '#9E8F5F'], fg: '#fff' },
-];
+type Option = FocusOption;
+const OPTIONS = FOCUS_OPTIONS;
 
 export default function ScreenFocus() {
   const router = useRouter();

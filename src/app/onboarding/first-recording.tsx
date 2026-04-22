@@ -53,6 +53,8 @@ import { useRecordingsStore } from '../../stores/useRecordingsStore';
 import { StructuredEntry } from '../../stores/types';
 import { StructuredWithSources } from '../../components/recording/types';
 import { uuid } from '../../utils/uuid';
+import { RECORDING_PROMPTS } from '../../constants/prompts';
+import { FIELD_META, FieldKey } from '../../constants/fields';
 
 /**
  * Screen 06 — First recording.
@@ -64,22 +66,9 @@ import { uuid } from '../../utils/uuid';
  * ends.
  */
 
-const PROMPTS = [
-  "My knee has been hurting when I climb stairs…",
-  "I've been getting headaches in the afternoon…",
-  "I feel more tired than usual…",
-];
+const PROMPTS = RECORDING_PROMPTS;
 
 type IconRef = typeof Activity;
-type FieldKey = 'symptoms' | 'location' | 'duration' | 'severity' | 'triggers';
-type FieldMeta = { key: FieldKey; label: string; Icon: IconRef; tint: string };
-const FIELD_META: FieldMeta[] = [
-  { key: 'symptoms', label: 'Symptom',  Icon: Activity,  tint: '#E07A5F' },
-  { key: 'location', label: 'Location', Icon: MapPin,    tint: '#2C6E6B' },
-  { key: 'duration', label: 'Duration', Icon: Hourglass, tint: '#D97706' },
-  { key: 'severity', label: 'Severity', Icon: BarChart3, tint: '#C45C3F' },
-  { key: 'triggers', label: 'Triggers', Icon: Zap,       tint: '#F6C06A' },
-];
 
 function fieldDisplay(s: StructuredEntry, key: FieldKey): string {
   switch (key) {

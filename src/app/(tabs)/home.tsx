@@ -41,6 +41,11 @@ import {
 import { hapticHeavy, hapticLight } from '../../services/haptics';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { topTrendingSymptom } from '../../utils/insights';
+import {
+  DEMO_QUICK_TILES as DEMO_QUICK,
+  DEMO_TODAY_ENTRIES as DEMO_TODAY,
+  DemoEntry,
+} from '../../constants/demo/home';
 
 /**
  * Home — daily surface (per design handoff).
@@ -57,56 +62,6 @@ import { topTrendingSymptom } from '../../utils/insights';
  * the layout always looks populated (the design handoff mocks).
  */
 
-type QuickIconRef = typeof Pill;
-const DEMO_QUICK: Array<{
-  Icon: QuickIconRef;
-  t: string;
-  c: string;
-  kind: string;
-}> = [
-  { Icon: Pill,       t: 'Medication',  c: '#5A8F6E', kind: 'medication' },
-  { Icon: Activity,   t: 'Symptom',     c: '#E07A5F', kind: 'symptom' },
-  { Icon: BadgeAlert, t: 'Side effect', c: '#F6C06A', kind: 'side-effect' },
-];
-
-type DemoEntry = {
-  time: string;
-  period: 'AM' | 'PM';
-  text: string;
-  tags: { t: string; c: string }[];
-  dur?: string;
-  kind: 'voice' | 'med';
-};
-
-const DEMO_TODAY: DemoEntry[] = [
-  {
-    time: '10:42',
-    period: 'AM',
-    text: 'Morning knee pain, 6/10, worse climbing stairs.',
-    tags: [{ t: 'knee', c: '#E07A5F' }],
-    dur: '1:24',
-    kind: 'voice',
-  },
-  {
-    time: '08:15',
-    period: 'AM',
-    text:
-      'Fatigue returning — slept ~6h, groggy through breakfast.',
-    tags: [
-      { t: 'fatigue', c: '#F6C06A' },
-      { t: 'sleep', c: '#5A8F6E' },
-    ],
-    dur: '0:48',
-    kind: 'voice',
-  },
-  {
-    time: '07:30',
-    period: 'AM',
-    text: 'Methotrexate 15mg + folic acid.',
-    tags: [{ t: 'meds', c: '#5A8F6E' }],
-    kind: 'med',
-  },
-];
 
 export default function TabHome() {
   const router = useRouter();

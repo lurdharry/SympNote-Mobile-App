@@ -15,8 +15,7 @@ import { SceneTransition } from "../../components/navigation/SceneTransition";
 import { SympnoteHero } from "../../components/brand/SympnoteHero";
 import { PrimaryButton } from "../../components/ui/PrimaryButton";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
-
-const FULL_HEADLINE = "Your doctor's visit,\nfinally prepared.";
+import { FULL_HEADLINE } from "../../constants/onboarding";
 
 export default function ScreenHook() {
   const router = useRouter();

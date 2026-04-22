@@ -15,12 +15,7 @@ import Svg, {
   Defs,
   Stop,
 } from 'react-native-svg';
-import {
-  Brain,
-  Check,
-  ClipboardList,
-  Sparkles,
-} from 'lucide-react-native';
+import { Brain, Check, Sparkles } from 'lucide-react-native';
 import { makeStyles, spacing, typography, useTheme } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { BackButton } from '../../components/ui/BackButton';
@@ -28,6 +23,7 @@ import { PrimaryButton } from '../../components/ui/PrimaryButton';
 import { Confetti } from '../../components/ui/Confetti';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { hapticLight, hapticSuccess } from '../../services/haptics';
+import { ANALYZING_STEPS } from '../../constants/analyzing';
 
 /**
  * Screen 05 — Analyzing.
@@ -43,11 +39,7 @@ import { hapticLight, hapticSuccess } from '../../services/haptics';
  */
 
 type IconRef = typeof Brain;
-const STEPS: Array<{ t: string; Icon: IconRef }> = [
-  { t: 'Analyzing your needs',      Icon: Brain },
-  { t: 'Building your prep plan',   Icon: ClipboardList },
-  { t: 'Personalizing your path',   Icon: Sparkles },
-];
+const STEPS = ANALYZING_STEPS;
 
 export default function ScreenAnalyzing() {
   const router = useRouter();

@@ -3,20 +3,14 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
-import { Clipboard, History, Home, LineChart } from 'lucide-react-native';
 import { makeStyles, useTheme } from '../../theme';
 import { hapticSelect } from '../../services/haptics';
+import { TABS } from '../../constants/tabs';
 
 /**
  * Bottom tab bar — 4 tabs (Home, Prep, Insights, History). Settings is
  * a modal from the Home avatar, not a tab.
  */
-const TABS = [
-  { name: 'home',     label: 'Home',     Icon: Home },
-  { name: 'prep',     label: 'Prep',     Icon: Clipboard },
-  { name: 'insights', label: 'Insights', Icon: LineChart },
-  { name: 'history',  label: 'History',  Icon: History },
-] as const;
 
 export default function TabsLayout() {
   const { colors, isDark } = useTheme();

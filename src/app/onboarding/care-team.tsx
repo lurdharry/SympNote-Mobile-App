@@ -18,6 +18,7 @@ import { StaggeredList } from '../../components/animated/StaggeredList';
 import { useProfileStore } from '../../stores/useProfileStore';
 import { hapticLight, hapticSuccess } from '../../services/haptics';
 import { uuid } from '../../utils/uuid';
+import { CARE_TEAM_PALETTE } from '../../constants/onboarding';
 
 /**
  * Screen 04 — Care team.
@@ -34,7 +35,7 @@ type Member = {
   color: string;
 };
 
-const PALETTE = ['#2C6E6B', '#E07A5F', '#F6C06A', '#5A8F6E', '#A8C4C2'];
+const PALETTE = CARE_TEAM_PALETTE;
 
 export default function ScreenCareTeam() {
   const router = useRouter();

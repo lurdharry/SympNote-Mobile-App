@@ -18,15 +18,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import {
-  Check,
-  Flame,
-  Lock,
-  Mic,
-  Send,
-  Sparkles,
-  Trophy,
-} from 'lucide-react-native';
+import { Check, Flame, Mic, Trophy } from 'lucide-react-native';
 import { makeStyles, shadows, spacing, typography, useTheme } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { BackButton } from '../../components/ui/BackButton';
@@ -36,6 +28,7 @@ import { useProfileStore } from '../../stores/useProfileStore';
 import { useRecordingsStore } from '../../stores/useRecordingsStore';
 import { hapticHeavy } from '../../services/haptics';
 import { computeOnboardingProgress } from '../../utils/onboarding';
+import { PAYWALL_PLANS, PLAN_FEATURES, PlanDef } from '../../constants/plans';
 
 /**
  * Screen 07 — Paywall (gamified with streak/reward framing).
@@ -48,35 +41,9 @@ import { computeOnboardingProgress } from '../../utils/onboarding';
  *  - __DEV__ skip link at the bottom
  */
 
-type PlanDef = {
-  id: Plan['id'];
-  label: string;
-  price: string;
-  per: string;
-  note?: string;
-  badge?: string;
-};
-
-const PLANS: PlanDef[] = [
-  { id: 'weekly',  label: 'Weekly',  price: '$4.99',  per: '/week' },
-  { id: 'monthly', label: 'Monthly', price: '$9.99',  per: '/month' },
-  {
-    id: 'annual',
-    label: 'Annual',
-    price: '$59.99',
-    per: '/year',
-    note: 'Just $4.99/month',
-    badge: 'BEST VALUE · SAVE 50%',
-  },
-];
-
 type IconRef = typeof Mic;
-const FEATURES: Array<{ Icon: IconRef; t: string }> = [
-  { Icon: Mic,      t: 'Unlimited voice notes' },
-  { Icon: Sparkles, t: 'AI summary for every appointment' },
-  { Icon: Lock,     t: 'Private & encrypted' },
-  { Icon: Send,     t: 'Export to your doctor' },
-];
+const PLANS = PAYWALL_PLANS;
+const FEATURES = PLAN_FEATURES;
 
 export default function ScreenPaywall() {
   const router = useRouter();

@@ -30,6 +30,12 @@ import {
   SymptomFrequency,
   InsightsRange,
 } from '../../utils/insights';
+import { DAY_COLS, RANGES, ROW_LABELS } from '../../constants/insights';
+import {
+  DEMO_CORRELATIONS as CORRELATIONS,
+  DEMO_HEATMAP,
+  DEMO_SYMPTOMS,
+} from '../../constants/demo/insights';
 
 /**
  * Insights — Phase 2 (partial real data).
@@ -46,37 +52,6 @@ import {
 type Range = InsightsRange;
 
 type SymptomRow = SymptomFrequency;
-
-const DEMO_SYMPTOMS: SymptomRow[] = [
-  { name: 'Knee pain', count: 18, trend: 'up',   pct: 72, color: '#2C6E6B', sparkline: [3,4,5,4,6,7,6,5,7,8] },
-  { name: 'Fatigue',   count: 12, trend: 'up',   pct: 48, color: '#F6C06A', sparkline: [4,5,4,6,5,7,6,5,6,7] },
-  { name: 'Headache',  count:  6, trend: 'down', pct: 24, color: '#E07A5F', sparkline: [5,6,4,3,4,3,2,2,3,2] },
-  { name: 'Nausea',    count:  3, trend: 'flat', pct: 12, color: '#D97706', sparkline: [2,3,2,3,2,3,2,2,3,2] },
-];
-
-const CORRELATIONS = [
-  { a: 'Fatigue',   b: 'Poor sleep',   strength: 0.8, pattern: 'Fatigue follows nights with <6h sleep 4 of 5 times.', severity: 'strong'   },
-  { a: 'Knee pain', b: 'Stairs',       strength: 0.7, pattern: 'Knee pain is ~2× more severe on days you mention stairs.', severity: 'strong' },
-  { a: 'Headache',  b: 'Dehydration',  strength: 0.5, pattern: 'Headaches cluster on low-water days.', severity: 'moderate' },
-];
-
-const RANGES: Range[] = ['7d', '30d', '90d', 'All'];
-const DAY_COLS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-const ROW_LABELS = ['AM', 'Noon', 'PM', 'Eve', 'Night'];
-
-// Shape-only demo heatmap shown when there aren't enough real
-// recordings to bucket. Intentionally smooth so it doesn't look like
-// it's claiming a specific user pattern.
-const DEMO_HEATMAP: number[][] = (() => {
-  const rows = 5;
-  const cols = 7;
-  return Array.from({ length: rows }, (_, r) =>
-    Array.from({ length: cols }, (_, c) => {
-      const intensity = (Math.sin(r * 1.3 + c * 0.7) + 1) / 2;
-      return r === 0 || r === 2 ? intensity * 0.9 : intensity * 0.4;
-    })
-  );
-})();
 
 export default function TabInsights() {
   const { colors } = useTheme();
