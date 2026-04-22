@@ -9,8 +9,17 @@ import Animated, {
   withDelay,
   withTiming,
 } from "react-native-reanimated";
-import { Zap, Heart, Sparkles } from "lucide-react-native";
-import { makeStyles, scale, spacing, typography, useTheme, verticalScale } from "../../theme";
+import { Heart, Sparkles, Zap } from "lucide-react-native";
+import {
+  fontScale,
+  makeStyles,
+  moderateScale,
+  scale,
+  spacing,
+  typography,
+  useTheme,
+  verticalScale,
+} from "../../theme";
 import { SceneTransition } from "../../components/navigation/SceneTransition";
 import { SympnoteHero } from "../../components/brand/SympnoteHero";
 import { PrimaryButton } from "../../components/ui/PrimaryButton";
@@ -126,9 +135,9 @@ export default function ScreenHook() {
             </Animated.Text>
 
             <Animated.View style={[styles.chips, chips]}>
-              <TrustChip icon={<Zap size={12} color={colors.accent} />} label="2-min daily" />
-              <TrustChip icon={<Heart size={12} color={colors.accent} />} label="HIPAA-safe" />
-              <TrustChip icon={<Sparkles size={12} color={colors.accent} />} label="AI summary" />
+              <TrustChip Icon={Zap} label="2-min daily" tint={colors.accent} />
+              <TrustChip Icon={Heart} label="HIPAA-safe" tint={colors.success} />
+              <TrustChip Icon={Sparkles} label="AI summary" tint={colors.gold} />
             </Animated.View>
           </View>
 
@@ -142,21 +151,31 @@ export default function ScreenHook() {
   );
 }
 
-function TrustChip({ icon, label }: { icon: React.ReactNode; label: string }) {
+type LucideIcon = typeof Zap;
+
+/**
+ * Trust signal chip — a small rounded surface anchored by its own
+ * tinted icon tile. Each chip carries a distinct accent color so the
+ * three signals read as three different promises (speed · privacy ·
+ * capability) instead of a row of identical stickers.
+ */
+function TrustChip({
+  Icon,
+  label,
+  tint,
+}: {
+  Icon: LucideIcon;
+  label: string;
+  tint: string;
+}) {
   const { colors } = useTheme();
   const styles = useStyles();
   return (
-    <View
-      style={[
-        styles.trustChip,
-        {
-          backgroundColor: colors.bgSurface,
-          borderColor: colors.border,
-        },
-      ]}
-    >
-      {icon}
-      <Text style={[typography.label, { color: colors.textSecondary, marginLeft: 6 }]}>
+    <View style={styles.trustChip}>
+      <View style={[styles.trustTile, { backgroundColor: tint + '1F' }]}>
+        <Icon size={moderateScale(11)} color={tint} strokeWidth={2.4} />
+      </View>
+      <Text style={[styles.trustLabel, { color: colors.textPrimary }]}>
         {label}
       </Text>
     </View>
@@ -210,10 +229,27 @@ const useStyles = makeStyles((theme) => ({
   trustChip: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: scale(12),
-    paddingVertical: verticalScale(6),
+    gap: moderateScale(6),
+    paddingLeft: scale(6),
+    paddingRight: scale(12),
+    paddingVertical: verticalScale(5),
     borderRadius: theme.radius.full,
     borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.bgSurface,
+    ...theme.shadows.card,
+  },
+  trustTile: {
+    width: moderateScale(22),
+    height: moderateScale(22),
+    borderRadius: moderateScale(7),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  trustLabel: {
+    fontFamily: "DMSans_600SemiBold",
+    fontSize: fontScale(12),
+    letterSpacing: 0.1,
   },
   ctaArea: {
     paddingHorizontal: theme.spacing.s6,
