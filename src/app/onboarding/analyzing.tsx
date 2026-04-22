@@ -1,23 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
   FadeIn,
+  SharedValue,
+  useAnimatedProps,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
+  withDelay,
   withRepeat,
   withSequence,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { TextInput as RNTextInput } from 'react-native';
 import { RadialGradient } from 'react-native-svg';
 import Svg, {
   Circle as SvgCircle,
   Defs,
   Stop,
 } from 'react-native-svg';
-import { Brain, Check, Sparkles } from 'lucide-react-native';
+import { Brain, Check, Sparkles, Zap } from 'lucide-react-native';
 import { makeStyles, moderateScale, scale, spacing, typography, useTheme, verticalScale } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { BackButton } from '../../components/ui/BackButton';
@@ -63,6 +69,8 @@ function useTypewriter(text: string, charMs: number, enabled: boolean) {
   return typed;
 }
 
+const XP_PER_STEP = 10;
+
 export default function ScreenAnalyzing() {
   const router = useRouter();
   const { colors } = useTheme();
@@ -74,9 +82,40 @@ export default function ScreenAnalyzing() {
   const [ready, setReady] = useState(false);
   const [confetti, setConfetti] = useState(false);
 
+  const completedCount = done.filter(Boolean).length;
+  const xpEarned = completedCount * XP_PER_STEP;
+
+  // Progress 0..1 and total XP, spring-animated as steps complete.
+  // Drives the orb's progress arc and the XP ticker at the top.
+  const progressSv = useSharedValue(0);
+  const xpSv = useSharedValue(0);
+  const xpPulse = useSharedValue(0);
+  useEffect(() => {
+    const target = completedCount / STEPS.length;
+    if (reduced) {
+      progressSv.value = target;
+      xpSv.value = xpEarned;
+      return;
+    }
+    progressSv.value = withTiming(target, {
+      duration: 520,
+      easing: Easing.out(Easing.cubic),
+    });
+    xpSv.value = withTiming(xpEarned, {
+      duration: 520,
+      easing: Easing.out(Easing.cubic),
+    });
+    // XP pill pops on change — bigger pop on the final step.
+    const popTo = completedCount === STEPS.length ? 1.22 : 1.12;
+    xpPulse.value = withSequence(
+      withTiming(popTo, { duration: 160, easing: Easing.out(Easing.cubic) }),
+      withSpring(1, { damping: 9, stiffness: 180 })
+    );
+  }, [completedCount, xpEarned, reduced, progressSv, xpSv, xpPulse]);
+
+  const xpDisplay = useDerivedValue(() => Math.round(xpSv.value));
+
   // Typewriter: types the active step's label out char by char.
-  // Each step has ~1100ms before advancing, so at 32ms/char a 24-char
-  // label finishes typing in ~770ms and rests briefly before swapping.
   const typedText = useTypewriter(STEPS[activeText]!.t, 32, !reduced);
 
   // Blinking caret — toggles opacity via a reanimated loop so the
@@ -142,7 +181,19 @@ export default function ScreenAnalyzing() {
 
           <View style={styles.hero}>
             <Confetti show={confetti} />
-            <OrbitOrb ready={ready} reduced={reduced} />
+
+            <XPTicker
+              xp={xpEarned}
+              total={STEPS.length * XP_PER_STEP}
+              pulse={xpPulse}
+            />
+
+            <OrbitOrb
+              ready={ready}
+              reduced={reduced}
+              progress={progressSv}
+              completedCount={completedCount}
+            />
 
             <View style={styles.textSlot}>
               {ready ? (
@@ -199,17 +250,26 @@ export default function ScreenAnalyzing() {
   );
 }
 
+const ORB_SIZE = moderateScale(220);
+const PROGRESS_RADIUS = (ORB_SIZE - moderateScale(20)) / 2;
+const PROGRESS_CIRC = 2 * Math.PI * PROGRESS_RADIUS;
+const AnimatedSvgCircle = Animated.createAnimatedComponent(SvgCircle);
+
 function OrbitOrb({
   ready,
   reduced,
+  progress,
+  completedCount,
 }: {
   ready: boolean;
   reduced: boolean;
+  progress: SharedValue<number>;
+  completedCount: number;
 }) {
   const styles = useStyles();
   const spin1 = useSharedValue(0);
-  const spin2 = useSharedValue(0);
   const pulse = useSharedValue(0);
+  const flash = useSharedValue(0);
 
   useEffect(() => {
     if (reduced) return;
@@ -218,38 +278,51 @@ function OrbitOrb({
       -1,
       false
     );
-    spin2.value = withRepeat(
-      withTiming(-1, { duration: 8000, easing: Easing.linear }),
-      -1,
-      false
-    );
     pulse.value = withRepeat(
       withTiming(1, { duration: 2400, easing: Easing.inOut(Easing.quad) }),
       -1,
       true
     );
-  }, [reduced, spin1, spin2, pulse]);
+  }, [reduced, spin1, pulse]);
+
+  // Fire a flash bump every time a step lands.
+  useEffect(() => {
+    if (reduced || completedCount === 0) return;
+    flash.value = withSequence(
+      withTiming(1, { duration: 180, easing: Easing.out(Easing.cubic) }),
+      withTiming(0, { duration: 520, easing: Easing.in(Easing.cubic) })
+    );
+  }, [completedCount, reduced, flash]);
 
   const ring1Style = useAnimatedStyle(() => ({
     transform: [{ rotate: `${spin1.value * 360}deg` }],
   }));
-  const ring2Style = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${spin2.value * 360}deg` }],
-  }));
   const orbStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + pulse.value * 0.06 }],
-    shadowOpacity: 0.4 + pulse.value * 0.25,
-    shadowRadius: 24 + pulse.value * 16,
+    transform: [
+      { scale: 1 + pulse.value * 0.06 + flash.value * 0.1 },
+    ],
+    shadowOpacity: 0.4 + pulse.value * 0.25 + flash.value * 0.35,
+    shadowRadius: 24 + pulse.value * 16 + flash.value * 18,
+  }));
+  const haloStyle = useAnimatedStyle(() => ({
+    opacity: flash.value * 0.55,
+    transform: [{ scale: 1 + flash.value * 0.2 }],
+  }));
+
+  // Progress-arc stroke-dashoffset — fills CW as steps complete.
+  const arcProps = useAnimatedProps(() => ({
+    strokeDashoffset: PROGRESS_CIRC * (1 - progress.value),
   }));
 
   return (
     <View style={styles.orbFrame}>
+      {/* Outer dashed ring — ambient motion. */}
       <Animated.View
         style={[
           styles.orbitRing,
           {
-            width: 220,
-            height: 220,
+            width: ORB_SIZE,
+            height: ORB_SIZE,
             borderColor: 'rgba(44,110,107,0.25)',
             borderStyle: 'dashed',
             borderWidth: 2,
@@ -257,18 +330,51 @@ function OrbitOrb({
           ring1Style,
         ]}
       />
+
+      {/* Progress arc — functional, reads 0→100%. */}
+      <Svg
+        width={ORB_SIZE}
+        height={ORB_SIZE}
+        style={{
+          position: 'absolute',
+          transform: [{ rotate: '-90deg' }],
+        }}
+      >
+        <SvgCircle
+          cx={ORB_SIZE / 2}
+          cy={ORB_SIZE / 2}
+          r={PROGRESS_RADIUS}
+          stroke="rgba(246,192,106,0.18)"
+          strokeWidth={moderateScale(3)}
+          fill="none"
+        />
+        <AnimatedSvgCircle
+          cx={ORB_SIZE / 2}
+          cy={ORB_SIZE / 2}
+          r={PROGRESS_RADIUS}
+          stroke="#F6C06A"
+          strokeWidth={moderateScale(3)}
+          strokeLinecap="round"
+          fill="none"
+          strokeDasharray={`${PROGRESS_CIRC} ${PROGRESS_CIRC}`}
+          animatedProps={arcProps}
+        />
+      </Svg>
+
+      {/* Flash halo — pulses when each step lands. */}
       <Animated.View
+        pointerEvents="none"
         style={[
           styles.orbitRing,
           {
-            width: 180,
-            height: 180,
-            borderColor: 'rgba(246,192,106,0.3)',
-            borderWidth: 2,
+            width: moderateScale(170),
+            height: moderateScale(170),
+            backgroundColor: '#F6C06A',
           },
-          ring2Style,
+          haloStyle,
         ]}
       />
+
       <Animated.View
         style={[
           styles.orb,
@@ -289,14 +395,67 @@ function OrbitOrb({
             }}
           >
             {ready ? (
-              <Check size={44} color="#FFFFFF" strokeWidth={3} />
+              <Check size={moderateScale(44)} color="#FFFFFF" strokeWidth={3} />
             ) : (
-              <Sparkles size={40} color="#FFFFFF" strokeWidth={2} />
+              <Sparkles size={moderateScale(40)} color="#FFFFFF" strokeWidth={2} />
             )}
           </View>
         </View>
       </Animated.View>
     </View>
+  );
+}
+
+const AnimatedTextInput = Animated.createAnimatedComponent(RNTextInput);
+
+function XPTicker({
+  xp,
+  total,
+  pulse,
+}: {
+  xp: number;
+  total: number;
+  pulse: SharedValue<number>;
+}) {
+  const styles = useStyles();
+
+  // Animate the counter via a shared value so the rendered string
+  // actually counts up rather than snapping.
+  const displayed = useSharedValue(xp);
+  useEffect(() => {
+    displayed.value = withTiming(xp, {
+      duration: 520,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [xp, displayed]);
+
+  const animatedProps = useAnimatedProps(
+    () => ({ text: String(Math.round(displayed.value)) } as any)
+  );
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse.value || 1 }],
+  }));
+
+  return (
+    <Animated.View style={[styles.xpPill, pulseStyle]}>
+      <View style={styles.xpBolt}>
+        <Sparkles
+          size={moderateScale(10)}
+          color="#B45309"
+          fill="#B45309"
+        />
+      </View>
+      <AnimatedTextInput
+        editable={false}
+        defaultValue={String(xp)}
+        animatedProps={animatedProps}
+        style={styles.xpNumber}
+        underlineColorAndroid="transparent"
+      />
+      <Text style={styles.xpSlash}>/{total}</Text>
+      <Text style={styles.xpSuffix}>XP</Text>
+    </Animated.View>
   );
 }
 
@@ -328,16 +487,54 @@ function CheckRow({
 }) {
   const { colors } = useTheme();
   const styles = useStyles();
+  const reduced = useReducedMotion();
+
+  // Pop the whole row forward by a hair when it transitions to done,
+  // and settle back — gives a tactile "checked off" feel.
+  const rowScale = useSharedValue(1);
+  const tintLevel = useSharedValue(0);
+  useEffect(() => {
+    if (!done) return;
+    if (reduced) {
+      tintLevel.value = 1;
+      return;
+    }
+    rowScale.value = withSequence(
+      withTiming(1.04, { duration: 160, easing: Easing.out(Easing.cubic) }),
+      withSpring(1, { damping: 10, stiffness: 200 })
+    );
+    tintLevel.value = withTiming(1, { duration: 280 });
+  }, [done, reduced, rowScale, tintLevel]);
+
+  // The +10 XP badge bounces in when the row lands.
+  const xpScale = useSharedValue(done ? 1 : 0);
+  const xpOpacity = useSharedValue(done ? 1 : 0);
+  useEffect(() => {
+    if (!done) return;
+    if (reduced) {
+      xpScale.value = 1;
+      xpOpacity.value = 1;
+      return;
+    }
+    xpOpacity.value = withTiming(1, { duration: 140 });
+    xpScale.value = withSequence(
+      withTiming(1.3, { duration: 170, easing: Easing.out(Easing.back(2)) }),
+      withSpring(1, { damping: 9, stiffness: 220 })
+    );
+  }, [done, reduced, xpScale, xpOpacity]);
+
+  const rowStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: rowScale.value }],
+    backgroundColor: `rgba(90,143,110,${tintLevel.value * 0.08})`,
+    opacity: 0.5 + tintLevel.value * 0.5,
+  }));
+  const xpStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: xpScale.value }],
+    opacity: xpOpacity.value,
+  }));
+
   return (
-    <View
-      style={[
-        styles.checkRow,
-        {
-          backgroundColor: done ? success + '14' : 'transparent',
-          opacity: done ? 1 : 0.5,
-        },
-      ]}
-    >
+    <Animated.View style={[styles.checkRow, rowStyle]}>
       <View
         style={[
           styles.checkIcon,
@@ -345,9 +542,9 @@ function CheckRow({
         ]}
       >
         {done ? (
-          <Check size={16} color="#FFFFFF" strokeWidth={3} />
+          <Check size={moderateScale(16)} color="#FFFFFF" strokeWidth={3} />
         ) : (
-          <Icon size={16} color={colors.textSecondary} strokeWidth={2} />
+          <Icon size={moderateScale(16)} color={colors.textSecondary} strokeWidth={2} />
         )}
       </View>
       <Text
@@ -362,20 +559,10 @@ function CheckRow({
       >
         {label}
       </Text>
-      {done && (
-        <Text
-          style={[
-            typography.label,
-            {
-              color: success,
-              fontFamily: 'Inter_700Bold',
-            },
-          ]}
-        >
-          +10 XP
-        </Text>
-      )}
-    </View>
+      <Animated.View style={[styles.xpBadge, { borderColor: success + '55' }, xpStyle]}>
+        <Text style={[styles.xpBadgeText, { color: success }]}>+10 XP</Text>
+      </Animated.View>
+    </Animated.View>
   );
 }
 
@@ -435,5 +622,62 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: moderateScale(16),
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  xpPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(6),
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(6),
+    borderRadius: theme.radius.full,
+    backgroundColor: '#FFE6B0',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#F6C06A',
+    marginBottom: theme.spacing.s5,
+    ...theme.shadows.card,
+  },
+  xpBolt: {
+    width: moderateScale(18),
+    height: moderateScale(18),
+    borderRadius: moderateScale(9),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  xpNumber: {
+    fontFamily: 'Fraunces_500Medium',
+    fontSize: moderateScale(18),
+    lineHeight: moderateScale(20),
+    color: '#7C2D12',
+    letterSpacing: -0.3,
+    minWidth: moderateScale(24),
+    padding: 0,
+    textAlign: 'right',
+  },
+  xpSlash: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: moderateScale(13),
+    color: '#B45309',
+    opacity: 0.75,
+  },
+  xpSuffix: {
+    fontFamily: 'Inter_700Bold',
+    fontSize: moderateScale(11),
+    letterSpacing: 1,
+    color: '#7C2D12',
+    marginLeft: moderateScale(2),
+  },
+  xpBadge: {
+    paddingHorizontal: scale(8),
+    paddingVertical: verticalScale(3),
+    borderRadius: theme.radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: '#FFFFFF',
+  },
+  xpBadgeText: {
+    ...theme.typography.caption,
+    fontFamily: 'Inter_700Bold',
+    fontSize: moderateScale(11),
+    letterSpacing: 0.4,
   },
 }));
