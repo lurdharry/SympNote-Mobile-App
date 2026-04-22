@@ -19,7 +19,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Check, Flame, Mic, Trophy } from 'lucide-react-native';
-import { makeStyles, shadows, spacing, typography, useTheme } from '../../theme';
+import { makeStyles, moderateScale, scale, shadows, spacing, typography, useTheme, verticalScale } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { BackButton } from '../../components/ui/BackButton';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
@@ -467,67 +467,67 @@ const useStyles = makeStyles((theme) => ({
   plusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(4),
     borderRadius: theme.radius.full,
     overflow: 'hidden',
   },
   progress: {
     marginTop: theme.spacing.s5,
-    padding: 16,
+    padding: moderateScale(16),
     borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
   },
   progressRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
   },
   progressTrack: {
-    height: 8,
-    borderRadius: 4,
+    height: verticalScale(8),
+    borderRadius: moderateScale(4),
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: moderateScale(4),
     overflow: 'hidden',
   },
   progressFoot: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: verticalScale(8),
   },
   featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: moderateScale(12),
   },
   featureIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: moderateScale(28),
+    height: moderateScale(28),
+    borderRadius: moderateScale(8),
     alignItems: 'center',
     justifyContent: 'center',
   },
   plan: {
-    padding: 16,
+    padding: moderateScale(16),
     borderRadius: theme.radius.lg,
     position: 'relative',
   },
   planBadge: {
     position: 'absolute',
-    top: -10,
-    left: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    top: -verticalScale(10),
+    left: scale(16),
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(4),
     borderRadius: theme.radius.full,
     overflow: 'hidden',
   },
   radio: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: moderateScale(24),
+    height: moderateScale(24),
+    borderRadius: moderateScale(12),
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',

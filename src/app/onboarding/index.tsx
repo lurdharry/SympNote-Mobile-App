@@ -10,7 +10,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { Zap, Heart, Sparkles } from "lucide-react-native";
-import { makeStyles, spacing, typography, useTheme } from "../../theme";
+import { makeStyles, scale, spacing, typography, useTheme, verticalScale } from "../../theme";
 import { SceneTransition } from "../../components/navigation/SceneTransition";
 import { SympnoteHero } from "../../components/brand/SympnoteHero";
 import { PrimaryButton } from "../../components/ui/PrimaryButton";
@@ -210,8 +210,8 @@ const useStyles = makeStyles((theme) => ({
   trustChip: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(6),
     borderRadius: theme.radius.full,
     borderWidth: StyleSheet.hairlineWidth,
   },

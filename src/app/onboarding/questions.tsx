@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { makeStyles, spacing, typography, useTheme } from '../../theme';
+import { makeStyles, spacing, typography, useTheme, verticalScale } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { BackButton } from '../../components/ui/BackButton';
 import {
@@ -113,7 +113,7 @@ const useStyles = makeStyles((theme) => ({
   },
   tray: {
     paddingHorizontal: theme.spacing.s5,
-    paddingTop: 10,
+    paddingTop: verticalScale(10),
     paddingBottom: theme.spacing.s4,
     borderTopWidth: 1,
   },

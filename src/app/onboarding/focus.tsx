@@ -18,7 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Check } from 'lucide-react-native';
-import { makeStyles, spacing, typography, useTheme } from '../../theme';
+import { fontScale, makeStyles, moderateScale, spacing, typography, useTheme } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { BackButton } from '../../components/ui/BackButton';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
@@ -294,7 +294,7 @@ const useStyles = makeStyles((theme) => ({
     marginTop: theme.spacing.s5,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: moderateScale(10),
   },
   tileSlot: {
     width: '48.5%',
@@ -302,14 +302,14 @@ const useStyles = makeStyles((theme) => ({
   },
   tile: {
     flex: 1,
-    padding: 14,
-    borderRadius: 18,
+    padding: moderateScale(14),
+    borderRadius: moderateScale(18),
     overflow: 'hidden',
     position: 'relative',
   },
   blob: {
     position: 'absolute',
-    borderRadius: 9999,
+    borderRadius: theme.radius.full,
   },
   selectedRing: {
     position: 'absolute',
@@ -317,7 +317,7 @@ const useStyles = makeStyles((theme) => ({
     left: -3,
     right: -3,
     bottom: -3,
-    borderRadius: 21,
+    borderRadius: moderateScale(21),
     borderWidth: 3,
   },
   selectedOuterRing: {
@@ -326,32 +326,32 @@ const useStyles = makeStyles((theme) => ({
     left: -5,
     right: -5,
     bottom: -5,
-    borderRadius: 23,
+    borderRadius: moderateScale(23),
     borderWidth: 2,
   },
   iconWrap: {
-    width: 36,
-    height: 36,
+    width: moderateScale(36),
+    height: moderateScale(36),
     alignItems: 'flex-start',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: moderateScale(4),
   },
   label: {
-    fontSize: 15,
-    lineHeight: 18,
+    fontSize: fontScale(15),
+    lineHeight: fontScale(18),
   },
   sub: {
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: fontScale(11),
+    lineHeight: fontScale(14),
     fontFamily: 'Inter_500Medium',
   },
   checkBadge: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    top: moderateScale(10),
+    right: moderateScale(10),
+    width: moderateScale(24),
+    height: moderateScale(24),
+    borderRadius: moderateScale(12),
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',

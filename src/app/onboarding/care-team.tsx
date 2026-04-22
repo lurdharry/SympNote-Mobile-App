@@ -10,7 +10,7 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus } from 'lucide-react-native';
-import { makeStyles, shadows, spacing, typography, useTheme } from '../../theme';
+import { fontScale, makeStyles, moderateScale, scale, shadows, spacing, typography, useTheme, verticalScale } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { BackButton } from '../../components/ui/BackButton';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
@@ -348,38 +348,38 @@ const useStyles = makeStyles((theme) => ({
   memberCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 16,
+    gap: moderateScale(12),
+    padding: moderateScale(16),
     borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: moderateScale(20),
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarLetter: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: fontScale(15),
     fontFamily: 'Inter_700Bold',
   },
   addingCard: {
-    padding: 16,
+    padding: moderateScale(16),
     borderRadius: theme.radius.lg,
     borderWidth: 2,
-    gap: 8,
+    gap: moderateScale(8),
   },
   input: {
-    height: 44,
-    paddingHorizontal: 12,
+    height: verticalScale(44),
+    paddingHorizontal: scale(12),
     borderRadius: theme.radius.md,
     borderWidth: StyleSheet.hairlineWidth,
   },
   smallBtn: {
     flex: 1,
-    height: 40,
+    height: verticalScale(40),
     borderRadius: theme.radius.full,
     alignItems: 'center',
     justifyContent: 'center',
@@ -388,10 +388,10 @@ const useStyles = makeStyles((theme) => ({
     borderWidth: 2,
     borderStyle: 'dashed',
     borderRadius: theme.radius.lg,
-    paddingVertical: 20,
+    paddingVertical: verticalScale(20),
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: 6,
+    gap: moderateScale(6),
   },
 }));

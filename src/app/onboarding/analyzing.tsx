@@ -16,7 +16,7 @@ import Svg, {
   Stop,
 } from 'react-native-svg';
 import { Brain, Check, Sparkles } from 'lucide-react-native';
-import { makeStyles, spacing, typography, useTheme } from '../../theme';
+import { makeStyles, moderateScale, scale, spacing, typography, useTheme, verticalScale } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { BackButton } from '../../components/ui/BackButton';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
@@ -340,8 +340,8 @@ const useStyles = makeStyles((theme) => ({
     paddingHorizontal: theme.spacing.s6,
   },
   orbFrame: {
-    width: 220,
-    height: 220,
+    width: moderateScale(220),
+    height: moderateScale(220),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: theme.spacing.s10,
@@ -351,14 +351,14 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: theme.radius.full,
   },
   orb: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+    width: moderateScale(140),
+    height: moderateScale(140),
+    borderRadius: moderateScale(70),
     overflow: 'hidden',
     elevation: 8,
   },
   textSlot: {
-    height: 40,
+    height: verticalScale(40),
     marginBottom: theme.spacing.s8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -366,20 +366,20 @@ const useStyles = makeStyles((theme) => ({
   },
   checkList: {
     width: '100%',
-    maxWidth: 300,
-    gap: 10,
+    maxWidth: scale(300),
+    gap: moderateScale(10),
   },
   checkRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 12,
+    gap: moderateScale(12),
+    padding: moderateScale(12),
     borderRadius: theme.radius.md,
   },
   checkIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: moderateScale(32),
+    height: moderateScale(32),
+    borderRadius: moderateScale(16),
     alignItems: 'center',
     justifyContent: 'center',
   },

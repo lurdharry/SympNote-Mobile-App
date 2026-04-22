@@ -29,7 +29,7 @@ import Svg, {
   RadialGradient,
   Stop,
 } from 'react-native-svg';
-import { makeStyles, radius, shadows, spacing, typography, useTheme } from '../../theme';
+import { makeStyles, moderateScale, radius, scale, shadows, spacing, typography, useTheme, verticalScale } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { BackButton } from '../../components/ui/BackButton';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
@@ -749,9 +749,9 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: theme.radius.full,
   },
   micCore: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: moderateScale(120),
+    height: moderateScale(120),
+    borderRadius: moderateScale(60),
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
@@ -771,13 +771,13 @@ const useStyles = makeStyles((theme) => ({
     elevation: 12,
   },
   stopShape: {
-    width: 26,
-    height: 26,
-    borderRadius: 6,
+    width: moderateScale(26),
+    height: moderateScale(26),
+    borderRadius: moderateScale(6),
     backgroundColor: '#FFFFFF',
   },
   subSlot: {
-    height: 60,
+    height: verticalScale(60),
     marginTop: theme.spacing.s5,
     width: '100%',
     alignItems: 'center',
@@ -790,12 +790,12 @@ const useStyles = makeStyles((theme) => ({
     marginTop: theme.spacing.s3,
   },
   shimmer: {
-    height: 14,
-    borderRadius: 7,
+    height: verticalScale(14),
+    borderRadius: moderateScale(7),
     overflow: 'hidden',
   },
   card: {
-    padding: 16,
+    padding: moderateScale(16),
     borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     marginTop: theme.spacing.s4,
@@ -803,8 +803,8 @@ const useStyles = makeStyles((theme) => ({
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
+    gap: moderateScale(6),
+    marginBottom: moderateScale(4),
   },
   aiCard: {
     borderWidth: 2,
@@ -812,23 +812,23 @@ const useStyles = makeStyles((theme) => ({
   },
   aiBlob: {
     position: 'absolute',
-    right: -16,
-    top: -16,
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    right: -scale(16),
+    top: -verticalScale(16),
+    width: moderateScale(96),
+    height: moderateScale(96),
+    borderRadius: moderateScale(48),
   },
   fieldRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    gap: moderateScale(12),
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(8),
     borderRadius: theme.radius.sm,
   },
   xpBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: scale(8),
+    paddingVertical: verticalScale(2),
     borderRadius: theme.radius.full,
   },
 }));
