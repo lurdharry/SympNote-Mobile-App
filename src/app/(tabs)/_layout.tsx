@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
-import { makeStyles, useTheme } from '../../theme';
+import { makeStyles, moderateScale, scale, useTheme, verticalScale } from '../../theme';
 import { hapticSelect } from '../../services/haptics';
 import { TABS } from '../../constants/tabs';
 
@@ -60,7 +60,7 @@ export default function TabsLayout() {
                       style={styles.tab}
                     >
                       {isActive && <View style={styles.activeRule} />}
-                      <cfg.Icon size={22} color={tint} strokeWidth={2} />
+                      <cfg.Icon size={moderateScale(22)} color={tint} strokeWidth={2} />
                       <Text
                         style={[
                           styles.label,
@@ -95,7 +95,7 @@ const useStyles = makeStyles((theme) => ({
   wrap: { overflow: 'hidden' },
   bar: {
     flexDirection: 'row',
-    height: 60,
+    height: verticalScale(60),
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: theme.colors.border,
     paddingHorizontal: theme.spacing.s3,
@@ -104,14 +104,14 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
+    gap: moderateScale(2),
     position: 'relative',
   },
   activeRule: {
     position: 'absolute',
     top: 0,
-    width: 40,
-    height: 2,
+    width: scale(40),
+    height: verticalScale(2),
     borderRadius: 1,
     backgroundColor: theme.colors.accent,
   },

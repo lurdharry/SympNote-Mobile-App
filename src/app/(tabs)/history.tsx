@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Mic, Search, X as XIcon } from 'lucide-react-native';
-import { makeStyles, shadows, spacing, typography, useTheme } from '../../theme';
+import { makeStyles, moderateScale, scale, shadows, spacing, typography, useTheme, verticalScale } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { TagChip } from '../../components/ui/TagChip';
 import { useRecordingsStore } from '../../stores/useRecordingsStore';
@@ -413,40 +413,40 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: 'space-between',
   },
   searchRow: {
-    height: 44,
+    height: verticalScale(44),
     borderRadius: theme.radius.full,
     borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 16,
+    paddingHorizontal: scale(16),
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: moderateScale(8),
   },
   pillRow: {
     flexDirection: 'row',
-    gap: 6,
+    gap: moderateScale(6),
     paddingHorizontal: theme.spacing.s6,
-    paddingVertical: 4,
+    paddingVertical: verticalScale(4),
   },
   filterPill: {
-    height: 32,
-    paddingHorizontal: 12,
+    height: verticalScale(32),
+    paddingHorizontal: scale(12),
     borderRadius: theme.radius.full,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
   },
   clearPill: {
-    height: 32,
-    paddingHorizontal: 12,
+    height: verticalScale(32),
+    paddingHorizontal: scale(12),
     borderRadius: theme.radius.full,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: moderateScale(4),
   },
   groupHeader: {
     paddingHorizontal: theme.spacing.s6,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingTop: verticalScale(12),
+    paddingBottom: verticalScale(8),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -458,8 +458,8 @@ const useStyles = makeStyles((theme) => ({
     overflow: 'hidden',
   },
   entryRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(14),
   },
   entryMeta: {
     flexDirection: 'row',
@@ -467,11 +467,11 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: 'space-between',
   },
   noMatchIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: moderateScale(56),
+    height: moderateScale(56),
+    borderRadius: moderateScale(28),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: verticalScale(12),
   },
 }));
