@@ -2,8 +2,7 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import { SharedValue } from 'react-native-reanimated';
 import { useTheme, spacing, typography } from '../../theme';
-import { WaveformCanvas } from '../animated/WaveformCanvas';
-import { MicButton } from './MicButton';
+import { VoiceReactiveOrb } from './VoiceReactiveOrb';
 import { formatDuration } from '../../utils/date';
 
 type Props = {
@@ -13,6 +12,11 @@ type Props = {
   onStop: () => void;
 };
 
+/**
+ * Active recording scene. The VoiceReactiveOrb does double duty as both
+ * the visualizer AND the stop button — no separate waveform bar, no
+ * separate affordance. The live transcript streams underneath.
+ */
 export function RecordingPhase({
   meterSv,
   liveTranscript,
@@ -23,44 +27,47 @@ export function RecordingPhase({
 
   return (
     <View style={{ alignItems: 'center', marginVertical: spacing.s8 }}>
-      <MicButton active onPress={onStop} />
+      <VoiceReactiveOrb active meterSv={meterSv} onPress={onStop} size={240} />
 
-      <View style={{ alignItems: 'center', marginTop: spacing.s4 }}>
-        <WaveformCanvas level={meterSv} width={260} height={60} active />
-        <Text
-          style={[
-            typography.number,
-            {
-              color: colors.warning,
-              marginTop: spacing.s2,
-              fontSize: 15,
-            },
-          ]}
+      <Text
+        style={[
+          typography.numberEditorial,
+          {
+            color: colors.warning,
+            marginTop: spacing.s5,
+            fontSize: 24,
+            lineHeight: 26,
+          },
+        ]}
+      >
+        {formatDuration(durationSec)}
+      </Text>
+
+      {!!liveTranscript && (
+        <View
+          style={{ marginTop: spacing.s4, paddingHorizontal: spacing.s4 }}
         >
-          {formatDuration(durationSec)}
-        </Text>
-        {!!liveTranscript && (
-          <View style={{ marginTop: spacing.s3, paddingHorizontal: spacing.s4 }}>
-            <Text
-              style={[
-                typography.body,
-                {
-                  color: colors.textPrimary,
-                  textAlign: 'center',
-                  minHeight: 22,
-                },
-              ]}
-            >
-              {liveTranscript}
-            </Text>
-          </View>
-        )}
-      </View>
+          <Text
+            style={[
+              typography.bodyLarge,
+              {
+                color: colors.textPrimary,
+                textAlign: 'center',
+                minHeight: 26,
+                fontSize: 18,
+                lineHeight: 26,
+              },
+            ]}
+          >
+            {liveTranscript}
+          </Text>
+        </View>
+      )}
 
       <Text
         style={[
           typography.caption,
-          { color: colors.textTertiary, marginTop: spacing.s4 },
+          { color: colors.textTertiary, marginTop: spacing.s5 },
         ]}
       >
         Tap to finish

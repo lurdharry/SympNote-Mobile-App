@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useTheme, spacing, typography } from '../../theme';
-import { MicButton } from './MicButton';
+import { VoiceReactiveOrb } from './VoiceReactiveOrb';
 import { hapticLight } from '../../services/haptics';
 
 const PROMPTS = [
@@ -35,12 +35,12 @@ export function IdlePhase({ onStart, onTypeInstead }: Props) {
         </Text>
       </View>
 
-      <View style={{ alignItems: 'center', marginVertical: spacing.s8 }}>
-        <MicButton active={false} onPress={onStart} />
+      <View style={{ alignItems: 'center', marginVertical: spacing.s10 }}>
+        <VoiceReactiveOrb active={false} onPress={onStart} size={220} />
         <Text
           style={[
             typography.caption,
-            { color: colors.textTertiary, marginTop: spacing.s4 },
+            { color: colors.textTertiary, marginTop: spacing.s5 },
           ]}
         >
           Tap to record
