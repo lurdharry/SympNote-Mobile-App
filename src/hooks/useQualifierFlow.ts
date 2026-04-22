@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useProfileStore } from '../stores/useProfileStore';
-import { hapticLight } from '../services/haptics';
+import { compact, omit } from 'lodash';
+import { useProfileStore } from '@/stores/useProfileStore';
+import { hapticLight } from '@/services/haptics';
 import {
   Option,
   PLAN_UNLOCKS,
@@ -8,7 +9,7 @@ import {
   QUALIFIER_TIMINGS,
   Question,
   QUESTIONS,
-} from '../constants/onboarding';
+} from '@/constants/onboarding';
 
 type Phase = 'typing' | 'answering' | 'advancing' | 'complete';
 
@@ -94,13 +95,13 @@ export function useQualifierFlow(onComplete: () => void): QualifierFlow {
     // Drive from QUESTIONS order (not Object.keys) so the list is
     // deterministic and slicing to `step` naturally hides any answer
     // the user has walked back past.
-    return QUESTIONS.slice(0, step)
-      .map((q) => {
+    return compact(
+      QUESTIONS.slice(0, step).map((q) => {
         const a = answers[q.id];
         if (!a) return null;
         return PLAN_UNLOCKS[`${q.id}:${a.v}`] ?? null;
-      })
-      .filter((p): p is PlanItem => p !== null);
+      }),
+    );
   }, [answers, step]);
 
   const answer = useCallback(
@@ -130,16 +131,8 @@ export function useQualifierFlow(onComplete: () => void): QualifierFlow {
     // locally and in the persisted profile, so the plan card + paywall
     // progress reflect only what's still "locked in".
     const toDrop = QUESTIONS.slice(prevStep);
-    setAnswers((prev) => {
-      const next = { ...prev };
-      toDrop.forEach((q) => {
-        delete next[q.id];
-      });
-      return next;
-    });
-    toDrop.forEach((q) => {
-      setProfileAnswer(q.profileKey, '');
-    });
+    setAnswers((prev) => omit(prev, toDrop.map((q) => q.id)));
+    toDrop.forEach((q) => setProfileAnswer(q.profileKey, ''));
     setStep(prevStep);
   }, [step, setProfileAnswer]);
 
