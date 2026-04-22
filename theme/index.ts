@@ -7,6 +7,7 @@ export * from "./typography";
 export * from "./spacing";
 export * from "./radius";
 export * from "./shadows";
+export * from "./makeStyles";
 
 export function useTheme(): { colors: ColorPalette; isDark: boolean } {
   const scheme = useColorScheme();
