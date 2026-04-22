@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 export interface UseTypewriterOptions {
   /** Milliseconds per character. Default 32. */
@@ -17,7 +17,7 @@ export interface UseTypewriterOptions {
  */
 export const useTypewriter = (text: string, options: UseTypewriterOptions = {}): string => {
   const { charMs = 32, delayMs = 0, enabled = true, onDone } = options;
-  const [typed, setTyped] = useState<string>(enabled ? '' : text);
+  const [typed, setTyped] = useState<string>(enabled ? "" : text);
 
   useEffect(() => {
     if (!enabled) {
@@ -25,10 +25,11 @@ export const useTypewriter = (text: string, options: UseTypewriterOptions = {}):
       onDone?.();
       return;
     }
-    setTyped('');
+    setTyped("");
     let i = 0;
     let cancelled = false;
     let intervalId: ReturnType<typeof setInterval> | null = null;
+
     const startId = setTimeout(() => {
       intervalId = setInterval(() => {
         if (cancelled) return;

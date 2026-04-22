@@ -60,7 +60,6 @@ export const ShimmerLines: React.FC = () => {
 const useStyles = makeStyles(() => ({
   frame: {
     width: '100%',
-    maxWidth: 260,
     gap: 8,
   },
   line: {

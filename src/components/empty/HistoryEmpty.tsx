@@ -93,6 +93,5 @@ const useStyles = makeStyles((theme) => ({
     color: theme.colors.textTertiary,
     marginTop: theme.spacing.s2,
     textAlign: 'center',
-    maxWidth: scale(280),
   },
 }));
