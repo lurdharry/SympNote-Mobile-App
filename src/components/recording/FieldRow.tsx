@@ -6,7 +6,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { makeStyles } from '../../theme';
+import { makeStyles, moderateScale } from '../../theme';
 
 type Props = {
   label: string;
@@ -52,6 +52,6 @@ const useStyles = makeStyles((theme) => ({
   value: {
     ...theme.typography.bodyLarge,
     color: theme.colors.textPrimary,
-    marginTop: 2,
+    marginTop: moderateScale(2),
   },
 }));

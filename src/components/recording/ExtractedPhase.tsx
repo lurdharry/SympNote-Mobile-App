@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { makeStyles, spacing } from '../../theme';
+import { fontScale, makeStyles, moderateScale, spacing, verticalScale } from '../../theme';
 import { Button } from '../ui/Button';
 import { FieldRow } from './FieldRow';
 import { FIELDS, StructuredWithSources, fieldValue } from './types';
@@ -92,20 +92,20 @@ const useStyles = makeStyles((theme) => ({
   bodySystem: {
     ...theme.typography.serifHeadline,
     color: theme.colors.textPrimary,
-    fontSize: 22,
-    lineHeight: 28,
-    marginTop: 4,
+    fontSize: fontScale(22),
+    lineHeight: fontScale(28),
+    marginTop: moderateScale(4),
   },
   symptomRow: {
     marginTop: theme.spacing.s3,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: moderateScale(6),
   },
   symptomChip: {
     backgroundColor: theme.colors.bgMuted,
     paddingHorizontal: theme.spacing.s3,
-    paddingVertical: 4,
+    paddingVertical: verticalScale(4),
     borderRadius: theme.radius.full,
   },
   symptomText: {

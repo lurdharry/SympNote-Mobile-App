@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import React, { useEffect } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 import Animated, {
   SharedValue,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-} from 'react-native-reanimated';
+} from "react-native-reanimated";
 import {
   BlurMask,
   Canvas,
@@ -16,10 +16,10 @@ import {
   Skia,
   useClock,
   vec,
-} from '@shopify/react-native-skia';
-import { useDerivedValue } from 'react-native-reanimated';
-import { useTheme } from '../../theme';
-import { useReducedMotion } from '../../hooks/useReducedMotion';
+} from "@shopify/react-native-skia";
+import { useDerivedValue } from "react-native-reanimated";
+import { moderateScale, useTheme } from "../../theme";
+import { useReducedMotion } from "../../hooks/useReducedMotion";
 
 /**
  * Organic, voice-reactive orb.
@@ -59,7 +59,7 @@ export function VoiceReactiveOrb({
   active,
   meterSv,
   onPress,
-  size = 220,
+  size = moderateScale(220),
   disabled = false,
 }: Props) {
   const { colors } = useTheme();
@@ -93,9 +93,7 @@ export function VoiceReactiveOrb({
     const target = active && meterSv ? meterSv.value : 0;
     // Idle breathing: simulated gentle amplitude so the orb never feels
     // dead when waiting for you to tap.
-    const idlePhase = reduced
-      ? 0
-      : Math.sin(clock.value / 900) * 0.15 + 0.15;
+    const idlePhase = reduced ? 0 : Math.sin(clock.value / 900) * 0.15 + 0.15;
     const effective = active ? target : idlePhase;
     // Exponential smoothing (no framerate dependency required — Skia's
     // frame callback runs at display refresh).
@@ -115,15 +113,17 @@ export function VoiceReactiveOrb({
       const angle = (i / VERTEX_COUNT) * TWO_PI;
       const phase = i * 0.73;
       const wobble =
-        Math.sin(t * 1.1 + phase) * wobbleAmp +
-        Math.sin(t * 2.3 + phase * 0.6) * wobbleAmp * 0.45;
+        Math.sin(t * 1.1 + phase) * wobbleAmp + Math.sin(t * 2.3 + phase * 0.6) * wobbleAmp * 0.45;
       const r = baseR + wobble + m * baseR * 0.25;
       pts.push([center + Math.cos(angle) * r, center + Math.sin(angle) * r]);
     }
     // Close the path using quadratic midpoints between consecutive
     // vertices for a smooth outline.
     const first = pts[0]!;
-    path.moveTo((first[0] + pts[VERTEX_COUNT - 1]![0]) / 2, (first[1] + pts[VERTEX_COUNT - 1]![1]) / 2);
+    path.moveTo(
+      (first[0] + pts[VERTEX_COUNT - 1]![0]) / 2,
+      (first[1] + pts[VERTEX_COUNT - 1]![1]) / 2,
+    );
     for (let i = 0; i < VERTEX_COUNT; i++) {
       const curr = pts[i]!;
       const next = pts[(i + 1) % VERTEX_COUNT]!;
@@ -136,9 +136,7 @@ export function VoiceReactiveOrb({
   });
 
   /** Outer halo radius — tracks meter more dramatically than the core. */
-  const haloR = useDerivedValue(
-    () => baseR * 1.35 + smoothedMeter.value * baseR * 0.9
-  );
+  const haloR = useDerivedValue(() => baseR * 1.35 + smoothedMeter.value * baseR * 0.9);
   const haloOp = useDerivedValue(() => 0.2 + smoothedMeter.value * 0.4);
 
   /** Inner bright spot. */
@@ -169,17 +167,17 @@ export function VoiceReactiveOrb({
       const r = Math.round(ar + (br - ar) * t);
       const g = Math.round(ag + (bg - ag) * t);
       const b2 = Math.round(ab + (bb - ab) * t);
-      return `#${((r << 16) | (g << 8) | b2).toString(16).padStart(6, '0')}`;
+      return `#${((r << 16) | (g << 8) | b2).toString(16).padStart(6, "0")}`;
     };
     return [
-      mix(colors.accentLight, '#F2B36E', warmth),
-      mix(colors.accent, '#E08B3F', warmth),
-      mix(colors.accentDark, '#C4701F', warmth),
+      mix(colors.accentLight, "#F2B36E", warmth),
+      mix(colors.accent, "#E08B3F", warmth),
+      mix(colors.accentDark, "#C4701F", warmth),
     ];
   });
 
   const haloColor = useDerivedValue(() =>
-    active && smoothedMeter.value > 0.25 ? '#E08B3F' : colors.accent
+    active && smoothedMeter.value > 0.25 ? "#E08B3F" : colors.accent,
   );
 
   return (
@@ -204,21 +202,13 @@ export function VoiceReactiveOrb({
 
             {/* Middle glow */}
             <Circle cx={center} cy={center} r={baseR * 1.08}>
-              <RadialGradient
-                c={vec(center, center)}
-                r={baseR * 1.1}
-                colors={gradientColors}
-              />
+              <RadialGradient c={vec(center, center)} r={baseR * 1.1} colors={gradientColors} />
               <BlurMask blur={14} style="solid" />
             </Circle>
 
             {/* Core organic blob */}
             <Path path={blobPath}>
-              <RadialGradient
-                c={vec(center, center)}
-                r={baseR}
-                colors={gradientColors}
-              />
+              <RadialGradient c={vec(center, center)} r={baseR} colors={gradientColors} />
               <BlurMask blur={6} style="solid" />
             </Path>
 
@@ -237,5 +227,3 @@ export function VoiceReactiveOrb({
     </Animated.View>
   );
 }
-
-const _styles = StyleSheet.create({});

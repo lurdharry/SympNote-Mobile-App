@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
-import { makeStyles, spacing, useTheme } from '../../theme';
+import { makeStyles, moderateScale, spacing, useTheme, verticalScale } from '../../theme';
 import { Button } from '../ui/Button';
 import { formatDuration } from '../../utils/date';
 
@@ -78,7 +78,7 @@ const useStyles = makeStyles((theme) => ({
   caption: {
     ...theme.typography.label,
     color: theme.colors.textTertiary,
-    marginBottom: 8,
+    marginBottom: moderateScale(8),
   },
   box: {
     borderWidth: StyleSheet.hairlineWidth,
@@ -90,7 +90,7 @@ const useStyles = makeStyles((theme) => ({
     ...theme.typography.bodyLarge,
     color: theme.colors.textPrimary,
     padding: theme.spacing.s4,
-    minHeight: 120,
+    minHeight: verticalScale(120),
     textAlignVertical: 'top',
   },
   hint: {
@@ -110,6 +110,6 @@ const useStyles = makeStyles((theme) => ({
   errorBody: {
     ...theme.typography.body,
     color: theme.colors.textPrimary,
-    marginTop: 4,
+    marginTop: moderateScale(4),
   },
 }));

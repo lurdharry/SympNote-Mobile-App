@@ -3,7 +3,7 @@ import { Alert, Text, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { VoiceReactiveOrb } from './recording/VoiceReactiveOrb';
 import { ShimmerText } from './animated/ShimmerText';
-import { makeStyles } from '../theme';
+import { fontScale, makeStyles, moderateScale } from '../theme';
 import { hapticHeavy, hapticMedium } from '../services/haptics';
 import {
   ensureSpeechPermission,
@@ -138,7 +138,7 @@ export function RecordButton({ onSaved }: Props) {
         active={phase === 'recording'}
         meterSv={meterSv}
         onPress={toggle}
-        size={180}
+        size={moderateScale(180)}
         disabled={phase === 'processing' || phase === 'done'}
       />
 
@@ -178,8 +178,8 @@ const useStyles = makeStyles((theme) => ({
   duration: {
     ...theme.typography.numberEditorial,
     color: theme.colors.warning,
-    fontSize: 22,
-    lineHeight: 24,
+    fontSize: fontScale(22),
+    lineHeight: fontScale(24),
   },
   liveTranscript: {
     ...theme.typography.body,

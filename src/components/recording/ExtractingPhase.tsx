@@ -24,7 +24,7 @@ import {
   Rect,
   vec,
 } from '@shopify/react-native-skia';
-import { makeStyles, spacing, typography, useTheme } from '../../theme';
+import { fontScale, makeStyles, moderateScale, scale, spacing, typography, useTheme, verticalScale } from '../../theme';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { hapticLight } from '../../services/haptics';
 import {
@@ -299,8 +299,8 @@ function TranscriptCard({
           typography.bodyLarge,
           {
             color: colors.textPrimary,
-            fontSize: 17,
-            lineHeight: 26,
+            fontSize: fontScale(17),
+            lineHeight: fontScale(26),
           },
         ]}
       >
@@ -327,8 +327,8 @@ function TranscriptCard({
           pointerEvents="none"
           style={[styles.scanOverlay, scanStyle]}
         >
-          <Canvas style={{ width: '100%', height: 20 }}>
-            <Rect x={0} y={0} width={1000} height={20}>
+          <Canvas style={{ width: '100%', height: verticalScale(20) }}>
+            <Rect x={0} y={0} width={1000} height={verticalScale(20)}>
               <LinearGradient
                 start={vec(0, 10)}
                 end={vec(1000, 10)}
@@ -501,10 +501,10 @@ function BinCell({
         style={[
           {
             fontFamily: 'Fraunces_500Medium',
-            fontSize: 18,
-            lineHeight: 22,
+            fontSize: fontScale(18),
+            lineHeight: fontScale(22),
             color: filled ? colors.textPrimary : colors.textTertiary,
-            marginTop: 4,
+            marginTop: moderateScale(4),
             letterSpacing: -0.2,
           },
         ]}
@@ -589,8 +589,8 @@ function FlyingWord({
           backgroundColor: toneColor + '22',
           borderColor: toneColor + '55',
           borderWidth: StyleSheet.hairlineWidth,
-          paddingHorizontal: 10,
-          paddingVertical: 4,
+          paddingHorizontal: scale(10),
+          paddingVertical: verticalScale(4),
           borderRadius: 999,
         },
         style,
@@ -600,7 +600,7 @@ function FlyingWord({
         style={{
           color: toneColor,
           fontFamily: 'Inter_600SemiBold',
-          fontSize: 13,
+          fontSize: fontScale(13),
           letterSpacing: 0.2,
         }}
         numberOfLines={1}
@@ -628,7 +628,7 @@ const useStyles = makeStyles((theme) => ({
     left: 0,
     right: 0,
     top: 0,
-    height: 20,
+    height: verticalScale(20),
   },
   binRow: {
     flexDirection: 'row',
@@ -637,7 +637,7 @@ const useStyles = makeStyles((theme) => ({
   },
   bin: {
     width: '48%',
-    minHeight: 72,
+    minHeight: verticalScale(72),
     padding: theme.spacing.s4,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import { SharedValue } from 'react-native-reanimated';
-import { makeStyles } from '../../theme';
+import { fontScale, makeStyles, moderateScale, verticalScale } from '../../theme';
 import { VoiceReactiveOrb } from './VoiceReactiveOrb';
 import { formatDuration } from '../../utils/date';
 
@@ -26,7 +26,7 @@ export function RecordingPhase({
 
   return (
     <View style={styles.root}>
-      <VoiceReactiveOrb active meterSv={meterSv} onPress={onStop} size={240} />
+      <VoiceReactiveOrb active meterSv={meterSv} onPress={onStop} size={moderateScale(240)} />
 
       <Text style={styles.duration}>{formatDuration(durationSec)}</Text>
 
@@ -47,8 +47,8 @@ const useStyles = makeStyles((theme) => ({
     ...theme.typography.numberEditorial,
     color: theme.colors.warning,
     marginTop: theme.spacing.s5,
-    fontSize: 24,
-    lineHeight: 26,
+    fontSize: fontScale(24),
+    lineHeight: fontScale(26),
   },
   transcriptWrap: {
     marginTop: theme.spacing.s4,
@@ -58,9 +58,9 @@ const useStyles = makeStyles((theme) => ({
     ...theme.typography.bodyLarge,
     color: theme.colors.textPrimary,
     textAlign: 'center',
-    minHeight: 26,
-    fontSize: 18,
-    lineHeight: 26,
+    minHeight: verticalScale(26),
+    fontSize: fontScale(18),
+    lineHeight: fontScale(26),
   },
   caption: {
     ...theme.typography.caption,

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { makeStyles } from '../../theme';
+import { makeStyles, moderateScale, verticalScale } from '../../theme';
 import { VoiceReactiveOrb } from './VoiceReactiveOrb';
 import { hapticLight } from '../../services/haptics';
 import { RECORDING_PROMPTS as PROMPTS } from '../../constants/prompts';
@@ -28,7 +28,7 @@ export function IdlePhase({ onStart, onTypeInstead }: Props) {
       </View>
 
       <View style={styles.orbArea}>
-        <VoiceReactiveOrb active={false} onPress={onStart} size={220} />
+        <VoiceReactiveOrb active={false} onPress={onStart} size={moderateScale(220)} />
         <Text style={styles.caption}>Tap to record</Text>
 
         {onTypeInstead && (
@@ -49,7 +49,7 @@ export function IdlePhase({ onStart, onTypeInstead }: Props) {
 }
 
 const useStyles = makeStyles((theme) => ({
-  promptSlot: { minHeight: 56, marginTop: theme.spacing.s3 },
+  promptSlot: { minHeight: verticalScale(56), marginTop: theme.spacing.s3 },
   prompt: { ...theme.typography.body, color: theme.colors.textTertiary },
   orbArea: { alignItems: 'center', marginVertical: theme.spacing.s10 },
   caption: {
