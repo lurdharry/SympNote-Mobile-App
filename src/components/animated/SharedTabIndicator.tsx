@@ -17,7 +17,7 @@ type Props = {
   bottomInset?: number;
 };
 
-export function SharedTabIndicator({
+export const SharedTabIndicator: React.FC<Props> = ({
   count,
   activeIndex,
   containerWidth,
@@ -25,7 +25,7 @@ export function SharedTabIndicator({
   height = 3,
   widthRatio = 0.35,
   bottomInset = 0,
-}: Props) {
+}) => {
   const reduced = useReducedMotion();
   const slotWidth = containerWidth / count;
   const pillWidth = slotWidth * widthRatio;

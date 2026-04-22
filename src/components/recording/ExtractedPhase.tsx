@@ -13,7 +13,7 @@ type Props = {
   onSave: () => void;
 };
 
-export function ExtractedPhase({ structured, onSave }: Props) {
+export const ExtractedPhase: React.FC<Props> = ({ structured, onSave }) => {
   const styles = useStyles();
   return (
     <View style={{ marginTop: spacing.s6, gap: spacing.s5 }}>
@@ -43,7 +43,11 @@ export function ExtractedPhase({ structured, onSave }: Props) {
   );
 }
 
-function Header({ structured }: { structured: StructuredWithSources }) {
+interface HeaderProps {
+  structured: StructuredWithSources;
+}
+
+const Header: React.FC<HeaderProps> = ({ structured }) => {
   const styles = useStyles();
   return (
     <View style={styles.header}>

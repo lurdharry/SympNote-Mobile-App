@@ -12,7 +12,7 @@ import Animated, {
 import { moderateScale, useTheme } from "../../theme";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 
-export function TypingDots() {
+export const TypingDots: React.FC = () => {
   const { colors } = useTheme();
   return (
     <View style={styles.row}>
@@ -28,7 +28,12 @@ export function TypingDots() {
 // the JS/UI thread boundary and throw at runtime.
 const DOT_TRAVEL = moderateScale(4);
 
-function Dot({ delay, color }: { delay: number; color: string }) {
+interface DotProps {
+  delay: number;
+  color: string;
+}
+
+const Dot: React.FC<DotProps> = ({ delay, color }) => {
   const reduced = useReducedMotion();
   const t = useSharedValue(0);
   useEffect(() => {

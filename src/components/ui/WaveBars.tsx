@@ -28,11 +28,11 @@ type Props = {
   colors?: [string, string];
 };
 
-export function WaveBars({
+export const WaveBars: React.FC<Props> = ({
   count = 28,
   width = moderateScale(3),
   colors = ['#F5B873', '#C97A1E'],
-}: Props) {
+}) => {
   return (
     <View style={styles.row}>
       {Array.from({ length: count }, (_, i) => (
@@ -42,15 +42,15 @@ export function WaveBars({
   );
 }
 
-function Bar({
-  i,
-  width,
-  colors,
-}: {
+interface BarProps {
   i: number;
   width: number;
   colors: [string, string];
-}) {
+}
+
+const Bar: React.FC<BarProps> = ({ i,
+  width,
+  colors }) => {
   const reduced = useReducedMotion();
   const t = useSharedValue(0.3);
   useEffect(() => {

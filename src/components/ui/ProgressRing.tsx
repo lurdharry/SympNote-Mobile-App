@@ -24,14 +24,14 @@ type Props = {
   children?: React.ReactNode;
 };
 
-export function ProgressRing({
+export const ProgressRing: React.FC<Props> = ({
   value,
   size = moderateScale(56),
   stroke = moderateScale(5),
   color,
   trackColor,
   children,
-}: Props) {
+}) => {
   const { colors } = useTheme();
   const effectiveColor = color ?? colors.accent;
   const effectiveTrack = trackColor ?? colors.bgMuted;

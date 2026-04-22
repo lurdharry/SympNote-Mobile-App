@@ -24,7 +24,7 @@ import { moderateScale } from "../../theme";
  */
 type Props = { size?: number };
 
-export function SympnoteHero({ size = moderateScale(128) }: Props) {
+export const SympnoteHero: React.FC<Props> = ({ size = moderateScale(128) }) => {
   const reduced = useReducedMotion();
   const ring1 = useSharedValue(0);
   const ring2 = useSharedValue(0);

@@ -1,32 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Plus } from "lucide-react-native";
 import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus } from 'lucide-react-native';
-import { fontScale, makeStyles, moderateScale, scale, shadows, spacing, typography, useTheme, verticalScale } from '../../theme';
-import { SceneTransition } from '../../components/navigation/SceneTransition';
-import { BackButton } from '../../components/ui/BackButton';
-import { PrimaryButton } from '../../components/ui/PrimaryButton';
-import { StaggeredList } from '../../components/animated/StaggeredList';
-import { useProfileStore } from '../../stores/useProfileStore';
-import { hapticLight, hapticSuccess } from '../../services/haptics';
-import { uuid } from '../../utils/uuid';
-import { CARE_TEAM_PALETTE } from '../../constants/onboarding';
-
-/**
- * Screen 04 — Care team.
- *
- * Optional list of clinicians. Starts with one sample doctor (matches
- * handoff), users add/remove their own. Results persist to
- * onboardingAnswers.careTeam so Prep can read them later.
- */
+  fontScale,
+  makeStyles,
+  moderateScale,
+  scale,
+  shadows,
+  spacing,
+  typography,
+  useTheme,
+  verticalScale,
+} from "../../theme";
+import { SceneTransition } from "../../components/navigation/SceneTransition";
+import { BackButton } from "../../components/ui/BackButton";
+import { PrimaryButton } from "../../components/ui/PrimaryButton";
+import { StaggeredList } from "../../components/animated/StaggeredList";
+import { useProfileStore } from "../../stores/useProfileStore";
+import { hapticLight, hapticSuccess } from "../../services/haptics";
+import { uuid } from "../../utils/uuid";
+import { CARE_TEAM_PALETTE } from "../../constants/onboarding";
 
 type Member = {
   id: string;
@@ -37,18 +32,18 @@ type Member = {
 
 const PALETTE = CARE_TEAM_PALETTE;
 
-export default function ScreenCareTeam() {
+const ScreenCareTeam: React.FC = () => {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useStyles();
   const setAnswer = useProfileStore((s) => s.setOnboardingAnswer);
 
   const [members, setMembers] = useState<Member[]>([
-    { id: uuid(), name: 'Dr. Chen', role: 'Rheumatology', color: '#2C6E6B' },
+    { id: uuid(), name: "Dr. Chen", role: "Rheumatology", color: "#2C6E6B" },
   ]);
   const [adding, setAdding] = useState(false);
-  const [name, setName] = useState('');
-  const [role, setRole] = useState('');
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("");
 
   const add = () => {
     const trimmed = name.trim();
@@ -59,12 +54,12 @@ export default function ScreenCareTeam() {
       {
         id: uuid(),
         name: trimmed,
-        role: role.trim() || 'Clinician',
+        role: role.trim() || "Clinician",
         color: PALETTE[m.length % PALETTE.length]!,
       },
     ]);
-    setName('');
-    setRole('');
+    setName("");
+    setRole("");
     setAdding(false);
   };
 
@@ -75,28 +70,26 @@ export default function ScreenCareTeam() {
 
   const onContinue = () => {
     setAnswer(
-      'careTeam',
-      members.map(({ name, role }) => ({ name, role }))
+      "careTeam",
+      members.map(({ name, role }) => ({ name, role })),
     );
-    router.push('/onboarding/analyzing');
+    router.push("/onboarding/analyzing");
   };
 
   return (
     <SceneTransition mode="scale-fade">
       <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
-        <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
           <View style={styles.topBar}>
             <BackButton onPress={() => router.back()} />
-            <Text style={[typography.label, { color: colors.textTertiary }]}>
-              7 of 9
-            </Text>
+            <Text style={[typography.label, { color: colors.textTertiary }]}>7 of 9</Text>
             <Pressable onPress={onContinue} hitSlop={8}>
               <Text
                 style={[
                   typography.label,
                   {
                     color: colors.accent,
-                    fontFamily: 'DMSans_600SemiBold',
+                    fontFamily: "DMSans_600SemiBold",
                   },
                 ]}
               >
@@ -113,14 +106,8 @@ export default function ScreenCareTeam() {
             <Text style={[typography.h1, { color: colors.textPrimary }]}>
               Who's on your care team?
             </Text>
-            <Text
-              style={[
-                typography.body,
-                { color: colors.textSecondary, marginTop: 8 },
-              ]}
-            >
-              Optional. Adding clinicians lets us tag entries and build summaries
-              by doctor.
+            <Text style={[typography.body, { color: colors.textSecondary, marginTop: 8 }]}>
+              Optional. Adding clinicians lets us tag entries and build summaries by doctor.
             </Text>
 
             <View style={{ marginTop: spacing.s5, gap: 8 }}>
@@ -137,11 +124,9 @@ export default function ScreenCareTeam() {
                       shadows.card,
                     ]}
                   >
-                    <View
-                      style={[styles.avatar, { backgroundColor: m.color }]}
-                    >
+                    <View style={[styles.avatar, { backgroundColor: m.color }]}>
                       <Text style={styles.avatarLetter}>
-                        {m.name.replace(/^Dr\.?\s*/, '')[0] ?? '?'}
+                        {m.name.replace(/^Dr\.?\s*/, "")[0] ?? "?"}
                       </Text>
                     </View>
                     <View style={{ flex: 1 }}>
@@ -151,12 +136,7 @@ export default function ScreenCareTeam() {
                       >
                         {m.name}
                       </Text>
-                      <Text
-                        style={[
-                          typography.caption,
-                          { color: colors.textTertiary },
-                        ]}
-                      >
+                      <Text style={[typography.caption, { color: colors.textTertiary }]}>
                         {m.role}
                       </Text>
                     </View>
@@ -166,7 +146,7 @@ export default function ScreenCareTeam() {
                           typography.label,
                           {
                             color: colors.textTertiary,
-                            fontFamily: 'DMSans_600SemiBold',
+                            fontFamily: "DMSans_600SemiBold",
                           },
                         ]}
                       >
@@ -198,24 +178,21 @@ export default function ScreenCareTeam() {
                     onChangeText={setRole}
                     placeholder="Specialty (e.g. Primary care)"
                   />
-                  <View style={{ flexDirection: 'row', gap: 8, paddingTop: 4 }}>
+                  <View style={{ flexDirection: "row", gap: 8, paddingTop: 4 }}>
                     <Pressable
                       onPress={() => {
                         setAdding(false);
-                        setName('');
-                        setRole('');
+                        setName("");
+                        setRole("");
                       }}
-                      style={[
-                        styles.smallBtn,
-                        { backgroundColor: colors.bgMuted },
-                      ]}
+                      style={[styles.smallBtn, { backgroundColor: colors.bgMuted }]}
                     >
                       <Text
                         style={[
                           typography.label,
                           {
                             color: colors.textPrimary,
-                            fontFamily: 'DMSans_600SemiBold',
+                            fontFamily: "DMSans_600SemiBold",
                           },
                         ]}
                       >
@@ -237,8 +214,8 @@ export default function ScreenCareTeam() {
                         style={[
                           typography.label,
                           {
-                            color: '#FFFFFF',
-                            fontFamily: 'DMSans_600SemiBold',
+                            color: "#FFFFFF",
+                            fontFamily: "DMSans_600SemiBold",
                           },
                         ]}
                       >
@@ -253,10 +230,7 @@ export default function ScreenCareTeam() {
                     hapticLight();
                     setAdding(true);
                   }}
-                  style={[
-                    styles.addDashed,
-                    { borderColor: colors.border },
-                  ]}
+                  style={[styles.addDashed, { borderColor: colors.border }]}
                 >
                   <Plus size={16} color={colors.textSecondary} />
                   <Text
@@ -264,7 +238,7 @@ export default function ScreenCareTeam() {
                       typography.body,
                       {
                         color: colors.textSecondary,
-                        fontFamily: 'DMSans_600SemiBold',
+                        fontFamily: "DMSans_600SemiBold",
                       },
                     ]}
                   >
@@ -279,7 +253,7 @@ export default function ScreenCareTeam() {
                 typography.caption,
                 {
                   color: colors.textTertiary,
-                  textAlign: 'center',
+                  textAlign: "center",
                   marginTop: spacing.s4,
                 },
               ]}
@@ -290,7 +264,7 @@ export default function ScreenCareTeam() {
 
           <View style={{ paddingHorizontal: spacing.s6, paddingTop: 8 }}>
             <PrimaryButton
-              label={members.length > 0 ? 'Continue' : 'Skip for now'}
+              label={members.length > 0 ? "Continue" : "Skip for now"}
               onPress={onContinue}
             />
           </View>
@@ -300,15 +274,15 @@ export default function ScreenCareTeam() {
   );
 }
 
-function InputField({
-  value,
-  onChangeText,
-  placeholder,
-}: {
+interface InputFieldProps {
   value: string;
   onChangeText: (v: string) => void;
   placeholder: string;
-}) {
+}
+
+const InputField: React.FC<InputFieldProps> = ({ value,
+  onChangeText,
+  placeholder }) => {
   const { colors } = useTheme();
   const styles = useStyles();
   return (
@@ -330,15 +304,17 @@ function InputField({
   );
 }
 
+export default ScreenCareTeam;
+
 const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },
   safe: { flex: 1 },
   topBar: {
     paddingTop: theme.spacing.s3,
     paddingHorizontal: theme.spacing.s6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   content: {
     paddingHorizontal: theme.spacing.s6,
@@ -346,8 +322,8 @@ const useStyles = makeStyles((theme) => ({
     paddingBottom: theme.spacing.s6,
   },
   memberCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: moderateScale(12),
     padding: moderateScale(16),
     borderRadius: theme.radius.lg,
@@ -357,13 +333,13 @@ const useStyles = makeStyles((theme) => ({
     width: moderateScale(40),
     height: moderateScale(40),
     borderRadius: moderateScale(20),
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   avatarLetter: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: fontScale(15),
-    fontFamily: 'DMSans_700Bold',
+    fontFamily: "DMSans_700Bold",
   },
   addingCard: {
     padding: moderateScale(16),
@@ -381,17 +357,17 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     height: verticalScale(40),
     borderRadius: theme.radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   addDashed: {
     borderWidth: 2,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
     borderRadius: theme.radius.lg,
     paddingVertical: verticalScale(20),
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
     gap: moderateScale(6),
   },
 }));

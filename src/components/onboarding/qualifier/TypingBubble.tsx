@@ -5,7 +5,7 @@ import { TypingDots } from '../../ui/TypingDots';
 import { AssistantAvatar } from './AssistantAvatar';
 
 /** Bot message bubble containing the "…" typing indicator. */
-export function TypingBubble() {
+export const TypingBubble: React.FC = () => {
   const styles = useStyles();
   return (
     <View style={styles.row}>

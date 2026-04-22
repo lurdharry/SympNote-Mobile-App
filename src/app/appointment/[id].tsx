@@ -23,7 +23,7 @@ import { formatDate } from '../../utils/date';
 import { hapticLight, hapticMedium, hapticSuccess } from '../../services/haptics';
 import { useTransition } from '../../components/navigation/TransitionContext';
 
-export default function AppointmentDetail() {
+const AppointmentDetail: React.FC = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { colors } = useTheme();
@@ -163,6 +163,8 @@ export default function AppointmentDetail() {
     </SharedElementScene>
   );
 }
+
+export default AppointmentDetail;
 
 const useStyles = makeStyles((theme) => ({
   content: {

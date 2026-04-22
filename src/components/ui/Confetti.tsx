@@ -34,7 +34,7 @@ type Props = {
 
 const COLORS = ['#2C6E6B', '#F6C06A', '#5A8F6E', '#A8C4C2', '#E07A5F'];
 
-export function Confetti({ show, count = 32 }: Props) {
+export const Confetti: React.FC<Props> = ({ show, count = 32 }) => {
   const reduced = useReducedMotion();
   const pieces = useMemo<Piece[]>(
     () =>
@@ -65,7 +65,11 @@ export function Confetti({ show, count = 32 }: Props) {
   );
 }
 
-function Piece({ piece }: { piece: Piece }) {
+interface PieceProps {
+  piece: Piece;
+}
+
+const Piece: React.FC<PieceProps> = ({ piece }) => {
   const t = useSharedValue(0);
   useEffect(() => {
     t.value = withDelay(

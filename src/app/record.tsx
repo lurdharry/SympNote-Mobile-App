@@ -35,7 +35,7 @@ import { hapticHeavy, hapticLight } from '../services/haptics';
  *    dismisses the modal
  *  - Close button in the header lets the user abort mid-flow
  */
-export default function RecordModal() {
+const RecordModal: React.FC = () => {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useStyles();
@@ -199,6 +199,8 @@ function kindToLabel(raw?: string): string | null {
     return 'Side effect';
   return null;
 }
+
+export default RecordModal;
 
 const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },

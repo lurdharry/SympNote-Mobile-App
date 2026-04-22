@@ -24,7 +24,7 @@ type Props = {
  * Bottom sheet with blurred backdrop. Velocity-aware swipe-down dismiss
  * with a haptic on commit.
  */
-export function Sheet({ visible, onDismiss, children, heightRatio = 0.75 }: Props) {
+export const Sheet: React.FC<Props> = ({ visible, onDismiss, children, heightRatio = 0.75 }) => {
   const { colors, isDark } = useTheme();
   const styles = useStyles();
   const reduced = useReducedMotion();

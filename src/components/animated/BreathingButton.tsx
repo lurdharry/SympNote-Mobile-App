@@ -28,7 +28,7 @@ type Props = {
   pressScale?: number;
 };
 
-export function BreathingButton({
+export const BreathingButton: React.FC<Props> = ({
   onPress,
   style,
   breathe = true,
@@ -36,7 +36,7 @@ export function BreathingButton({
   disabled,
   children,
   pressScale = 0.95,
-}: Props) {
+}) => {
   const reduced = useReducedMotion();
   const scale = useSharedValue(1);
   const press = useSharedValue(1);

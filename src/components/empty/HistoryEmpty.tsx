@@ -17,7 +17,7 @@ import { useReducedMotion } from '../../hooks/useReducedMotion';
  * fades toward the right edge, suggesting the space where recordings
  * will eventually live.
  */
-export function HistoryEmpty() {
+export const HistoryEmpty: React.FC = () => {
   const { colors } = useTheme();
   const styles = useStyles();
   const reduced = useReducedMotion();

@@ -1,10 +1,10 @@
-import React, { useEffect, useRef } from 'react';
-import { ScrollView, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { makeStyles, spacing, typography, useTheme, verticalScale } from '../../theme';
-import { SceneTransition } from '../../components/navigation/SceneTransition';
-import { BackButton } from '../../components/ui/BackButton';
+import React, { useEffect, useRef } from "react";
+import { ScrollView, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { makeStyles, spacing, typography, useTheme, verticalScale } from "../../theme";
+import { SceneTransition } from "../../components/navigation/SceneTransition";
+import { BackButton } from "../../components/ui/BackButton";
 import {
   AssistantBubble,
   ChipTray,
@@ -13,24 +13,17 @@ import {
   ProgressBar,
   TypingBubble,
   UserBubble,
-} from '../../components/onboarding/qualifier';
-import { useQualifierFlow } from '../../hooks/useQualifierFlow';
+} from "../../components/onboarding/qualifier";
+import { useQualifierFlow } from "../../hooks/useQualifierFlow";
 
-/**
- * Screen 02 — Qualifier.
- *
- * Orchestration only: wires the {@link useQualifierFlow} state machine
- * to the sub-components that render the chat feed, plan card, and
- * answer tray. All timings and behavior live in the hook + qualifier
- * component folder.
- */
-export default function ScreenQualifier() {
+const ScreenQualifier: React.FC = () => {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useStyles();
 
-  const { step, current, answers, planItems, typing, questions, answer, back } =
-    useQualifierFlow(() => router.push('/onboarding/focus'));
+  const { step, current, answers, planItems, typing, questions, answer, back } = useQualifierFlow(
+    () => router.push("/onboarding/focus"),
+  );
 
   const scrollRef = useRef<ScrollView>(null);
   useEffect(() => {
@@ -45,7 +38,7 @@ export default function ScreenQualifier() {
   return (
     <SceneTransition mode="scale-fade">
       <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
-        <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
           <View style={styles.topBar}>
             <BackButton onPress={onBack} />
             <ProgressBar step={step} total={questions.length} />
@@ -77,8 +70,13 @@ export default function ScreenQualifier() {
             <View style={{ height: 8 }} />
           </ScrollView>
 
-          <View style={[styles.tray, { borderTopColor: colors.border, backgroundColor: colors.bgPrimary }]}>
-            {current.kind === 'date' ? (
+          <View
+            style={[
+              styles.tray,
+              { borderTopColor: colors.border, backgroundColor: colors.bgPrimary },
+            ]}
+          >
+            {current.kind === "date" ? (
               <DateTray disabled={typing} onAnswer={answer} />
             ) : (
               <ChipTray disabled={typing} options={current.options ?? []} onAnswer={answer} />
@@ -90,17 +88,19 @@ export default function ScreenQualifier() {
   );
 }
 
+export default ScreenQualifier;
+
 const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },
   safe: { flex: 1 },
   topBar: {
     paddingTop: theme.spacing.s3,
     paddingHorizontal: theme.spacing.s5,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: theme.spacing.s3,
   },
-  counter: { fontVariant: ['tabular-nums'] },
+  counter: { fontVariant: ["tabular-nums"] },
   planSlot: {
     paddingHorizontal: theme.spacing.s5,
     marginTop: theme.spacing.s3,

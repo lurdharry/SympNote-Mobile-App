@@ -29,14 +29,14 @@ type Particle = {
   swayAmp: number;
 };
 
-export function ParticleField({
+export const ParticleField: React.FC<Props> = ({
   width,
   height,
   count = 20,
   color = '#A8C4C2',
   direction = 'up',
   speed = 9000,
-}: Props) {
+}) => {
   const reduced = useReducedMotion();
   const t = useSharedValue(0);
 
@@ -91,7 +91,7 @@ type PProps = {
   direction: 'up' | 'down' | 'inward';
 };
 
-function Particle({ p, t, width, height, color, direction }: PProps) {
+const Particle: React.FC<PProps> = ({ p, t, width, height, color, direction }) => {
   const cx = useDerivedValue(() => {
     if (direction === 'inward') {
       const progress = (t.value * p.speed + p.phase) % 1;

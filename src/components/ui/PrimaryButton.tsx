@@ -33,14 +33,14 @@ type Props = {
   style?: StyleProp<ViewStyle>;
 };
 
-export function PrimaryButton({
+export const PrimaryButton: React.FC<Props> = ({
   label,
   onPress,
   icon,
   disabled,
   loading,
   style,
-}: Props) {
+}) => {
   const styles = useStyles();
   const scale = useSharedValue(1);
 

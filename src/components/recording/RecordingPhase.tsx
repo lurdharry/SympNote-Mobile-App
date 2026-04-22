@@ -16,12 +16,12 @@ type Props = {
  * Active recording scene. The orb is both the visualizer and stop
  * button. Live transcript streams underneath.
  */
-export function RecordingPhase({
+export const RecordingPhase: React.FC<Props> = ({
   meterSv,
   liveTranscript,
   durationSec,
   onStop,
-}: Props) {
+}) => {
   const styles = useStyles();
 
   return (

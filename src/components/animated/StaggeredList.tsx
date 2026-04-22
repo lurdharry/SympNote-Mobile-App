@@ -19,14 +19,14 @@ type Props = {
   style?: StyleProp<ViewStyle>;
 };
 
-export function StaggeredList({
+export const StaggeredList: React.FC<Props> = ({
   children,
   stagger = 80,
   initialDelay = 0,
   translateY = 16,
   direction = 'up',
   style,
-}: Props) {
+}) => {
   const items = Children.toArray(children);
   return (
     <Animated.View style={style}>
@@ -51,7 +51,7 @@ type ItemProps = {
   direction: 'up' | 'down' | 'left' | 'right';
 };
 
-function StaggeredItem({ children, delay, translateY, direction }: ItemProps) {
+const StaggeredItem: React.FC<ItemProps> = ({ children, delay, translateY, direction }) => {
   const reduced = useReducedMotion();
   const opacity = useSharedValue(0);
   const offset = useSharedValue(translateY);

@@ -14,7 +14,7 @@ type Props = {
   active?: boolean;
 };
 
-export function FieldRow({ label, value, active }: Props) {
+export const FieldRow: React.FC<Props> = ({ label, value, active }) => {
   const styles = useStyles();
   const bg = useSharedValue(0);
 

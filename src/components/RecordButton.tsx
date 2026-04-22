@@ -26,7 +26,7 @@ type Phase = 'idle' | 'recording' | 'processing' | 'done';
  * Home-tab recorder. Shares the VoiceReactiveOrb with onboarding so the
  * visual language is unified.
  */
-export function RecordButton({ onSaved }: Props) {
+export const RecordButton: React.FC<Props> = ({ onSaved }) => {
   const styles = useStyles();
   const [phase, setPhase] = useState<Phase>('idle');
   const [dur, setDur] = useState(0);

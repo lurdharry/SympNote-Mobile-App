@@ -10,7 +10,7 @@ type Props = {
   onTypeInstead?: () => void;
 };
 
-export function IdlePhase({ onStart, onTypeInstead }: Props) {
+export const IdlePhase: React.FC<Props> = ({ onStart, onTypeInstead }) => {
   const styles = useStyles();
   const [idx, setIdx] = useState(0);
 

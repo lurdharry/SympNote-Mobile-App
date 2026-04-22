@@ -17,7 +17,7 @@ type Props = TextInputProps & {
   label?: string;
 };
 
-export function TextInput({ label, style, onFocus, onBlur, ...rest }: Props) {
+export const TextInput: React.FC<Props> = ({ label, style, onFocus, onBlur, ...rest }) => {
   const { colors } = useTheme();
   const styles = useStyles();
   const [focused, setFocused] = useState(false);

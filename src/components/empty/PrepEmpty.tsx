@@ -16,7 +16,7 @@ import { useReducedMotion } from '../../hooks/useReducedMotion';
  * Prep empty state — a minimal 5×4 calendar grid where one date gets
  * circled with a hand-drawn accent stroke animation.
  */
-export function PrepEmpty() {
+export const PrepEmpty: React.FC = () => {
   const { colors } = useTheme();
   const styles = useStyles();
   const reduced = useReducedMotion();

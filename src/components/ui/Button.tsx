@@ -19,7 +19,7 @@ type Props = {
   size?: "md" | "lg";
 };
 
-export function Button({
+export const Button: React.FC<Props> = ({
   label,
   onPress,
   variant = "primary",
@@ -30,7 +30,7 @@ export function Button({
   style,
   fullWidth = true,
   size = "lg",
-}: Props) {
+}) => {
   const { colors } = useTheme();
   const styles = useStyles();
 

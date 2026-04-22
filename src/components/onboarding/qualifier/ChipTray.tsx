@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -7,7 +7,7 @@ import Animated, {
   withDelay,
   withSpring,
   withTiming,
-} from 'react-native-reanimated';
+} from "react-native-reanimated";
 import {
   fontScale,
   makeStyles,
@@ -15,21 +15,28 @@ import {
   scale,
   useTheme,
   verticalScale,
-} from '../../../theme';
-import { Option, QUALIFIER_TIMINGS } from '../../../constants/onboarding';
+} from "../../../theme";
+import { Option, QUALIFIER_TIMINGS } from "../../../constants/onboarding";
 
-type Props = {
+type ChipTrayProps = {
   options: Option[];
   onAnswer: (o: Option) => void;
   disabled: boolean;
 };
+
+interface ChipProps {
+  option: Option;
+  index: number;
+  disabled: boolean;
+  onPress: () => void;
+}
 
 /**
  * Row of answer chips with a tinted icon tile, staggered entrance,
  * and a spring-scale press state. Each chip feels like a small card
  * rather than a flat pill.
  */
-export function ChipTray({ options, onAnswer, disabled }: Props) {
+export const ChipTray: React.FC<ChipTrayProps> = ({ options, onAnswer, disabled }) => {
   const styles = useStyles();
   return (
     <View style={styles.wrap}>
@@ -44,19 +51,9 @@ export function ChipTray({ options, onAnswer, disabled }: Props) {
       ))}
     </View>
   );
-}
+};
 
-function Chip({
-  option,
-  index,
-  disabled,
-  onPress,
-}: {
-  option: Option;
-  index: number;
-  disabled: boolean;
-  onPress: () => void;
-}) {
+const Chip: React.FC<ChipProps> = ({ option, index, disabled, onPress }) => {
   const { colors } = useTheme();
   const styles = useStyles();
 
@@ -72,12 +69,9 @@ function Chip({
       withTiming(1, {
         duration: QUALIFIER_TIMINGS.chipDurationMs,
         easing: Easing.out(Easing.cubic),
-      })
+      }),
     );
-    entryTy.value = withDelay(
-      delay,
-      withSpring(0, { damping: 18, stiffness: 160 })
-    );
+    entryTy.value = withDelay(delay, withSpring(0, { damping: 18, stiffness: 160 }));
   }, [index, entryOpacity, entryTy]);
 
   // Press animation — scale + glow that persists briefly on release.
@@ -85,10 +79,7 @@ function Chip({
 
   const outerStyle = useAnimatedStyle(() => ({
     opacity: entryOpacity.value,
-    transform: [
-      { translateY: entryTy.value },
-      { scale: 1 - press.value * 0.04 },
-    ],
+    transform: [{ translateY: entryTy.value }, { scale: 1 - press.value * 0.04 }],
   }));
 
   const glowStyle = useAnimatedStyle(() => ({
@@ -124,12 +115,7 @@ function Chip({
         accessibilityLabel={option.t}
       >
         {Icon && (
-          <View
-            style={[
-              styles.iconTile,
-              { backgroundColor: tint + '22' },
-            ]}
-          >
+          <View style={[styles.iconTile, { backgroundColor: tint + "22" }]}>
             <Icon size={moderateScale(14)} color={tint} strokeWidth={2.4} />
           </View>
         )}
@@ -137,19 +123,21 @@ function Chip({
       </Pressable>
     </Animated.View>
   );
-}
+};
 
 const useStyles = makeStyles((theme) => ({
   wrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: moderateScale(8),
+    alignItems: "center",
+    justifyContent: "center",
   },
   outer: {
-    position: 'relative',
+    position: "relative",
   },
   glow: {
-    position: 'absolute',
+    position: "absolute",
     left: -2,
     right: -2,
     top: -2,
@@ -157,8 +145,8 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: theme.radius.full,
   },
   chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: moderateScale(8),
     paddingLeft: scale(10),
     paddingRight: scale(16),
@@ -172,13 +160,13 @@ const useStyles = makeStyles((theme) => ({
     width: moderateScale(24),
     height: moderateScale(24),
     borderRadius: moderateScale(12),
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   label: {
     ...theme.typography.label,
     color: theme.colors.textPrimary,
-    fontFamily: 'DMSans_600SemiBold',
-    fontSize: fontScale(14),
+    fontFamily: "DMSans_600SemiBold",
+    fontSize: fontScale(12),
   },
 }));

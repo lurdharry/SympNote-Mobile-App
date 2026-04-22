@@ -18,12 +18,12 @@ type Props = {
   durationMs?: number;
 };
 
-export function ShimmerText({
+export const ShimmerText: React.FC<Props> = ({
   text,
   textStyle,
   containerStyle,
   durationMs = 1800,
-}: Props) {
+}) => {
   const reduced = useReducedMotion();
   const { colors } = useTheme();
   const progress = useSharedValue(0);

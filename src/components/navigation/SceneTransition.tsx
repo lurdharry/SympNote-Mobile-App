@@ -29,12 +29,12 @@ type Props = {
  * main-app screen should wrap its content in this so transitions feel
  * continuous instead of stock Expo Router slides.
  */
-export function SceneTransition({
+export const SceneTransition: React.FC<Props> = ({
   children,
   mode = 'scale-fade',
   style,
   enterDelay = 0,
-}: Props) {
+}) => {
   const reduced = useReducedMotion();
   const opacity = useSharedValue(0);
   const scale = useSharedValue(mode === 'scale-fade' ? 0.95 : 1);

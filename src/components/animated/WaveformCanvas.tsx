@@ -40,14 +40,14 @@ function isSharedValue(v: unknown): v is SharedValue<number> {
  * shared value when provided, so the parent doesn't re-render on every
  * meter update.
  */
-export function WaveformCanvas({
+export const WaveformCanvas: React.FC<Props> = ({
   level,
   width,
   height,
   barCount = 26,
   colors = ['#E08B3F', 'rgba(224,139,63,0)'],
   active = true,
-}: Props) {
+}) => {
   const reduced = useReducedMotion();
   const history = useRef<number[]>(new Array(barCount).fill(0.05)).current;
   const version = useSharedValue(0);
@@ -106,7 +106,7 @@ type BarProps = {
   reduced: boolean;
 };
 
-function Bar({ index, barWidth, centerY, height, history, version, reduced }: BarProps) {
+const Bar: React.FC<BarProps> = ({ index, barWidth, centerY, height, history, version, reduced }) => {
   const target = useSharedValue(0.05);
 
   // Read `version` so reactively we retrigger when the history is updated.

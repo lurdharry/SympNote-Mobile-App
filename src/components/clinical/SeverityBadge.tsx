@@ -10,7 +10,7 @@ type Props = {
  * Color-coded severity pill. Green for mild, amber for moderate, red for
  * severe.
  */
-export function SeverityBadge({ severity }: Props) {
+export const SeverityBadge: React.FC<Props> = ({ severity }) => {
   const { colors } = useTheme();
   const styles = useStyles();
 

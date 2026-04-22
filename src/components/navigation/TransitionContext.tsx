@@ -27,7 +27,11 @@ type TransitionState = {
 
 const Ctx = createContext<TransitionState | null>(null);
 
-export function TransitionProvider({ children }: { children: React.ReactNode }) {
+interface TransitionProviderProps {
+  children: React.ReactNode;
+}
+
+export const TransitionProvider: React.FC<TransitionProviderProps> = ({ children }) => {
   const [origin, setOriginState] = useState<Origin>(null);
   const [wipeActive, _setWipeActive] = useState(false);
   const [_wipeCenter, _setWipeCenter] = useState({ x: 0, y: 0 });

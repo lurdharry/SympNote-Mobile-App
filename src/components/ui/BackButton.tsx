@@ -1,15 +1,15 @@
 import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
-import { moderateScale, scale, useTheme, verticalScale } from '../../theme';
-import { hapticLight } from '../../services/haptics';
+import { moderateScale, scale, useTheme, verticalScale } from '@/theme';
+import { hapticLight } from '@/services/haptics';
 
-type Props = {
+interface BackButtonProps {
   onPress: () => void;
   color?: string;
-};
+}
 
-export function BackButton({ onPress, color }: Props) {
+export const BackButton: React.FC<BackButtonProps> = ({ onPress, color }) => {
   const { colors } = useTheme();
   return (
     <Pressable
@@ -28,7 +28,7 @@ export function BackButton({ onPress, color }: Props) {
       <ArrowLeft size={moderateScale(22)} color={color ?? colors.textPrimary} strokeWidth={2} />
     </Pressable>
   );
-}
+};
 
 const styles = StyleSheet.create({
   btn: {

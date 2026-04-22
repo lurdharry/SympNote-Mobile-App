@@ -25,13 +25,13 @@ type Props = {
   style?: StyleProp<ViewStyle>;
 };
 
-export function SecondaryButton({
+export const SecondaryButton: React.FC<Props> = ({
   label,
   onPress,
   icon,
   disabled,
   style,
-}: Props) {
+}) => {
   const { colors } = useTheme();
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({

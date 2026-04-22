@@ -65,7 +65,7 @@ type Props = {
   text: string | null;
 };
 
-export function ClinicalSummaryTeaser({ text }: Props) {
+export const ClinicalSummaryTeaser: React.FC<Props> = ({ text }) => {
   const { colors } = useTheme();
   const styles = useStyles();
   const reduced = useReducedMotion();

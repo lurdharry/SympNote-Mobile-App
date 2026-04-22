@@ -3,7 +3,11 @@ import { Text, View } from 'react-native';
 import { makeStyles } from '../../theme';
 import { Button } from '../ui/Button';
 
-export function PrivacyPhase({ onAccept }: { onAccept: () => void }) {
+interface PrivacyPhaseProps {
+  onAccept: () => void;
+}
+
+export const PrivacyPhase: React.FC<PrivacyPhaseProps> = ({ onAccept }) => {
   const styles = useStyles();
   return (
     <View style={styles.wrap}>

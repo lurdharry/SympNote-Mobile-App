@@ -14,7 +14,7 @@ type Props = {
   retryInSec?: number;
 };
 
-export function ReviewPhase({
+export const ReviewPhase: React.FC<Props> = ({
   text,
   onChange,
   durationSec,
@@ -22,7 +22,7 @@ export function ReviewPhase({
   onDiscard,
   error,
   retryInSec = 0,
-}: Props) {
+}) => {
   const { colors } = useTheme();
   const styles = useStyles();
   const blocked = retryInSec > 0;
