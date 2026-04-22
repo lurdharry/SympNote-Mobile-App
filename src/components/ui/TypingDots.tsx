@@ -23,6 +23,11 @@ export function TypingDots() {
   );
 }
 
+// Hoisted out of the component so the worklet below can close over a
+// plain number — calling `moderateScale` inside the worklet would cross
+// the JS/UI thread boundary and throw at runtime.
+const DOT_TRAVEL = moderateScale(4);
+
 function Dot({ delay, color }: { delay: number; color: string }) {
   const reduced = useReducedMotion();
   const t = useSharedValue(0);
@@ -41,7 +46,7 @@ function Dot({ delay, color }: { delay: number; color: string }) {
     );
   }, [delay, reduced, t]);
   const style = useAnimatedStyle(() => ({
-    transform: [{ translateY: -moderateScale(4) * t.value }],
+    transform: [{ translateY: -DOT_TRAVEL * t.value }],
     opacity: 0.5 + t.value * 0.5,
   }));
   return <Animated.View style={[styles.dot, { backgroundColor: color }, style]} />;
