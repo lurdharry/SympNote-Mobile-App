@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useId } from "react";
 import Svg, {
   Defs,
   LinearGradient,
@@ -9,15 +9,20 @@ import Svg, {
   G,
   Circle,
 } from "react-native-svg";
-import { moderateScale } from "../../theme";
+import { moderateScale } from "@/theme";
 
-type Props = {
+interface SympnoteMarkProps {
   size?: number;
   rounded?: boolean;
-};
+}
 
-export function SympnoteMark({ size = moderateScale(64), rounded = true }: Props) {
-  const id = useMemo(() => "sn-" + Math.random().toString(36).slice(2, 8), []);
+export const SympnoteMark: React.FC<SympnoteMarkProps> = ({
+  size = moderateScale(64),
+  rounded = true,
+}) => {
+  // `useId` is stable across renders and SSR-safe, so SVG <defs> ids
+  // don't collide when multiple marks mount at once.
+  const id = `sn-${useId().replace(/:/g, "")}`;
   const radius = rounded ? 16 : 0;
 
   return (
