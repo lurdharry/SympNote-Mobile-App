@@ -50,3 +50,14 @@ export function daysUntil(iso: string): number {
   const now = Date.now();
   return Math.ceil((then - now) / 86400000);
 }
+
+/**
+ * Time-of-day greeting suitable for a serif display at the top of Home.
+ * Morning 5–11, Afternoon 12–16, Evening otherwise.
+ */
+export function timeGreeting(at: Date = new Date()): string {
+  const h = at.getHours();
+  if (h >= 5 && h < 12) return 'Good morning.';
+  if (h >= 12 && h < 17) return 'Good afternoon.';
+  return 'Good evening.';
+}

@@ -15,6 +15,16 @@ type Actions = {
   upcoming: () => Appointment[];
   next: () => Appointment | undefined;
   attachRecording: (appointmentId: string, recordingId: string) => void;
+  /** Push a question onto the appointment's brief. */
+  addQuestion: (appointmentId: string, question: string) => void;
+  /** Remove a question by its index in `brief.questions`. */
+  removeQuestion: (appointmentId: string, index: number) => void;
+  /** Replace an existing question in place. */
+  updateQuestion: (
+    appointmentId: string,
+    index: number,
+    next: string
+  ) => void;
 };
 
 export const useAppointmentsStore = create<State & Actions>()(
@@ -61,6 +71,54 @@ export const useAppointmentsStore = create<State & Actions>()(
               : a
           ),
         })),
+      addQuestion: (appointmentId, question) => {
+        const q = question.trim();
+        if (!q) return;
+        set((s) => ({
+          appointments: s.appointments.map((a) =>
+            a.id === appointmentId
+              ? {
+                  ...a,
+                  brief: {
+                    questions: [...(a.brief?.questions ?? []), q],
+                  },
+                }
+              : a
+          ),
+        }));
+      },
+      removeQuestion: (appointmentId, index) =>
+        set((s) => ({
+          appointments: s.appointments.map((a) =>
+            a.id === appointmentId
+              ? {
+                  ...a,
+                  brief: {
+                    questions: (a.brief?.questions ?? []).filter(
+                      (_, i) => i !== index
+                    ),
+                  },
+                }
+              : a
+          ),
+        })),
+      updateQuestion: (appointmentId, index, next) => {
+        const q = next.trim();
+        set((s) => ({
+          appointments: s.appointments.map((a) =>
+            a.id === appointmentId
+              ? {
+                  ...a,
+                  brief: {
+                    questions: (a.brief?.questions ?? []).map((old, i) =>
+                      i === index ? q : old
+                    ),
+                  },
+                }
+              : a
+          ),
+        }));
+      },
     }),
     {
       name: 'appointments',

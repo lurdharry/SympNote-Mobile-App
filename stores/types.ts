@@ -41,6 +41,16 @@ export type Recording = {
   tags: string[];
 };
 
+/**
+ * Per-visit "brief" — user-curated content that sits alongside the
+ * AI-generated `summary`. These are things the patient wants to
+ * bring up with the doctor; they persist even if the summary is
+ * regenerated.
+ */
+export type AppointmentBrief = {
+  questions: string[];
+};
+
 export type Appointment = {
   id: string;
   title: string;
@@ -50,6 +60,12 @@ export type Appointment = {
   relatedRecordingIds: string[];
   summary: string | null;
   generatedAt: string | null;
+  /**
+   * Optional for forward compatibility with existing MMKV-persisted
+   * records written before the field was added. Treat `undefined` as
+   * an empty brief.
+   */
+  brief?: AppointmentBrief;
 };
 
 export type SubscriptionStatus = 'trial' | 'active' | 'expired' | 'none';

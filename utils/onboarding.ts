@@ -128,6 +128,52 @@ export function tentativeAppointmentTitle(): string {
 }
 
 /**
+ * Real progress across the onboarding flow. Each stage contributes an
+ * equal slice of XP so the paywall progress bar reflects what the user
+ * has actually done, not a fabricated number.
+ *
+ * Stages tracked (5 total, 20 XP each):
+ *   1. Privacy acknowledged (hook screen completed)
+ *   2. Qualifier — all 4 answers set
+ *   3. Focus area picked
+ *   4. Care team stage passed (answer set, even if empty)
+ *   5. First recording saved
+ */
+export function computeOnboardingProgress(input: {
+  hasSeenPrivacy: boolean;
+  answers: Answers;
+  recordingCount: number;
+}): {
+  xp: number;
+  total: number;
+  stagesComplete: number;
+  stagesTotal: number;
+} {
+  const total = 100;
+  const stagesTotal = 5;
+  let stagesComplete = 0;
+
+  if (input.hasSeenPrivacy) stagesComplete += 1;
+
+  const qualifierKeys = [
+    'regularity',
+    'hardest',
+    'forgetting',
+    'nextAppointment',
+  ];
+  if (qualifierKeys.every((k) => typeof input.answers[k] === 'string')) {
+    stagesComplete += 1;
+  }
+
+  if (typeof input.answers.focus === 'string') stagesComplete += 1;
+  if ('careTeam' in input.answers) stagesComplete += 1;
+  if (input.recordingCount >= 1) stagesComplete += 1;
+
+  const xp = Math.round((stagesComplete / stagesTotal) * total);
+  return { xp, total, stagesComplete, stagesTotal };
+}
+
+/**
  * Sympnote's conversational reply to each qualifier answer. Used in the
  * chat-bubble questions screen so the AI feels like it's listening, and
  * in the analyzing screen to recap what it learned.
