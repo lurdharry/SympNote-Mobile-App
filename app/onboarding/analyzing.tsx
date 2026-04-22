@@ -1,229 +1,391 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
+  Easing,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
+  withRepeat,
   withTiming,
-  Easing,
 } from 'react-native-reanimated';
+import { RadialGradient } from 'react-native-svg';
+import Svg, {
+  Circle as SvgCircle,
+  Defs,
+  Stop,
+} from 'react-native-svg';
 import {
-  Canvas,
-  Circle,
-  Group,
-  RadialGradient,
-  vec,
-  BlurMask,
-} from '@shopify/react-native-skia';
-import { useTheme, spacing, typography } from '../../theme';
+  Brain,
+  Check,
+  ClipboardList,
+  Sparkles,
+} from 'lucide-react-native';
+import { useTheme, radius, spacing, typography } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
-import { TypewriterText } from '../../components/animated/TypewriterText';
+import { BackButton } from '../../components/ui/BackButton';
+import { PrimaryButton } from '../../components/ui/PrimaryButton';
+import { Confetti } from '../../components/ui/Confetti';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { hapticLight, hapticMedium } from '../../services/haptics';
-import { useTransition } from '../../components/navigation/TransitionContext';
-import { useProfileStore } from '../../stores/useProfileStore';
-import { getSympnoteReply } from '../../utils/onboarding';
+import { hapticLight, hapticSuccess } from '../../services/haptics';
 
 /**
- * Screen 4 — Sympnote reflects back what it heard.
- * Instead of fake "Analyzing..." theater, we echo back real interpretations
- * of the user's answers one by one. Editorial layout: soft orb, single-line
- * lines streaming in, serif closing line.
+ * Screen 05 — Analyzing.
+ *
+ * Interstitial with:
+ *  - Outer dashed orbit ring (12s linear spin)
+ *  - Inner solid gold ring (8s reverse spin)
+ *  - Central radial-gradient orb with soft pulse (2.4s ease-in-out)
+ *  - 3 staged check rows, each with a +10 XP badge when complete
+ *  - Confetti + "Your plan is ready!" + enabled CTA when all three done
+ *
+ * Timing (from handoff): 1100ms → 2300ms → 3500ms → 4000ms ready.
  */
-export default function Analyzing() {
+
+type IconRef = typeof Brain;
+const STEPS: Array<{ t: string; Icon: IconRef }> = [
+  { t: 'Analyzing your needs',      Icon: Brain },
+  { t: 'Building your prep plan',   Icon: ClipboardList },
+  { t: 'Personalizing your path',   Icon: Sparkles },
+];
+
+export default function ScreenAnalyzing() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { width, height } = useWindowDimensions();
-  const { triggerRadialWipe } = useTransition();
-  const answers = useProfileStore((s) => s.onboardingAnswers);
+  const reduced = useReducedMotion();
 
-  // Build reflection lines from the user's qualifier answers.
-  // Only include answers we have — users can land here with fewer than 4
-  // if a future iteration adds skips.
-  const lines = (['hardest', 'forgetting', 'nextAppointment'] as const)
-    .map((key) => {
-      const v = answers[key];
-      if (typeof v !== 'string' || !v) return null;
-      return getSympnoteReply(key, v);
-    })
-    .filter((x): x is string => !!x)
-    .slice(0, 3);
-
-  const [visibleCount, setVisibleCount] = useState(0);
-  const [closing, setClosing] = useState(false);
-
-  const inhale = useSharedValue(1);
-
-  const routerRef = useRef(router);
-  routerRef.current = router;
-  const wipeRef = useRef(triggerRadialWipe);
-  wipeRef.current = triggerRadialWipe;
-  const dimsRef = useRef({ width, height });
-  dimsRef.current = { width, height };
-  const navigatedRef = useRef(false);
+  const [done, setDone] = useState([false, false, false]);
+  const [activeText, setActiveText] = useState(0);
+  const [ready, setReady] = useState(false);
+  const [confetti, setConfetti] = useState(false);
 
   useEffect(() => {
     const timers: ReturnType<typeof setTimeout>[] = [];
-    // Reveal each line with a beat between them.
-    lines.forEach((_, i) => {
-      timers.push(
-        setTimeout(() => {
-          setVisibleCount(i + 1);
-          hapticLight();
-        }, 500 + i * 900)
-      );
-    });
-
-    const closeAt = 500 + lines.length * 900 + 200;
     timers.push(
       setTimeout(() => {
-        setClosing(true);
-        hapticMedium();
-        inhale.value = withSpring(0.97, { damping: 18, stiffness: 160 });
-      }, closeAt)
+        setDone((d) => [true, d[1]!, d[2]!]);
+        setActiveText(1);
+        hapticLight();
+      }, 1100)
     );
-
     timers.push(
-      setTimeout(async () => {
-        if (navigatedRef.current) return;
-        navigatedRef.current = true;
-        const { width: w, height: h } = dimsRef.current;
-        await wipeRef.current({ x: w / 2, y: h / 2 });
-        routerRef.current.replace('/onboarding/first-recording');
-      }, closeAt + 1100)
+      setTimeout(() => {
+        setDone((d) => [d[0]!, true, d[2]!]);
+        setActiveText(2);
+        hapticLight();
+      }, 2300)
     );
-
+    timers.push(
+      setTimeout(() => {
+        setDone((d) => [d[0]!, d[1]!, true]);
+        hapticLight();
+      }, 3500)
+    );
+    timers.push(
+      setTimeout(() => {
+        setReady(true);
+        setConfetti(true);
+        hapticSuccess();
+      }, 4000)
+    );
     return () => timers.forEach(clearTimeout);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const inhaleStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: inhale.value }],
-  }));
 
   return (
     <SceneTransition mode="scale-fade">
-      <SafeAreaView style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
-        <Animated.View style={[styles.inner, inhaleStyle]}>
-          <View style={styles.header}>
-            <Orb size={80} />
-            <View style={{ marginTop: spacing.s4 }}>
-              <Text style={[typography.label, { color: colors.textSecondary }]}>
-                Sympnote
-              </Text>
-              <Text style={[typography.caption, { color: colors.textTertiary }]}>
-                {closing ? 'Ready' : 'Reflecting'}
-              </Text>
+      <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
+        <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+          <View style={styles.topBar}>
+            <BackButton onPress={() => router.back()} />
+          </View>
+
+          <View style={styles.hero}>
+            <Confetti show={confetti} />
+            <OrbitOrb ready={ready} reduced={reduced} />
+
+            <View style={styles.textSlot}>
+              {ready ? (
+                <Text
+                  style={[
+                    typography.h1,
+                    { color: colors.textPrimary, textAlign: 'center' },
+                  ]}
+                >
+                  Your plan is ready
+                </Text>
+              ) : (
+                <Text
+                  key={activeText}
+                  style={[
+                    typography.h2,
+                    { color: colors.textPrimary, textAlign: 'center' },
+                  ]}
+                >
+                  {STEPS[activeText]!.t}
+                  <Text style={{ color: colors.accent }}>▍</Text>
+                </Text>
+              )}
+            </View>
+
+            <View style={styles.checkList}>
+              {STEPS.map((s, i) => (
+                <CheckRow
+                  key={i}
+                  label={s.t}
+                  Icon={s.Icon}
+                  done={done[i]!}
+                  success={colors.success}
+                />
+              ))}
             </View>
           </View>
 
-          <View style={styles.body}>
-            {lines.map((line, i) => (
-              <ReflectionLine
-                key={`${i}-${line}`}
-                text={line}
-                visible={i < visibleCount}
-              />
-            ))}
-            {closing && (
-              <View style={{ marginTop: spacing.s6 }}>
-                <TypewriterText
-                  text="Let's get you on record."
-                  speed={26}
-                  style={[
-                    typography.displaySerif,
-                    { color: colors.accent, fontSize: 32, lineHeight: 40 },
-                  ]}
-                />
-              </View>
-            )}
+          <View style={{ paddingHorizontal: spacing.s6, paddingBottom: spacing.s10 }}>
+            <PrimaryButton
+              label={ready ? "Let's go · +30 XP" : 'Preparing…'}
+              disabled={!ready}
+              onPress={() => router.push('/onboarding/first-recording')}
+            />
           </View>
-        </Animated.View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </View>
     </SceneTransition>
   );
 }
 
-function ReflectionLine({ text, visible }: { text: string; visible: boolean }) {
-  const { colors } = useTheme();
-  const reduced = useReducedMotion();
-  const opacity = useSharedValue(0);
-  const ty = useSharedValue(8);
+function OrbitOrb({
+  ready,
+  reduced,
+}: {
+  ready: boolean;
+  reduced: boolean;
+}) {
+  const spin1 = useSharedValue(0);
+  const spin2 = useSharedValue(0);
+  const pulse = useSharedValue(0);
 
   useEffect(() => {
-    if (!visible) return;
-    opacity.value = withTiming(1, {
-      duration: 300,
-      easing: Easing.out(Easing.cubic),
-    });
-    ty.value = reduced
-      ? withTiming(0, { duration: 200 })
-      : withSpring(0, { damping: 18, stiffness: 140 });
-  }, [visible, opacity, ty, reduced]);
+    if (reduced) return;
+    spin1.value = withRepeat(
+      withTiming(1, { duration: 12000, easing: Easing.linear }),
+      -1,
+      false
+    );
+    spin2.value = withRepeat(
+      withTiming(-1, { duration: 8000, easing: Easing.linear }),
+      -1,
+      false
+    );
+    pulse.value = withRepeat(
+      withTiming(1, { duration: 2400, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true
+    );
+  }, [reduced, spin1, spin2, pulse]);
 
-  const style = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ translateY: ty.value }],
+  const ring1Style = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${spin1.value * 360}deg` }],
+  }));
+  const ring2Style = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${spin2.value * 360}deg` }],
+  }));
+  const orbStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: 1 + pulse.value * 0.06 }],
+    shadowOpacity: 0.4 + pulse.value * 0.25,
+    shadowRadius: 24 + pulse.value * 16,
   }));
 
   return (
-    <Animated.View
-      style={[
-        {
-          borderLeftWidth: 2,
-          borderLeftColor: colors.accent,
-          paddingLeft: spacing.s4,
-          paddingVertical: spacing.s2,
-          marginTop: spacing.s4,
-        },
-        style,
-      ]}
-    >
-      <Text
+    <View style={styles.orbFrame}>
+      <Animated.View
         style={[
-          typography.bodyLarge,
-          { color: colors.textPrimary, fontSize: 19, lineHeight: 26 },
+          styles.orbitRing,
+          {
+            width: 220,
+            height: 220,
+            borderColor: 'rgba(44,110,107,0.25)',
+            borderStyle: 'dashed',
+            borderWidth: 2,
+          },
+          ring1Style,
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.orbitRing,
+          {
+            width: 180,
+            height: 180,
+            borderColor: 'rgba(246,192,106,0.3)',
+            borderWidth: 2,
+          },
+          ring2Style,
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.orb,
+          {
+            shadowColor: '#2C6E6B',
+            shadowOffset: { width: 0, height: 10 },
+          },
+          orbStyle,
         ]}
       >
-        {text}
-      </Text>
-    </Animated.View>
+        <OrbGradient />
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <View
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {ready ? (
+              <Check size={44} color="#FFFFFF" strokeWidth={3} />
+            ) : (
+              <Sparkles size={40} color="#FFFFFF" strokeWidth={2} />
+            )}
+          </View>
+        </View>
+      </Animated.View>
+    </View>
   );
 }
 
-function Orb({ size }: { size: number }) {
-  const { colors } = useTheme();
-  const r = size / 2;
+function OrbGradient() {
   return (
-    <Canvas style={{ width: size, height: size }}>
-      <Group>
-        <Circle cx={r} cy={r} r={r - 4}>
-          <RadialGradient
-            c={vec(r, r)}
-            r={r}
-            colors={[colors.accentLight, colors.accent, colors.accentDark]}
-          />
-          <BlurMask blur={8} style="solid" />
-        </Circle>
-      </Group>
-    </Canvas>
+    <Svg width="100%" height="100%" viewBox="0 0 140 140">
+      <Defs>
+        <RadialGradient id="orbGrad" cx="0.3" cy="0.3" r="0.8">
+          <Stop offset="0" stopColor="#A8C4C2" />
+          <Stop offset="0.7" stopColor="#2C6E6B" />
+          <Stop offset="1" stopColor="#1F504E" />
+        </RadialGradient>
+      </Defs>
+      <SvgCircle cx={70} cy={70} r={70} fill="url(#orbGrad)" />
+    </Svg>
+  );
+}
+
+function CheckRow({
+  label,
+  Icon,
+  done,
+  success,
+}: {
+  label: string;
+  Icon: IconRef;
+  done: boolean;
+  success: string;
+}) {
+  const { colors } = useTheme();
+  return (
+    <View
+      style={[
+        styles.checkRow,
+        {
+          backgroundColor: done ? success + '14' : 'transparent',
+          opacity: done ? 1 : 0.5,
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.checkIcon,
+          { backgroundColor: done ? success : colors.bgMuted },
+        ]}
+      >
+        {done ? (
+          <Check size={16} color="#FFFFFF" strokeWidth={3} />
+        ) : (
+          <Icon size={16} color={colors.textSecondary} strokeWidth={2} />
+        )}
+      </View>
+      <Text
+        style={[
+          typography.bodyLarge,
+          {
+            color: done ? colors.textPrimary : colors.textTertiary,
+            fontFamily: done ? 'Inter_500Medium' : 'Inter_400Regular',
+            flex: 1,
+          },
+        ]}
+      >
+        {label}
+      </Text>
+      {done && (
+        <Text
+          style={[
+            typography.label,
+            {
+              color: success,
+              fontFamily: 'Inter_700Bold',
+            },
+          ]}
+        >
+          +10 XP
+        </Text>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  inner: {
-    flex: 1,
+  safe: { flex: 1 },
+  topBar: {
+    paddingTop: spacing.s3,
     paddingHorizontal: spacing.s6,
-    paddingTop: spacing.s10,
   },
-  header: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
+  hero: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.s6,
   },
-  body: {
-    marginTop: spacing.s10,
+  orbFrame: {
+    width: 220,
+    height: 220,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.s10,
+  },
+  orbitRing: {
+    position: 'absolute',
+    borderRadius: 9999,
+  },
+  orb: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    overflow: 'hidden',
+    elevation: 8,
+  },
+  textSlot: {
+    height: 40,
+    marginBottom: spacing.s8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  checkList: {
+    width: '100%',
+    maxWidth: 300,
+    gap: 10,
+  },
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: radius.md,
+  },
+  checkIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

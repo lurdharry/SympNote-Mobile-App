@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -9,297 +9,511 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
+  Easing,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
   withSpring,
   withTiming,
-  Easing,
 } from 'react-native-reanimated';
-import { useTheme, radius, spacing, typography } from '../../theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import {
+  Bell,
+  BookOpen,
+  Brain,
+  Calendar,
+  Check,
+  Hourglass,
+  MessageCircle,
+  NotebookPen,
+  Pin,
+  Sparkles,
+  Sprout,
+  Target,
+  Timer,
+} from 'lucide-react-native';
+import { useTheme, radius, spacing, typography, shadows } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
-import { ProgressBar } from '../../components/ui/ProgressBar';
-import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { BackButton } from '../../components/ui/BackButton';
+import { TypingDots } from '../../components/ui/TypingDots';
 import { useProfileStore } from '../../stores/useProfileStore';
 import { hapticLight } from '../../services/haptics';
-import { getSympnoteReply } from '../../utils/onboarding';
 
 /**
- * Screen 3 — conversational questions.
- * Each turn is a Sympnote bubble (left) + options, which collapse into a
- * user bubble (right) and a Sympnote reply once answered. The thread
- * accumulates so the user feels the AI listening across questions.
+ * Screen 02 — Qualifier.
+ *
+ * Chat format. The assistant asks, the user answers via chips (or a
+ * date card for Q4). Each answer unlocks a row in the "Your Sympnote
+ * plan" card pinned below the top bar — which is the primary "work"
+ * this screen communicates visually.
+ *
+ * Plan unlocks are keyed `questionId:value` per design handoff.
  */
 
+type Option = { t: string; v: string };
 type Question = {
-  key: string;
-  prompt: string;
-  options: string[];
+  id: string;
+  ask: string;
+  options?: Option[];
+  kind?: 'date';
 };
 
 const QUESTIONS: Question[] = [
   {
-    key: 'regularity',
-    prompt: 'Do you see a doctor regularly?',
-    options: ['Yes, often', 'Sometimes', 'Rarely'],
-  },
-  {
-    key: 'hardest',
-    prompt: "What's the hardest part about doctor visits?",
+    id: 'doctor',
+    ask: 'First — do you see a doctor regularly?',
     options: [
-      'Remembering symptoms',
-      'Explaining clearly',
-      'Feeling rushed',
-      'Taking notes',
+      { t: 'Yes, often', v: 'often' },
+      { t: 'Sometimes', v: 'sometimes' },
+      { t: 'Rarely', v: 'rarely' },
     ],
   },
   {
-    key: 'forgetting',
-    prompt: 'How often do you forget something important?',
-    options: ['Always', 'Often', 'Sometimes', 'Rarely'],
+    id: 'pain',
+    ask: "What's hardest about doctor visits for you?",
+    options: [
+      { t: 'Remembering symptoms', v: 'memory' },
+      { t: 'Explaining clearly', v: 'clarity' },
+      { t: 'Feeling rushed', v: 'time' },
+      { t: 'Taking notes', v: 'notes' },
+    ],
   },
   {
-    key: 'nextAppointment',
-    prompt: "When's your next appointment?",
+    id: 'forget',
+    ask: 'And honestly — how often do you forget something important?',
     options: [
-      'Within a week',
-      'Within a month',
-      'Later this year',
-      'Not scheduled yet',
+      { t: 'Almost always', v: 'always' },
+      { t: 'Often', v: 'often' },
+      { t: 'Sometimes', v: 'sometimes' },
+      { t: 'Rarely', v: 'rarely' },
     ],
+  },
+  {
+    id: 'next',
+    ask: "When's your next appointment? We'll count down and prep you.",
+    kind: 'date',
   },
 ];
 
-type Turn = {
-  qKey: string;
-  prompt: string;
-  answer: string | null;
-  reply: string | null;
+type IconRef = typeof Calendar;
+type PlanItem = { Icon: IconRef; title: string; sub: string };
+
+const PLAN_UNLOCKS: Record<string, PlanItem> = {
+  'doctor:often':     { Icon: Calendar,      title: 'Cross-visit timeline',  sub: 'We connect patterns between visits' },
+  'doctor:sometimes': { Icon: Calendar,      title: 'Visit-ready summaries', sub: 'Ready whenever you book next' },
+  'doctor:rarely':    { Icon: Sprout,        title: 'Grow-at-your-pace',     sub: 'Log when it matters, no pressure' },
+  'pain:memory':      { Icon: Brain,         title: 'Daily memory nudges',   sub: 'Gentle reminders to log small things' },
+  'pain:clarity':     { Icon: MessageCircle, title: 'Clear summaries',       sub: 'Your words, organized for your doctor' },
+  'pain:time':        { Icon: Timer,         title: 'One-page visit brief',  sub: 'Nothing important gets rushed past' },
+  'pain:notes':       { Icon: NotebookPen,   title: 'Automatic note-taking', sub: 'We capture, you focus on the doctor' },
+  'forget:always':    { Icon: Target,        title: 'Gentle recall prompts', sub: "We'll jog memory before each visit" },
+  'forget:often':     { Icon: Bell,          title: 'Pre-visit checklist',   sub: 'Key things to mention, ready to go' },
+  'forget:sometimes': { Icon: Sparkles,      title: 'Smart highlights',      sub: 'We surface what matters most' },
+  'forget:rarely':    { Icon: BookOpen,      title: 'Deep visit archive',    sub: 'Searchable history of every visit' },
+  'next:scheduled':   { Icon: Hourglass,     title: 'Appointment countdown', sub: 'Prep builds as your visit approaches' },
+  'next:none':        { Icon: Pin,           title: 'Ready when you book',   sub: "We'll prep the moment you schedule" },
 };
 
-export default function Questions() {
+export default function ScreenQualifier() {
   const router = useRouter();
   const { colors } = useTheme();
   const setAnswer = useProfileStore((s) => s.setOnboardingAnswer);
+
+  const [step, setStep] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, Option>>({});
+  const [typing, setTyping] = useState(true);
   const scrollRef = useRef<ScrollView>(null);
 
-  const [turns, setTurns] = useState<Turn[]>([
-    { qKey: QUESTIONS[0]!.key, prompt: QUESTIONS[0]!.prompt, answer: null, reply: null },
-  ]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const cur = QUESTIONS[step]!;
+  const total = QUESTIONS.length;
 
-  const current = QUESTIONS[currentIndex]!;
+  // Typing indicator before each question
+  useEffect(() => {
+    setTyping(true);
+    const id = setTimeout(() => setTyping(false), 650);
+    return () => clearTimeout(id);
+  }, [step]);
 
-  const handleSelect = (val: string) => {
+  // Auto-scroll on new turns
+  useEffect(() => {
+    scrollRef.current?.scrollToEnd({ animated: true });
+  }, [step, typing, answers]);
+
+  const onAnswer = (opt: Option) => {
     hapticLight();
-    setAnswer(current.key, val);
-    const reply = getSympnoteReply(current.key, val);
-
-    // Fill in the current turn's answer + reply.
-    setTurns((prev) =>
-      prev.map((t, i) =>
-        i === prev.length - 1 ? { ...t, answer: val, reply } : t
-      )
-    );
-
-    // After a beat, advance to the next question or analyzing.
+    setAnswers((prev) => ({ ...prev, [cur.id]: opt }));
+    // Persist the label so analyzing + paywall copy can read it.
+    const answerKey = mapToProfileKey(cur.id);
+    if (answerKey) setAnswer(answerKey, opt.t);
     setTimeout(() => {
-      if (currentIndex < QUESTIONS.length - 1) {
-        const nextQ = QUESTIONS[currentIndex + 1]!;
-        setTurns((prev) => [
-          ...prev,
-          { qKey: nextQ.key, prompt: nextQ.prompt, answer: null, reply: null },
-        ]);
-        setCurrentIndex(currentIndex + 1);
-        // Give the new bubble time to mount, then scroll.
-        setTimeout(
-          () => scrollRef.current?.scrollToEnd({ animated: true }),
-          60
-        );
-      } else {
-        router.push('/onboarding/analyzing');
-      }
-    }, 1100);
+      if (step < total - 1) setStep(step + 1);
+      else setTimeout(() => router.push('/onboarding/focus'), 600);
+    }, 450);
   };
 
-  const answered = turns[turns.length - 1]?.answer != null;
+  const planItems = useMemo<PlanItem[]>(() => {
+    const items: PlanItem[] = [];
+    (Object.keys(answers) as Array<keyof typeof answers>).forEach((qid) => {
+      const a = answers[qid];
+      if (!a) return;
+      const u = PLAN_UNLOCKS[`${qid}:${a.v}`];
+      if (u) items.push(u);
+    });
+    return items;
+  }, [answers]);
+
+  const onBack = () => {
+    if (step === 0) router.back();
+    else setStep(step - 1);
+  };
 
   return (
     <SceneTransition mode="scale-fade">
-      <SafeAreaView style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
-        <View style={{ paddingHorizontal: spacing.s6, paddingTop: spacing.s4 }}>
-          <Header />
-          <View style={{ marginTop: spacing.s3 }}>
-            <ProgressBar total={QUESTIONS.length} current={currentIndex + 1} />
+      <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
+        <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+          {/* Top bar */}
+          <View style={styles.topBar}>
+            <BackButton onPress={onBack} />
+            <ProgressBar step={step} total={total} />
+            <Text
+              style={[
+                typography.label,
+                { color: colors.textTertiary, fontVariant: ['tabular-nums'] },
+              ]}
+            >
+              {Math.min(step + 1, total)}/{total}
+            </Text>
           </View>
-        </View>
 
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-          onContentSizeChange={() =>
-            scrollRef.current?.scrollToEnd({ animated: true })
-          }
-        >
-          {turns.map((turn, i) => (
-            <TurnBlock key={`${turn.qKey}-${i}`} turn={turn} index={i} />
-          ))}
+          <View style={{ paddingHorizontal: spacing.s5, marginTop: spacing.s3 }}>
+            <PlanCard items={planItems} total={total} />
+          </View>
 
-          {!answered && (
-            <OptionBlock
-              key={`opts-${currentIndex}`}
-              options={current.options}
-              onSelect={handleSelect}
-            />
-          )}
-        </ScrollView>
-      </SafeAreaView>
+          {/* Conversation feed */}
+          <ScrollView
+            ref={scrollRef}
+            style={{ flex: 1 }}
+            contentContainerStyle={{
+              paddingHorizontal: spacing.s5,
+              paddingTop: spacing.s4,
+              paddingBottom: spacing.s4,
+              gap: spacing.s3,
+            }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Past turns */}
+            {QUESTIONS.slice(0, step).map((q) => (
+              <React.Fragment key={q.id + '-turn'}>
+                <AssistantBubble>{q.ask}</AssistantBubble>
+                {answers[q.id] && <UserBubble>{answers[q.id]!.t}</UserBubble>}
+              </React.Fragment>
+            ))}
+
+            {/* Current question */}
+            {typing ? (
+              <TypingBubble />
+            ) : (
+              <AssistantBubble>{cur.ask}</AssistantBubble>
+            )}
+
+            <View style={{ height: 8 }} />
+          </ScrollView>
+
+          {/* Answer tray */}
+          <View
+            style={[
+              styles.tray,
+              {
+                borderTopColor: colors.border,
+                backgroundColor: colors.bgPrimary,
+              },
+            ]}
+          >
+            {cur.kind === 'date' ? (
+              <DateTray disabled={typing} onAnswer={onAnswer} />
+            ) : (
+              <ChipTray
+                disabled={typing}
+                options={cur.options ?? []}
+                onAnswer={onAnswer}
+              />
+            )}
+          </View>
+        </SafeAreaView>
+      </View>
     </SceneTransition>
   );
 }
 
-function Header() {
+/** Map handoff question ids to the profile-store keys other screens expect. */
+function mapToProfileKey(qid: string): string | null {
+  switch (qid) {
+    case 'doctor':
+      return 'regularity';
+    case 'pain':
+      return 'hardest';
+    case 'forget':
+      return 'forgetting';
+    case 'next':
+      return 'nextAppointment';
+    default:
+      return null;
+  }
+}
+
+/* ------------------------------ Subcomponents ------------------------------ */
+
+function ProgressBar({ step, total }: { step: number; total: number }) {
   const { colors } = useTheme();
   return (
-    <View style={styles.header}>
-      <View
-        style={[
-          styles.avatar,
-          { backgroundColor: colors.accent },
-        ]}
-      >
-        <Text
-          style={{
-            color: '#FFFFFF',
-            fontFamily: 'Fraunces_500Medium',
-            fontSize: 14,
-            lineHeight: 16,
-          }}
+    <View style={styles.progressRow}>
+      {Array.from({ length: total }).map((_, i) => (
+        <View
+          key={i}
+          style={[
+            styles.progressSeg,
+            { backgroundColor: colors.bgMuted },
+          ]}
         >
-          S
-        </Text>
-      </View>
-      <View>
-        <Text style={[typography.label, { color: colors.textSecondary }]}>
-          Sympnote
-        </Text>
-        <Text style={[typography.caption, { color: colors.textTertiary }]}>
-          Listening
-        </Text>
-      </View>
+          <View style={StyleSheet.absoluteFill}>
+            <LinearGradient
+              colors={['#3BA79F', '#2C6E6B']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{
+                width: i < step ? '100%' : i === step ? '50%' : '0%',
+                height: '100%',
+              }}
+            />
+          </View>
+        </View>
+      ))}
     </View>
   );
 }
 
-function TurnBlock({ turn, index }: { turn: Turn; index: number }) {
+function PlanCard({ items, total }: { items: PlanItem[]; total: number }) {
   const { colors } = useTheme();
   return (
-    <View style={{ marginTop: index === 0 ? spacing.s6 : spacing.s8 }}>
-      <Bubble side="left" delay={0} variant="sympnote">
-        {turn.prompt}
-      </Bubble>
-      {turn.answer && (
-        <>
-          <View style={{ height: spacing.s3 }} />
-          <Bubble
-            side="right"
-            delay={0}
-            variant="user"
-            accent={colors.accent}
+    <View
+      style={[
+        styles.planCard,
+        {
+          backgroundColor: colors.bgSurface,
+          borderColor: colors.border,
+        },
+        shadows.card,
+      ]}
+    >
+      <LinearGradient
+        colors={[colors.bgSurface, '#FDFBF6']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={styles.planHeader}>
+        <View
+          style={[
+            styles.planHeaderTile,
+            { backgroundColor: colors.accentDark },
+          ]}
+        >
+          <LinearGradient
+            colors={['#2C6E6B', '#1F504E']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <Sparkles size={10} color={colors.gold} fill={colors.gold} />
+        </View>
+        <Text
+          style={[
+            typography.caption,
+            {
+              color: colors.accent,
+              fontFamily: 'Inter_700Bold',
+              letterSpacing: 1.2,
+            },
+          ]}
+        >
+          YOUR SYMPNOTE PLAN
+        </Text>
+        <Text
+          style={[
+            typography.caption,
+            {
+              color: colors.textTertiary,
+              marginLeft: 'auto',
+              fontVariant: ['tabular-nums'],
+            },
+          ]}
+        >
+          {items.length}/{total}
+        </Text>
+      </View>
+      <View style={styles.planBody}>
+        {items.length === 0 ? (
+          <Text
+            style={[
+              typography.caption,
+              {
+                color: colors.textTertiary,
+                fontStyle: 'italic',
+              },
+            ]}
           >
-            {turn.answer}
-          </Bubble>
-        </>
-      )}
-      {turn.reply && (
-        <>
-          <View style={{ height: spacing.s2 }} />
-          <Bubble side="left" delay={350} variant="sympnoteSoft">
-            {turn.reply}
-          </Bubble>
-        </>
-      )}
+            Tell me a bit about you — I'll build this as we go.
+          </Text>
+        ) : (
+          items.map((p, i) => <PlanRow key={i} item={p} index={i} />)
+        )}
+      </View>
     </View>
   );
 }
 
-function Bubble({
-  children,
-  side,
-  delay,
-  variant,
-  accent,
-}: {
-  children: React.ReactNode;
-  side: 'left' | 'right';
-  delay: number;
-  variant: 'sympnote' | 'sympnoteSoft' | 'user';
-  accent?: string;
-}) {
+function PlanRow({ item, index }: { item: PlanItem; index: number }) {
   const { colors } = useTheme();
-  const reduced = useReducedMotion();
   const opacity = useSharedValue(0);
   const ty = useSharedValue(6);
-
   useEffect(() => {
     opacity.value = withDelay(
-      delay,
-      withTiming(1, { duration: 280, easing: Easing.out(Easing.cubic) })
+      index * 60,
+      withTiming(1, { duration: 320, easing: Easing.out(Easing.cubic) })
     );
     ty.value = withDelay(
-      delay,
-      reduced
-        ? withTiming(0, { duration: 200 })
-        : withSpring(0, { damping: 18, stiffness: 160 })
+      index * 60,
+      withSpring(0, { damping: 18, stiffness: 140 })
     );
-  }, [delay, opacity, ty, reduced]);
-
+  }, [index, opacity, ty]);
   const style = useAnimatedStyle(() => ({
     opacity: opacity.value,
     transform: [{ translateY: ty.value }],
   }));
-
-  const bg =
-    variant === 'user'
-      ? accent ?? colors.accent
-      : variant === 'sympnoteSoft'
-      ? 'transparent'
-      : colors.bgSurface;
-  const fg = variant === 'user' ? '#FFFFFF' : colors.textPrimary;
-  const borderColor =
-    variant === 'sympnoteSoft' ? 'transparent' : colors.border;
-
   return (
-    <Animated.View
-      style={[
-        {
-          alignSelf: side === 'left' ? 'flex-start' : 'flex-end',
-          maxWidth: '85%',
-        },
-        style,
-      ]}
-    >
+    <Animated.View style={[styles.planRow, style]}>
+      <View
+        style={{
+          width: 20,
+          height: 20,
+          marginTop: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <item.Icon size={14} color={colors.accent} strokeWidth={2} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text
+          style={[
+            typography.label,
+            { color: colors.textPrimary, fontFamily: 'Inter_600SemiBold' },
+          ]}
+        >
+          {item.title}
+        </Text>
+        <Text
+          style={[
+            typography.caption,
+            { color: colors.textTertiary, marginTop: 1 },
+          ]}
+        >
+          {item.sub}
+        </Text>
+      </View>
+      <Check size={12} color={colors.success} strokeWidth={3} />
+    </Animated.View>
+  );
+}
+
+function AssistantAvatar() {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.avatar}>
+      <LinearGradient
+        colors={['#3BA79F', '#1F504E']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <Sparkles size={12} color={colors.gold} fill={colors.gold} />
+    </View>
+  );
+}
+
+function AssistantBubble({ children }: { children: React.ReactNode }) {
+  const { colors } = useTheme();
+  const opacity = useSharedValue(0);
+  const ty = useSharedValue(6);
+  useEffect(() => {
+    opacity.value = withTiming(1, {
+      duration: 320,
+      easing: Easing.out(Easing.cubic),
+    });
+    ty.value = withSpring(0, { damping: 18, stiffness: 160 });
+  }, [opacity, ty]);
+  const style = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: ty.value }],
+  }));
+  return (
+    <Animated.View style={[styles.bubbleRow, style]}>
+      <AssistantAvatar />
       <View
         style={[
           styles.bubble,
+          styles.assistantBubble,
           {
-            backgroundColor: bg,
-            borderColor,
-            borderTopLeftRadius: side === 'left' ? 4 : radius.lg,
-            borderTopRightRadius: side === 'right' ? 4 : radius.lg,
+            backgroundColor: colors.bgSurface,
+            borderColor: colors.border,
           },
+          shadows.card,
         ]}
       >
         <Text
           style={[
-            variant === 'sympnoteSoft'
-              ? typography.body
-              : typography.bodyLarge,
+            typography.body,
+            { color: colors.textPrimary, lineHeight: 20 },
+          ]}
+        >
+          {children}
+        </Text>
+      </View>
+    </Animated.View>
+  );
+}
+
+function UserBubble({ children }: { children: React.ReactNode }) {
+  const opacity = useSharedValue(0);
+  const ty = useSharedValue(6);
+  useEffect(() => {
+    opacity.value = withTiming(1, {
+      duration: 280,
+      easing: Easing.out(Easing.cubic),
+    });
+    ty.value = withSpring(0, { damping: 18, stiffness: 160 });
+  }, [opacity, ty]);
+  const style = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: ty.value }],
+  }));
+  return (
+    <Animated.View style={[styles.userRow, style]}>
+      <View style={[styles.bubble, styles.userBubble]}>
+        <LinearGradient
+          colors={['#2C6E6B', '#1F504E']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <Text
+          style={[
+            typography.body,
             {
-              color:
-                variant === 'sympnoteSoft' ? colors.textSecondary : fg,
-              fontStyle: variant === 'sympnoteSoft' ? 'italic' : 'normal',
+              color: '#FFFFFF',
+              fontFamily: 'Inter_500Medium',
+              lineHeight: 20,
             },
           ]}
         >
@@ -310,124 +524,329 @@ function Bubble({
   );
 }
 
-function OptionBlock({
+function TypingBubble() {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.bubbleRow}>
+      <AssistantAvatar />
+      <View
+        style={[
+          styles.bubble,
+          styles.assistantBubble,
+          {
+            backgroundColor: colors.bgSurface,
+            borderColor: colors.border,
+            paddingVertical: 12,
+          },
+          shadows.card,
+        ]}
+      >
+        <TypingDots />
+      </View>
+    </View>
+  );
+}
+
+function ChipTray({
   options,
-  onSelect,
+  onAnswer,
+  disabled,
 }: {
-  options: string[];
-  onSelect: (v: string) => void;
+  options: Option[];
+  onAnswer: (o: Option) => void;
+  disabled: boolean;
 }) {
   const { colors } = useTheme();
   return (
-    <View style={{ marginTop: spacing.s6, gap: spacing.s2 }}>
-      {options.map((opt, i) => (
-        <OptionPill
-          key={opt}
-          label={opt}
-          delay={160 + i * 70}
-          onPress={() => onSelect(opt)}
-          borderColor={colors.border}
-          surface={colors.bgSurface}
-          textColor={colors.textPrimary}
-        />
+    <View style={styles.chipWrap}>
+      {options.map((opt) => (
+        <Pressable
+          key={opt.v}
+          onPress={() => onAnswer(opt)}
+          disabled={disabled}
+          style={({ pressed }) => [
+            styles.chip,
+            {
+              backgroundColor: colors.bgSurface,
+              borderColor: pressed ? colors.accent : colors.border,
+              opacity: disabled ? 0.4 : 1,
+            },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={opt.t}
+        >
+          <Text
+            style={[
+              typography.label,
+              {
+                color: colors.textPrimary,
+                fontFamily: 'Inter_600SemiBold',
+              },
+            ]}
+          >
+            {opt.t}
+          </Text>
+        </Pressable>
       ))}
     </View>
   );
 }
 
-function OptionPill({
-  label,
-  delay,
-  onPress,
-  surface,
-  borderColor,
-  textColor,
+function DateTray({
+  onAnswer,
+  disabled,
 }: {
-  label: string;
-  delay: number;
-  onPress: () => void;
-  surface: string;
-  borderColor: string;
-  textColor: string;
+  onAnswer: (o: Option) => void;
+  disabled: boolean;
 }) {
-  const reduced = useReducedMotion();
-  const opacity = useSharedValue(0);
-  const ty = useSharedValue(10);
-  const scale = useSharedValue(1);
+  const { colors } = useTheme();
 
-  useEffect(() => {
-    opacity.value = withDelay(
-      delay,
-      withTiming(1, { duration: 260, easing: Easing.out(Easing.cubic) })
-    );
-    ty.value = withDelay(
-      delay,
-      reduced ? withTiming(0, { duration: 200 }) : withSpring(0, {
-        damping: 18,
-        stiffness: 140,
-      })
-    );
-  }, [delay, opacity, ty, reduced]);
-
-  const s = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ translateY: ty.value }, { scale: scale.value }],
-  }));
+  const scheduled = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    return d;
+  }, []);
+  const dateLabel = scheduled.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  const dayCount = 7;
 
   return (
-    <Animated.View style={[{ alignSelf: 'flex-end' }, s]}>
-      <Pressable
-        onPressIn={() => {
-          scale.value = withSpring(0.96, { damping: 20, stiffness: 240 });
-        }}
-        onPressOut={() => {
-          scale.value = withSpring(1, { damping: 18, stiffness: 160 });
-        }}
-        onPress={onPress}
+    <View style={{ gap: spacing.s2 }}>
+      <View
         style={[
-          styles.pill,
+          styles.dateCard,
           {
-            backgroundColor: surface,
-            borderColor,
+            backgroundColor: colors.bgSurface,
+            borderColor: colors.border,
           },
+          shadows.card,
         ]}
       >
-        <Text style={[typography.bodyLarge, { color: textColor }]}>
-          {label}
-        </Text>
-      </Pressable>
-    </Animated.View>
+        <View
+          style={[
+            styles.dateIconTile,
+            { backgroundColor: colors.accent + '1A' },
+          ]}
+        >
+          <Calendar size={18} color={colors.accent} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[typography.label, { color: colors.textTertiary }]}>
+            Appointment date
+          </Text>
+          <Text
+            style={[
+              typography.h3,
+              { color: colors.textPrimary, marginTop: 2 },
+            ]}
+          >
+            {dateLabel}
+          </Text>
+        </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text
+            style={[typography.caption, { color: colors.textTertiary }]}
+          >
+            in
+          </Text>
+          <Text
+            style={[
+              typography.h3,
+              { color: colors.accent, marginTop: 2 },
+            ]}
+          >
+            {dayCount} days
+          </Text>
+        </View>
+      </View>
+      <View style={{ flexDirection: 'row', gap: spacing.s2 }}>
+        <Pressable
+          onPress={() =>
+            onAnswer({ t: 'Not scheduled yet', v: 'none' })
+          }
+          disabled={disabled}
+          style={({ pressed }) => [
+            styles.dateBtnSecondary,
+            {
+              backgroundColor: colors.bgMuted,
+              opacity: pressed || disabled ? 0.6 : 1,
+            },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Not scheduled yet"
+        >
+          <Text
+            style={[
+              typography.label,
+              { color: colors.textPrimary, fontFamily: 'Inter_600SemiBold' },
+            ]}
+          >
+            Not scheduled
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => onAnswer({ t: dateLabel, v: 'scheduled' })}
+          disabled={disabled}
+          style={({ pressed }) => [
+            styles.dateBtnPrimary,
+            { opacity: pressed || disabled ? 0.85 : 1 },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={`Use ${dateLabel}`}
+        >
+          <LinearGradient
+            colors={['#3BA79F', '#2C6E6B']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <Text
+            style={[
+              typography.body,
+              { color: '#FFFFFF', fontFamily: 'Inter_600SemiBold' },
+            ]}
+          >
+            Use this date →
+          </Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: {
-    paddingHorizontal: spacing.s6,
-    paddingBottom: spacing.s12,
-  },
-  header: {
+  safe: { flex: 1 },
+  topBar: {
+    paddingTop: spacing.s3,
+    paddingHorizontal: spacing.s5,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.s3,
   },
+  progressRow: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 4,
+  },
+  progressSeg: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  planCard: {
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+  },
+  planHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 6,
+  },
+  planHeaderTile: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  planBody: {
+    paddingHorizontal: 14,
+    paddingBottom: 12,
+    minHeight: 60,
+    gap: 6,
+  },
+  planRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  bubbleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  userRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
   },
   bubble: {
-    paddingHorizontal: spacing.s4,
-    paddingVertical: spacing.s3,
+    maxWidth: '82%',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  assistantBubble: {
+    borderTopLeftRadius: 6,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  pill: {
+  userBubble: {
+    borderTopRightRadius: 6,
+    maxWidth: '75%',
+  },
+  tray: {
     paddingHorizontal: spacing.s5,
-    paddingVertical: spacing.s3,
-    borderRadius: 999,
+    paddingTop: 10,
+    paddingBottom: spacing.s4,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  chipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 9999,
     borderWidth: StyleSheet.hairlineWidth,
+  },
+  dateCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  dateIconTile: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateBtnSecondary: {
+    flex: 1,
+    height: 44,
+    borderRadius: 9999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateBtnPrimary: {
+    flex: 2,
+    height: 44,
+    borderRadius: 9999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
 });

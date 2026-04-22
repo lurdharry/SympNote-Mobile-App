@@ -6,75 +6,105 @@ import {
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
+  Easing,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
-  withRepeat,
-  withSequence,
   withSpring,
   withTiming,
-  Easing,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import {
+  Check,
+  Flame,
+  Lock,
+  Mic,
+  Send,
+  Sparkles,
+  Trophy,
+} from 'lucide-react-native';
 import { useTheme, radius, spacing, typography, shadows } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
-import { ShimmerText } from '../../components/animated/ShimmerText';
-import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { PLANS, purchase, Plan } from '../../services/subscription';
+import { BackButton } from '../../components/ui/BackButton';
+import { PrimaryButton } from '../../components/ui/PrimaryButton';
+import { purchase, Plan } from '../../services/subscription';
 import { useProfileStore } from '../../stores/useProfileStore';
-import { useAppointmentsStore } from '../../stores/useAppointmentsStore';
-import { useTransition } from '../../components/navigation/TransitionContext';
+import { useRecordingsStore } from '../../stores/useRecordingsStore';
 import { hapticHeavy } from '../../services/haptics';
-import { getPaywallCopy } from '../../utils/onboarding';
-import { ClinicalSummaryTeaser } from '../../components/clinical/ClinicalSummaryTeaser';
+import { computeOnboardingProgress } from '../../utils/onboarding';
 
-export default function Paywall() {
+/**
+ * Screen 07 — Paywall (gamified with streak/reward framing).
+ *
+ *  - "SYMPNOTE PLUS" badge
+ *  - XP progress strip (90/100 XP), pulls the user into the streak metaphor
+ *  - Feature list (unlimited, AI summary, private, export)
+ *  - 3 plan cards, annual has floating BEST VALUE · SAVE 50% badge
+ *  - "Start 3-day free trial" CTA + cancel caption
+ *  - __DEV__ skip link at the bottom
+ */
+
+type PlanDef = {
+  id: Plan['id'];
+  label: string;
+  price: string;
+  per: string;
+  note?: string;
+  badge?: string;
+};
+
+const PLANS: PlanDef[] = [
+  { id: 'weekly',  label: 'Weekly',  price: '$4.99',  per: '/week' },
+  { id: 'monthly', label: 'Monthly', price: '$9.99',  per: '/month' },
+  {
+    id: 'annual',
+    label: 'Annual',
+    price: '$59.99',
+    per: '/year',
+    note: 'Just $4.99/month',
+    badge: 'BEST VALUE · SAVE 50%',
+  },
+];
+
+type IconRef = typeof Mic;
+const FEATURES: Array<{ Icon: IconRef; t: string }> = [
+  { Icon: Mic,      t: 'Unlimited voice notes' },
+  { Icon: Sparkles, t: 'AI summary for every appointment' },
+  { Icon: Lock,     t: 'Private & encrypted' },
+  { Icon: Send,     t: 'Export to your doctor' },
+];
+
+export default function ScreenPaywall() {
   const router = useRouter();
   const { colors } = useTheme();
-  const reduced = useReducedMotion();
-  const { width, height } = useWindowDimensions();
+
   const [selected, setSelected] = useState<Plan['id']>('annual');
   const [loading, setLoading] = useState(false);
-  const { triggerRadialWipe } = useTransition();
+
   const complete = useProfileStore((s) => s.completeOnboarding);
+
+  // Real onboarding completion — each stage the user finished is worth
+  // 20 XP. This replaces the hardcoded "90 / 100 XP" that implied a
+  // gamification system we don't have.
+  const hasSeenPrivacy = useProfileStore((s) => s.hasSeenPrivacyNotice);
   const answers = useProfileStore((s) => s.onboardingAnswers);
+  const recordingCount = useRecordingsStore((s) => s.recordings.length);
+  const progress = computeOnboardingProgress({
+    hasSeenPrivacy,
+    answers,
+    recordingCount,
+  });
 
-  const paywallCopy = getPaywallCopy(answers);
-
-  // Poll for the background-generated summary from first-recording.save().
-  // Subscribing to the store means this updates automatically when the
-  // summary arrives — no prop drilling, no extra fetch.
-  const appointments = useAppointmentsStore((s) => s.appointments);
-  const previewSummary = React.useMemo(() => {
-    const withSummary = appointments.find((a) => !!a.summary);
-    return withSummary?.summary ?? null;
-  }, [appointments]);
-
-  const bgShift = useSharedValue(0);
-  useEffect(() => {
-    if (reduced) return;
-    bgShift.value = withRepeat(
-      withTiming(1, { duration: 10000, easing: Easing.inOut(Easing.quad) }),
-      -1,
-      true
-    );
-  }, [bgShift, reduced]);
-  const bgStyle = useAnimatedStyle(() => ({
-    opacity: 0.35 + bgShift.value * 0.2,
-  }));
-
-  const handleBuy = async (x: number, y: number) => {
+  const buy = async () => {
     setLoading(true);
     try {
       await purchase(selected);
       hapticHeavy();
       complete();
-      await triggerRadialWipe({ x, y });
       router.replace('/(tabs)/home');
     } catch (e) {
       Alert.alert('Purchase failed', String(e));
@@ -83,91 +113,105 @@ export default function Paywall() {
     }
   };
 
-  const skip = () => {
-    if (__DEV__) {
-      complete();
-      router.replace('/(tabs)/home');
-    }
+  const skipDev = () => {
+    if (!__DEV__) return;
+    complete();
+    router.replace('/(tabs)/home');
   };
 
   return (
     <SceneTransition mode="scale-fade">
-      <SafeAreaView style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
-        <Animated.View style={[StyleSheet.absoluteFill, bgStyle]}>
-          <LinearGradient
-            colors={[colors.bgMuted, colors.bgPrimary, colors.accentLight]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-        </Animated.View>
-
-        <ScrollView contentContainerStyle={styles.content}>
-          <View>
-            <IntroText title={paywallCopy.title} sub={paywallCopy.sub} />
+      <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
+        <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+          <View style={styles.topBar}>
+            <BackButton onPress={() => router.back()} />
+            <Text style={[typography.label, { color: colors.textTertiary }]}>
+              9 of 9
+            </Text>
+            <View style={{ width: 40 }} />
           </View>
 
-          <SummaryPreview text={previewSummary} />
+          <ScrollView
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+          >
+            <PlusBadge />
 
-          <View style={{ gap: spacing.s3, marginTop: spacing.s8 }}>
-            {PLANS.map((p, i) => (
-              <PlanCard
-                key={p.id}
-                plan={p}
-                index={i}
-                selected={selected === p.id}
-                onSelect={() => setSelected(p.id)}
-              />
-            ))}
-          </View>
-
-          <View style={{ marginTop: spacing.s8 }}>
-            <Pressable
-              onPress={(e) =>
-                handleBuy(e.nativeEvent.pageX, e.nativeEvent.pageY)
-              }
-              style={({ pressed }) => [
-                {
-                  backgroundColor: colors.accent,
-                  borderRadius: radius.full,
-                  height: 56,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden',
-                  opacity: pressed || loading ? 0.85 : 1,
-                },
-              ]}
-            >
-              <ShimmerText
-                text={loading ? 'Starting trial…' : 'Start 3-day free trial'}
-                textStyle={{
-                  ...typography.label,
-                  color: '#FFFFFF',
-                  letterSpacing: 0.3,
-                }}
-              />
-            </Pressable>
             <Text
               style={[
-                typography.caption,
+                typography.h1,
                 {
-                  color: colors.textTertiary,
+                  color: colors.textPrimary,
                   textAlign: 'center',
-                  marginTop: spacing.s3,
+                  marginTop: spacing.s5,
                 },
               ]}
             >
-              Cancel anytime. No charge during trial.
+              Keep your streak alive
+            </Text>
+            <Text
+              style={[
+                typography.body,
+                {
+                  color: colors.textSecondary,
+                  textAlign: 'center',
+                  marginTop: 8,
+                },
+              ]}
+            >
+              Unlimited recordings + AI summary before every visit
             </Text>
 
+            <ProgressStrip
+              xp={progress.xp}
+              total={progress.total}
+              stagesComplete={progress.stagesComplete}
+              stagesTotal={progress.stagesTotal}
+            />
+
+            <View style={{ marginTop: spacing.s5, gap: 10 }}>
+              {FEATURES.map((f, i) => (
+                <View key={i} style={styles.featureRow}>
+                  <View
+                    style={[
+                      styles.featureIcon,
+                      { backgroundColor: colors.accent + '1A' },
+                    ]}
+                  >
+                    <f.Icon size={16} color={colors.accent} strokeWidth={2} />
+                  </View>
+                  <Text
+                    style={[typography.body, { color: colors.textPrimary }]}
+                  >
+                    {f.t}
+                  </Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={{ marginTop: spacing.s5, gap: 12 }}>
+              {PLANS.map((p, i) => (
+                <PlanCard
+                  key={p.id}
+                  plan={p}
+                  index={i}
+                  selected={selected === p.id}
+                  onSelect={() => setSelected(p.id)}
+                />
+              ))}
+            </View>
+
             {__DEV__ && (
-              <Pressable onPress={skip} style={{ marginTop: spacing.s6 }}>
+              <Pressable
+                onPress={skipDev}
+                style={{ marginTop: spacing.s6, alignSelf: 'center' }}
+                hitSlop={12}
+              >
                 <Text
                   style={[
                     typography.caption,
                     {
                       color: colors.textTertiary,
-                      textAlign: 'center',
                       textDecorationLine: 'underline',
                     },
                   ]}
@@ -176,238 +220,261 @@ export default function Paywall() {
                 </Text>
               </Pressable>
             )}
+          </ScrollView>
+
+          <View style={{ paddingHorizontal: spacing.s6, paddingTop: 8, gap: 8 }}>
+            <PrimaryButton
+              label="Start 3-day free trial"
+              onPress={buy}
+              loading={loading}
+            />
+            <Text
+              style={[
+                typography.caption,
+                { color: colors.textTertiary, textAlign: 'center' },
+              ]}
+            >
+              Cancel anytime. No charge during trial.
+            </Text>
           </View>
-        </ScrollView>
-      </SafeAreaView>
+        </SafeAreaView>
+      </View>
     </SceneTransition>
   );
 }
 
-function IntroText({ title, sub }: { title: string; sub: string }) {
-  const { colors } = useTheme();
-  const op = useSharedValue(0);
-  const ty = useSharedValue(-10);
-  const subOp = useSharedValue(0);
-  useEffect(() => {
-    op.value = withTiming(1, { duration: 400, easing: Easing.out(Easing.cubic) });
-    ty.value = withSpring(0, { damping: 18, stiffness: 110 });
-    subOp.value = withDelay(
-      150,
-      withTiming(1, { duration: 400, easing: Easing.out(Easing.cubic) })
-    );
-  }, [op, ty, subOp]);
-  const h = useAnimatedStyle(() => ({
-    opacity: op.value,
-    transform: [{ translateY: ty.value }],
-  }));
-  const s = useAnimatedStyle(() => ({ opacity: subOp.value }));
+function PlusBadge() {
   return (
-    <>
-      <Animated.Text
-        style={[typography.displaySerif, { color: colors.textPrimary }, h]}
-      >
-        {title}
-      </Animated.Text>
-      <Animated.Text
-        style={[
-          typography.bodyLarge,
-          {
-            color: colors.textSecondary,
-            marginTop: spacing.s3,
-          },
-          s,
-        ]}
-      >
-        {sub}
-      </Animated.Text>
-    </>
+    <View style={{ alignItems: 'center' }}>
+      <View style={styles.plusBadge}>
+        <LinearGradient
+          colors={['#F6C06A', '#E07A5F']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <Trophy size={12} color="#FFFFFF" strokeWidth={2.5} />
+        <Text
+          style={[
+            typography.label,
+            {
+              color: '#FFFFFF',
+              fontFamily: 'Inter_700Bold',
+              marginLeft: 6,
+            },
+          ]}
+        >
+          SYMPNOTE PLUS
+        </Text>
+      </View>
+    </View>
   );
 }
 
-/**
- * Editorial summary block. Shows the user's own words, structured by
- * Gemini, fully visible. One free look is a stronger conversion lever
- * than an unlock tease — the user sees concrete value, then we tell
- * them the next one's behind the trial.
- */
-function SummaryPreview({ text }: { text: string | null }) {
+function ProgressStrip({
+  xp,
+  total,
+  stagesComplete,
+  stagesTotal,
+}: {
+  xp: number;
+  total: number;
+  stagesComplete: number;
+  stagesTotal: number;
+}) {
+  const { colors } = useTheme();
+  const target = total > 0 ? xp / total : 0;
+  const fill = useSharedValue(0);
+  useEffect(() => {
+    fill.value = withDelay(
+      200,
+      withTiming(target, { duration: 800, easing: Easing.out(Easing.cubic) })
+    );
+  }, [fill, target]);
+  const style = useAnimatedStyle(() => ({
+    width: `${fill.value * 100}%` as `${number}%`,
+  }));
+
+  const stagesRemaining = Math.max(0, stagesTotal - stagesComplete);
+  const footCopy =
+    stagesRemaining === 0
+      ? 'Setup complete — one last step to unlock unlimited.'
+      : stagesRemaining === 1
+      ? `Almost there — 1 step from 100%.`
+      : `${stagesComplete} of ${stagesTotal} onboarding steps complete.`;
+
+  return (
+    <View
+      style={[
+        styles.progress,
+        { backgroundColor: colors.bgSurface, borderColor: colors.border },
+        shadows.card,
+      ]}
+    >
+      <View style={styles.progressRow}>
+        <Text
+          style={[
+            typography.label,
+            {
+              color: colors.textTertiary,
+              fontFamily: 'Inter_600SemiBold',
+            },
+          ]}
+        >
+          PROGRESS
+        </Text>
+        <Text
+          style={[
+            typography.label,
+            {
+              color: colors.accent,
+              fontFamily: 'Inter_700Bold',
+              fontVariant: ['tabular-nums'],
+            },
+          ]}
+        >
+          {xp} / {total} XP
+        </Text>
+      </View>
+      <View
+        style={[styles.progressTrack, { backgroundColor: colors.bgMuted }]}
+      >
+        <Animated.View style={[styles.progressFill, style]}>
+          <LinearGradient
+            colors={['#3BA79F', '#2C6E6B']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
+      </View>
+      <View style={styles.progressFoot}>
+        <Flame size={12} color={colors.coral} fill={colors.coral} />
+        <Text
+          style={[
+            typography.caption,
+            { color: colors.textSecondary, marginLeft: 6 },
+          ]}
+        >
+          {footCopy}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function PlanCard({
+  plan,
+  index,
+  selected,
+  onSelect,
+}: {
+  plan: PlanDef;
+  index: number;
+  selected: boolean;
+  onSelect: () => void;
+}) {
   const { colors } = useTheme();
   const opacity = useSharedValue(0);
-  const ty = useSharedValue(8);
-
+  const ty = useSharedValue(10);
   useEffect(() => {
     opacity.value = withDelay(
-      300,
-      withTiming(1, { duration: 400, easing: Easing.out(Easing.cubic) })
+      240 + index * 80,
+      withTiming(1, { duration: 320, easing: Easing.out(Easing.cubic) })
     );
     ty.value = withDelay(
-      300,
-      withSpring(0, { damping: 18, stiffness: 120 })
+      240 + index * 80,
+      withSpring(0, { damping: 18, stiffness: 140 })
     );
-  }, [opacity, ty]);
-
-  const anim = useAnimatedStyle(() => ({
+  }, [index, opacity, ty]);
+  const enter = useAnimatedStyle(() => ({
     opacity: opacity.value,
     transform: [{ translateY: ty.value }],
   }));
 
-  const rule = useAnimatedStyle(() => ({ opacity: opacity.value }));
-
-  return (
-    <Animated.View style={[{ marginTop: spacing.s8 }, anim]}>
-      <View style={styles.summaryHeader}>
-        <Animated.View
-          style={[
-            styles.summaryRule,
-            { backgroundColor: colors.accent },
-            rule,
-          ]}
-        />
-        <Text
-          style={[
-            typography.label,
-            { color: colors.accent, letterSpacing: 0.3 },
-          ]}
-        >
-          Your first summary
-        </Text>
-      </View>
-      <Text
-        style={[
-          typography.serifHeadline,
-          {
-            color: colors.textPrimary,
-            marginTop: spacing.s3,
-            fontSize: 24,
-            lineHeight: 30,
-          },
-        ]}
-      >
-        From your own words.
-      </Text>
-      <ClinicalSummaryTeaser text={text} />
-    </Animated.View>
-  );
-}
-
-type PlanCardProps = {
-  plan: Plan;
-  index: number;
-  selected: boolean;
-  onSelect: () => void;
-};
-
-function PlanCard({ plan, index, selected, onSelect }: PlanCardProps) {
-  const { colors } = useTheme();
-  const reduced = useReducedMotion();
-  const op = useSharedValue(0);
-  const ty = useSharedValue(20);
-  const lift = useSharedValue(0);
-  const badgePulse = useSharedValue(1);
-
-  useEffect(() => {
-    op.value = withDelay(
-      200 * index,
-      withTiming(1, { duration: 320, easing: Easing.out(Easing.cubic) })
-    );
-    ty.value = withDelay(
-      200 * index,
-      reduced
-        ? withTiming(0, { duration: 200 })
-        : withSpring(0, { damping: 18, stiffness: 110 })
-    );
-  }, [index, op, ty, reduced]);
-
-  useEffect(() => {
-    lift.value = withSpring(selected ? 1 : 0, { damping: 18, stiffness: 120 });
-  }, [selected, lift]);
-
-  useEffect(() => {
-    if (!plan.badge || reduced) return;
-    badgePulse.value = withRepeat(
-      withSequence(
-        withTiming(1.03, { duration: 1000, easing: Easing.inOut(Easing.sin) }),
-        withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.sin) })
-      ),
-      -1,
-      false
-    );
-  }, [plan.badge, reduced, badgePulse]);
-
-  const enter = useAnimatedStyle(() => ({
-    opacity: op.value,
-    transform: [{ translateY: ty.value }],
-  }));
-
-  const liftStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: -lift.value * 8 },
-      { scale: 1 + lift.value * 0.02 },
-    ],
-    opacity: selected ? 1 : 0.6,
-  }));
-
-  const badgeStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: badgePulse.value }],
-  }));
-
   return (
     <Animated.View style={enter}>
-      <Pressable onPress={onSelect}>
-        <Animated.View
-          style={[
-            styles.plan,
-            shadows.card,
-            {
-              backgroundColor: colors.bgSurface,
-              borderColor: selected ? colors.accent : colors.border,
-              borderRadius: radius.xl,
-              borderWidth: selected ? 2 : StyleSheet.hairlineWidth,
-            },
-            liftStyle,
-          ]}
-        >
-          <View style={{ flex: 1 }}>
+      <Pressable
+        onPress={onSelect}
+        style={[
+          styles.plan,
+          {
+            backgroundColor: colors.bgSurface,
+            borderColor: selected ? colors.accent : colors.border,
+            borderWidth: 2,
+          },
+          shadows.card,
+        ]}
+      >
+        {plan.badge && (
+          <View style={styles.planBadge}>
+            <LinearGradient
+              colors={['#E07A5F', '#F6C06A']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={StyleSheet.absoluteFill}
+            />
             <Text
               style={[
-                typography.h3,
-                { color: colors.textPrimary, textTransform: 'capitalize' },
+                typography.caption,
+                {
+                  color: '#FFFFFF',
+                  fontFamily: 'Inter_700Bold',
+                },
               ]}
             >
-              {plan.id}
-            </Text>
-            <Text
-              style={[
-                typography.bodySmall,
-                { color: colors.textSecondary, marginTop: 2 },
-              ]}
-            >
-              {plan.price} / {plan.period}
-              {plan.savingsTag ? ` · ${plan.savingsTag}` : ''}
+              {plan.badge}
             </Text>
           </View>
-          {plan.badge && (
-            <Animated.View
-              style={[
-                styles.badge,
-                {
-                  backgroundColor: colors.accent,
-                  borderRadius: 999,
-                },
-                badgeStyle,
-              ]}
-            >
+        )}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <View>
+            <Text style={[typography.h3, { color: colors.textPrimary }]}>
+              {plan.label}
+            </Text>
+            {plan.note && (
               <Text
                 style={[
-                  typography.label,
-                  { color: '#FFFFFF', letterSpacing: 0.3 },
+                  typography.caption,
+                  { color: colors.textTertiary, marginTop: 2 },
                 ]}
               >
-                {plan.badge}
+                {plan.note}
               </Text>
-            </Animated.View>
-          )}
-        </Animated.View>
+            )}
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={[typography.h3, { color: colors.textPrimary }]}>
+                {plan.price}
+              </Text>
+              <Text
+                style={[
+                  typography.caption,
+                  { color: colors.textTertiary },
+                ]}
+              >
+                {plan.per}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.radio,
+                selected
+                  ? { backgroundColor: colors.accent, borderColor: colors.accent }
+                  : { borderColor: colors.border },
+              ]}
+            >
+              {selected && <Check size={12} color="#FFFFFF" strokeWidth={3} />}
+            </View>
+          </View>
+        </View>
       </Pressable>
     </Animated.View>
   );
@@ -415,28 +482,85 @@ function PlanCard({ plan, index, selected, onSelect }: PlanCardProps) {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  safe: { flex: 1 },
+  topBar: {
+    paddingTop: spacing.s3,
+    paddingHorizontal: spacing.s6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   content: {
     paddingHorizontal: spacing.s6,
-    paddingTop: spacing.s10,
-    paddingBottom: spacing.s12,
+    paddingTop: spacing.s4,
+    paddingBottom: spacing.s6,
+  },
+  plusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 9999,
+    overflow: 'hidden',
+  },
+  progress: {
+    marginTop: spacing.s5,
+    padding: 16,
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  progressRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  progressTrack: {
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFoot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  featureIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   plan: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.s5,
+    padding: 16,
+    borderRadius: radius.lg,
+    position: 'relative',
   },
-  badge: {
-    paddingHorizontal: spacing.s3,
-    paddingVertical: 6,
+  planBadge: {
+    position: 'absolute',
+    top: -10,
+    left: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 9999,
+    overflow: 'hidden',
   },
-  summaryHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.s3,
-  },
-  summaryRule: {
+  radio: {
     width: 24,
-    height: 2,
-    borderRadius: 1,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
