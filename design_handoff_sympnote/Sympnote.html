@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sympnote — Mobile Prototype</title>
+<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='16' fill='%232C6E6B'/><rect x='24' y='26' width='2.5' height='6' rx='1.25' fill='white'/><rect x='28.5' y='22' width='2.5' height='14' rx='1.25' fill='white'/><rect x='33' y='18' width='2.5' height='22' rx='1.25' fill='white'/><rect x='37.5' y='22' width='2.5' height='14' rx='1.25' fill='white'/></svg>"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          'bg-primary': '#F5F1EA',
+          'bg-surface': '#FFFFFF',
+          'bg-muted': '#EBE5DA',
+          'accent': '#2C6E6B',
+          'accent-dark': '#1F504E',
+          'accent-light': '#A8C4C2',
+          'text-primary': '#1A1F1E',
+          'text-secondary': '#5A6361',
+          'text-tertiary': '#8A9290',
+          'border-soft': '#E0D9CC',
+          'success': '#5A8F6E',
+          'gold': '#F6C06A',
+          'coral': '#E07A5F',
+        },
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+      }
+    }
+  }
+</script>
+<style>
+  html, body { background: #E8E2D5; font-family: 'Inter', system-ui, sans-serif; color: #1A1F1E; }
+  body { margin: 0; min-height: 100vh; }
+
+  .t-display { font-size: 40px; line-height: 48px; font-weight: 700; letter-spacing: -0.025em; }
+  .t-h1 { font-size: 28px; line-height: 34px; font-weight: 700; letter-spacing: -0.02em; }
+  .t-h2 { font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em; }
+  .t-h3 { font-size: 18px; line-height: 24px; font-weight: 600; }
+  .t-body-lg { font-size: 17px; line-height: 24px; font-weight: 400; }
+  .t-body { font-size: 15px; line-height: 22px; font-weight: 400; }
+  .t-label { font-size: 13px; line-height: 16px; font-weight: 500; }
+  .t-caption { font-size: 11px; line-height: 14px; font-weight: 400; }
+
+  .shadow-soft { box-shadow: 0 1px 2px rgba(26,31,30,0.04), 0 4px 12px rgba(26,31,30,0.05); }
+  .shadow-soft-lg { box-shadow: 0 1px 2px rgba(26,31,30,0.04), 0 8px 24px rgba(26,31,30,0.08), 0 16px 40px rgba(26,31,30,0.06); }
+  .shadow-accent-glow { box-shadow: 0 8px 24px rgba(44,110,107,0.25), 0 2px 6px rgba(44,110,107,0.18); }
+
+  @keyframes pulseRing { 0% { transform: scale(1); opacity: 0.45; } 80%, 100% { transform: scale(1.35); opacity: 0; } }
+  .pulse-ring { animation: pulseRing 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+  .pulse-ring-delay { animation: pulseRing 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite; animation-delay: 0.9s; }
+
+  @keyframes orbPulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(44,110,107,0.4), 0 0 40px rgba(44,110,107,0.3); }
+    50% { transform: scale(1.06); box-shadow: 0 0 0 24px rgba(44,110,107,0), 0 0 80px rgba(44,110,107,0.5); }
+  }
+  .orb-pulse { animation: orbPulse 2.4s ease-in-out infinite; }
+
+  @keyframes screenIn { 0% { opacity: 0; transform: scale(0.985); } 100% { opacity: 1; transform: scale(1); } }
+  .screen-in { animation: screenIn 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+  @keyframes fadeUp { 0% { opacity: 0; transform: translateY(12px); } 100% { opacity: 1; transform: translateY(0); } }
+  .fade-up { animation: fadeUp 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+  @keyframes wave { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
+  .wave-bar { animation: wave 0.9s ease-in-out infinite; transform-origin: center; }
+
+  @keyframes badgePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+  .badge-pulse { animation: badgePulse 2.2s ease-in-out infinite; }
+
+  @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+  .shimmer { background: linear-gradient(90deg, #EBE5DA 0%, #F5F1EA 50%, #EBE5DA 100%); background-size: 200% 100%; animation: shimmer 1.8s linear infinite; }
+
+  @keyframes checkIn { 0% { opacity: 0; transform: scale(0.6); } 60% { transform: scale(1.15); } 100% { opacity: 1; transform: scale(1); } }
+  .check-in { animation: checkIn 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  .phone-scroll::-webkit-scrollbar { display: none; }
+  .phone-scroll { scrollbar-width: none; }
+
+  .page-bg { background: radial-gradient(1200px 600px at 50% -10%, #F5F1EA 0%, #EBE3D2 60%, #E8E2D5 100%); }
+  .hero-overlay { background:
+      radial-gradient(600px 400px at 50% 10%, rgba(168,196,194,0.35) 0%, rgba(168,196,194,0) 60%),
+      radial-gradient(500px 400px at 80% 90%, rgba(246,192,106,0.18) 0%, rgba(246,192,106,0) 60%); }
+
+  .press { transition: transform 120ms ease, background-color 150ms ease, box-shadow 150ms ease, border-color 150ms ease, opacity 150ms ease; }
+  .press:active { transform: scale(0.98); }
+
+  @keyframes blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+  .caret { display: inline-block; width: 2px; height: 1em; background: #2C6E6B; margin-left: 2px; vertical-align: -2px; animation: blink 1s steps(1) infinite; }
+
+  /* Phone chrome */
+  .phone-frame {
+    width: 390px; height: 844px;
+    border-radius: 48px;
+    background: #0B0F0E;
+    padding: 10px;
+    box-shadow: 0 0 0 1px rgba(26,31,30,0.06), 0 30px 80px rgba(26,31,30,0.18), 0 10px 24px rgba(26,31,30,0.10);
+  }
+  .phone-inner { width: 100%; height: 100%; border-radius: 40px; overflow: hidden; position: relative; background: #F5F1EA; }
+  .dynamic-island { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 120px; height: 34px; border-radius: 20px; background: #000; z-index: 50; }
+  .home-indicator { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 134px; height: 5px; border-radius: 3px; background: rgba(26,31,30,0.35); z-index: 50; }
+  .status-bar { position: absolute; top: 0; left: 0; right: 0; height: 54px; display: flex; align-items: center; justify-content: space-between; padding: 16px 28px 0; font-size: 15px; font-weight: 600; color: #1A1F1E; z-index: 40; pointer-events: none; }
+
+  /* Confetti */
+  @keyframes confettiFly {
+    0% { transform: translate(0, 0) rotate(0); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); opacity: 0; }
+  }
+  .confetti-layer { position: absolute; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center; z-index: 20; }
+  .confetti-piece { position: absolute; animation: confettiFly 1400ms cubic-bezier(0.2, 0.7, 0.3, 1) forwards; }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" data-presets="react" src="screens/shared.jsx"></script>
+  <script type="text/babel" data-presets="react" src="screens/01_hook.jsx"></script>
+  <script type="text/babel" data-presets="react" src="screens/03_qualifier.jsx"></script>
+  <script type="text/babel" data-presets="react" src="screens/03b_focus.jsx"></script>
+  <script type="text/babel" data-presets="react" src="screens/04b_careteam.jsx"></script>
+  <script type="text/babel" data-presets="react" src="screens/04_analyzing.jsx"></script>
+  <script type="text/babel" data-presets="react" src="screens/05_recording.jsx"></script>
+  <script type="text/babel" data-presets="react" src="screens/06_paywall.jsx"></script>
+  <script type="text/babel" data-presets="react" src="screens/07_home.jsx"></script>
+  <script type="text/babel" data-presets="react" src="screens/08_prep.jsx"></script>
+  <script type="text/babel" data-presets="react" src="screens/09_history.jsx"></script>
+  <script type="text/babel" data-presets="react" src="screens/10_insights.jsx"></script>
+  <script type="text/babel" data-presets="react" src="screens/11_settings.jsx"></script>
+  <script type="text/babel" data-presets="react" src="screens/tabbar.jsx"></script>
+
+  <script type="text/babel" data-presets="react">
+    const SCREENS = [
+      { id: 'hook',     label: '01 Welcome',         file: 'screens/01_hook.jsx' },
+      { id: 'qualify',  label: '02 Qualifiers',      file: 'screens/03_qualifier.jsx' },
+      { id: 'focus',    label: '03 Focus area',      file: 'screens/03b_focus.jsx' },
+      { id: 'care',     label: '04 Care team',       file: 'screens/04b_careteam.jsx' },
+      { id: 'analyze',  label: '05 Analyzing',       file: 'screens/04_analyzing.jsx' },
+      { id: 'record',   label: '06 First recording', file: 'screens/05_recording.jsx' },
+      { id: 'paywall',  label: '07 Paywall',         file: 'screens/06_paywall.jsx' },
+      { id: 'home',     label: '08 App · Home',      file: 'screens/07_home.jsx' },
+      { id: 'prep',     label: '09 App · Prep',      file: 'screens/08_prep.jsx' },
+      { id: 'insights', label: '10 App · Insights',  file: 'screens/10_insights.jsx' },
+      { id: 'history',  label: '11 App · History',   file: 'screens/09_history.jsx' },
+      { id: 'settings', label: '12 App · Settings',  file: 'screens/11_settings.jsx' },
+    ];
+
+    const App = () => {
+      const [idx, setIdx] = React.useState(() => {
+        const v = parseInt(localStorage.getItem('sympnote-screen') || '0', 10);
+        return isNaN(v) ? 0 : Math.min(Math.max(v, 0), SCREENS.length - 1);
+      });
+      const [mainTab, setMainTab] = React.useState('home');
+      const [settingsOpen, setSettingsOpen] = React.useState(false);
+
+      React.useEffect(() => { localStorage.setItem('sympnote-screen', String(idx)); }, [idx]);
+
+      const go = (delta) => setIdx(i => Math.max(0, Math.min(SCREENS.length - 1, i + delta)));
+      const screen = SCREENS[idx].id;
+
+      React.useEffect(() => {
+        if (['home','prep','insights','history'].includes(screen)) {
+          setMainTab(screen);
+          setSettingsOpen(false);
+        }
+        if (screen === 'settings') setSettingsOpen(true);
+      }, [screen]);
+
+      const goToAppTab = (t) => {
+        setMainTab(t);
+        const i = SCREENS.findIndex(s => s.id === t);
+        if (i >= 0) setIdx(i);
+      };
+
+      const renderMain = () => (
+        <div className="w-full h-full bg-bg-primary relative">
+          {mainTab === 'home' && <TabHome onOpenSettings={() => setSettingsOpen(true)} onOpenPrep={() => goToAppTab('prep')} onOpenInsights={() => goToAppTab('insights')}/>}
+          {mainTab === 'prep' && <TabPrep />}
+          {mainTab === 'insights' && <TabInsights />}
+          {mainTab === 'history' && <TabHistory />}
+          {settingsOpen && <ScreenSettings onClose={() => { setSettingsOpen(false); if (screen === 'settings') { const i = SCREENS.findIndex(s=>s.id==='home'); if (i>=0) setIdx(i); } }}/>}
+          <TabBar tab={mainTab} setTab={goToAppTab}/>
+        </div>
+      );
+
+      const next = () => setIdx(i => Math.min(i + 1, SCREENS.length - 1));
+      const back = () => setIdx(i => Math.max(i - 1, 0));
+
+      const renderScreen = () => {
+        switch (screen) {
+          case 'hook':    return <ScreenHook onNext={next}/>;
+          case 'qualify': return <ScreenQualifier onNext={next} onBack={back}/>;
+          case 'focus':   return <ScreenFocus onNext={next} onBack={back}/>;
+          case 'care':    return <ScreenCareTeam onNext={next} onBack={back}/>;
+          case 'analyze': return <ScreenAnalyzing onNext={next} onBack={back}/>;
+          case 'record':  return <ScreenFirstRecording onNext={next} onBack={back}/>;
+          case 'paywall': return <ScreenPaywall onNext={next} onBack={back}/>;
+          case 'home':
+          case 'prep':
+          case 'insights':
+          case 'history':
+          case 'settings': return renderMain();
+          default: return null;
+        }
+      };
+
+      return (
+        <div className="min-h-screen w-full page-bg flex flex-col items-center justify-center py-10 px-6">
+          <div className="phone-frame" data-screen-label={SCREENS[idx].label}>
+            <div className="dynamic-island"/>
+            <div className="phone-inner">
+              {renderScreen()}
+              <div className="home-indicator"/>
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div className="mt-6 flex items-center gap-3 bg-bg-surface/90 backdrop-blur border border-border-soft rounded-full shadow-soft px-2 py-2">
+            <button onClick={() => go(-1)} disabled={idx === 0}
+                    className="press w-9 h-9 rounded-full flex items-center justify-center bg-bg-muted disabled:opacity-40 hover:bg-[#DFD7C6]">
+              <Icon.ArrowLeft width="16" height="16"/>
+            </button>
+            <div className="px-3 min-w-[240px] text-center">
+              <div className="t-caption text-text-tertiary uppercase tracking-wide">Screen {idx+1} of {SCREENS.length}</div>
+              <div className="t-label text-text-primary font-semibold">{SCREENS[idx].label}</div>
+              <div className="t-caption text-accent font-mono">{SCREENS[idx].file}</div>
+            </div>
+            <button onClick={() => go(1)} disabled={idx === SCREENS.length - 1}
+                    className="press w-9 h-9 rounded-full flex items-center justify-center bg-accent text-white disabled:opacity-40 hover:bg-accent-dark">
+              <Icon.ArrowRight width="16" height="16"/>
+            </button>
+          </div>
+
+          {/* Screen file jump list */}
+          <div className="mt-3 flex flex-wrap gap-1.5 max-w-[720px] justify-center">
+            {SCREENS.map((s, i) => (
+              <button key={s.id} onClick={() => setIdx(i)}
+                      className={`press t-caption px-2.5 py-1 rounded-full border transition-colors ${i === idx ? 'bg-accent border-accent text-white' : 'bg-bg-surface/80 border-border-soft text-text-secondary hover:border-accent-light'}`}
+                      title={s.file}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+
+          <p className="mt-3 t-caption text-text-tertiary max-w-md text-center">
+            Each screen lives in its own file under <span className="font-mono text-accent">screens/</span>. Edit any one independently.
+          </p>
+        </div>
+      );
+    };
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>
