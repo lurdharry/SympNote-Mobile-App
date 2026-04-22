@@ -1,264 +1,509 @@
 import React, { useMemo, useState } from 'react';
 import {
-  Alert,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
-  TextInput as RNTextInput,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-  useAnimatedScrollHandler,
-  interpolate,
-  Extrapolation,
-} from 'react-native-reanimated';
+import { Mic, Search, X as XIcon } from 'lucide-react-native';
 import { useTheme, radius, spacing, typography, shadows } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
-import { StaggeredList } from '../../components/animated/StaggeredList';
-import { SharedElementCard } from '../../components/navigation/SharedElementCard';
+import { TagChip } from '../../components/ui/TagChip';
 import { useRecordingsStore } from '../../stores/useRecordingsStore';
-import { formatRelative, formatDuration } from '../../utils/date';
-import { hapticMedium } from '../../services/haptics';
-import { Recording } from '../../stores/types';
-import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { formatDuration } from '../../utils/date';
+import { hapticLight } from '../../services/haptics';
 
-export default function History() {
-  const router = useRouter();
+/**
+ * History — per design handoff.
+ *
+ *  - Header with entry count
+ *  - Search input with clear-X
+ *  - Horizontal scroll of tag filter pills, tinted by tag color
+ *  - Date-grouped cards (Today, Yesterday, Nov 20, etc.)
+ *  - Each row: Mic icon + time + duration + tag chips + body text
+ */
+
+type HistoryItem = {
+  id: string;
+  date: string;
+  time: string;
+  dur: string;
+  text: string;
+  tags: { t: string; c: string }[];
+};
+
+const DEMO_ITEMS: HistoryItem[] = [
+  { id: 'h0', date: 'Today',     time: '10:42 AM', dur: '1:24', text: 'Morning knee pain, 6/10, worse on stairs. Stiffness lasted about 30 minutes after waking.', tags: [{t:'knee',c:'#2C6E6B'},{t:'pain',c:'#E07A5F'}] },
+  { id: 'h1', date: 'Today',     time: '08:15 AM', dur: '0:48', text: 'Afternoon fatigue returning, slept 6h. Feeling drained mid-afternoon again.', tags: [{t:'fatigue',c:'#F6C06A'},{t:'sleep',c:'#5A8F6E'}] },
+  { id: 'h2', date: 'Yesterday', time: '07:22 PM', dur: '2:10', text: 'Knee pain after walk, noted slight swelling around kneecap. 7/10 after 30min walk.', tags: [{t:'knee',c:'#2C6E6B'},{t:'pain',c:'#E07A5F'}] },
+  { id: 'h3', date: 'Yesterday', time: '09:20 AM', dur: '0:52', text: 'Ibuprofen 400mg for knee pain. Took with breakfast.', tags: [{t:'meds',c:'#5A8F6E'}] },
+  { id: 'h4', date: 'Nov 20',    time: '09:05 AM', dur: '1:38', text: 'Headache behind eyes, took ibuprofen. Resolved in an hour.', tags: [{t:'headache',c:'#E07A5F'},{t:'meds',c:'#5A8F6E'}] },
+  { id: 'h5', date: 'Nov 19',    time: '06:50 PM', dur: '0:55', text: 'Feeling tired, mild nausea after dinner. Ate late.', tags: [{t:'fatigue',c:'#F6C06A'},{t:'nausea',c:'#D97706'}] },
+  { id: 'h6', date: 'Nov 18',    time: '11:10 AM', dur: '1:12', text: 'Right knee stiff in the morning. Eased after 20 min of movement.', tags: [{t:'knee',c:'#2C6E6B'}] },
+];
+
+/**
+ * Palette for auto-assigned tag colors. Any tag the user has on a
+ * recording gets mapped to a deterministic color via a stable hash of
+ * its name, so "fatigue" always reads the same across app sessions.
+ */
+const TAG_PALETTE = [
+  '#2C6E6B',
+  '#E07A5F',
+  '#F6C06A',
+  '#5A8F6E',
+  '#D97706',
+  '#6CA4A0',
+  '#C88A4A',
+];
+
+function colorForTag(tag: string): string {
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) {
+    hash = (hash * 31 + tag.charCodeAt(i)) | 0;
+  }
+  return TAG_PALETTE[Math.abs(hash) % TAG_PALETTE.length]!;
+}
+
+// Demo fallback palette — only used when the store is empty so the
+// filter strip still renders during onboarding / fresh install review.
+const DEMO_ALL_TAGS = [
+  'knee',
+  'pain',
+  'fatigue',
+  'sleep',
+  'meds',
+  'headache',
+  'nausea',
+].map((t) => ({ t, c: colorForTag(t) }));
+
+export default function TabHistory() {
   const { colors } = useTheme();
-  const [query, setQuery] = useState('');
-  const [focused, setFocused] = useState(false);
-  const reduced = useReducedMotion();
-  const recordings = useRecordingsStore((s) => s.recordings);
-  const remove = useRecordingsStore((s) => s.remove);
+  const [q, setQ] = useState('');
+  const [active, setActive] = useState<string[]>([]);
 
-  const filtered = useMemo(() => {
-    if (!query.trim()) return recordings;
-    const q = query.toLowerCase();
-    return recordings.filter(
-      (r) =>
-        r.transcript.toLowerCase().includes(q) ||
-        r.structured.symptoms.some((s) => s.toLowerCase().includes(q)) ||
-        r.tags.some((t) => t.toLowerCase().includes(q))
-    );
-  }, [query, recordings]);
+  const storeRecordings = useRecordingsStore((s) => s.recordings);
 
-  const scrollY = useSharedValue(0);
-  const onScroll = useAnimatedScrollHandler((e) => {
-    scrollY.value = e.contentOffset.y;
-  });
-
-  const searchWidth = useSharedValue(1);
-  React.useEffect(() => {
-    searchWidth.value = withSpring(focused ? 1 : 0.95, {
-      damping: 18,
-      stiffness: 140,
+  // Real entries always take priority; fall back to demo data while empty
+  // so the layout is review-ready during prototyping.
+  const items = useMemo<HistoryItem[]>(() => {
+    if (storeRecordings.length === 0) return DEMO_ITEMS;
+    return storeRecordings.map((r) => {
+      const d = new Date(r.createdAt);
+      const today = new Date();
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const sameDay = (a: Date, b: Date) =>
+        a.getFullYear() === b.getFullYear() &&
+        a.getMonth() === b.getMonth() &&
+        a.getDate() === b.getDate();
+      const dateLabel = sameDay(d, today)
+        ? 'Today'
+        : sameDay(d, yesterday)
+        ? 'Yesterday'
+        : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return {
+        id: r.id,
+        date: dateLabel,
+        time: d.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+        }),
+        dur: formatDuration(r.durationSec),
+        text: r.transcript,
+        tags: r.tags.slice(0, 3).map((t) => ({ t, c: colorForTag(t) })),
+      };
     });
-  }, [focused, searchWidth]);
+  }, [storeRecordings]);
 
-  const searchStyle = useAnimatedStyle(() => ({
-    transform: [{ scaleX: searchWidth.value }],
-    transformOrigin: 'left' as any,
-  }));
+  const filtered = useMemo(
+    () =>
+      items.filter((it) => {
+        const matchesQ =
+          !q ||
+          (it.text + ' ' + it.tags.map((x) => x.t).join(' '))
+            .toLowerCase()
+            .includes(q.toLowerCase());
+        const matchesT =
+          active.length === 0 ||
+          it.tags.some((tg) => active.includes(tg.t));
+        return matchesQ && matchesT;
+      }),
+    [items, q, active]
+  );
 
-  const parallax = useAnimatedStyle(() => ({
-    transform: [
-      {
-        translateY: reduced
-          ? 0
-          : interpolate(
-              scrollY.value,
-              [0, 300],
-              [0, -40],
-              Extrapolation.CLAMP
-            ),
-      },
-    ],
-    opacity: reduced
-      ? 1
-      : interpolate(scrollY.value, [0, 200], [1, 0.7], Extrapolation.CLAMP),
-  }));
+  /**
+   * Live filter pills — derived from every tag seen in the recordings
+   * store (sorted by frequency, deduped, color assigned via stable
+   * hash). Falls back to the demo palette only when the store is
+   * empty, so the strip never looks dead on a fresh install.
+   */
+  const allTags = useMemo(() => {
+    if (storeRecordings.length === 0) return DEMO_ALL_TAGS;
+    const counts = new Map<string, number>();
+    storeRecordings.forEach((r) =>
+      r.tags.forEach((raw) => {
+        const t = raw.trim().toLowerCase();
+        if (!t) return;
+        counts.set(t, (counts.get(t) ?? 0) + 1);
+      })
+    );
+    return Array.from(counts.entries())
+      .sort(([, a], [, b]) => b - a)
+      .map(([t]) => ({ t, c: colorForTag(t) }));
+  }, [storeRecordings]);
+
+  const groups = useMemo(() => {
+    const map = new Map<string, HistoryItem[]>();
+    filtered.forEach((it) => {
+      const arr = map.get(it.date) ?? [];
+      arr.push(it);
+      map.set(it.date, arr);
+    });
+    return Array.from(map.entries());
+  }, [filtered]);
+
+  const toggleTag = (t: string) => {
+    hapticLight();
+    setActive((a) => (a.includes(t) ? a.filter((x) => x !== t) : [...a, t]));
+  };
 
   return (
     <SceneTransition mode="crossfade-parallax-up">
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
-        <View style={{ paddingHorizontal: spacing.s6, paddingTop: spacing.s4 }}>
-          <Animated.Text
-            style={[typography.h1, { color: colors.textPrimary }, parallax]}
-          >
-            History
-          </Animated.Text>
-          <Animated.View
-            style={[
-              styles.search,
-              {
-                backgroundColor: colors.bgSurface,
-                borderColor: focused ? colors.accent : colors.border,
-                borderRadius: radius.md,
-              },
-              searchStyle,
-            ]}
-          >
-            <RNTextInput
-              placeholder="Search symptoms, tags…"
-              placeholderTextColor={colors.textTertiary}
-              value={query}
-              onChangeText={setQuery}
-              onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
-              style={[
-                typography.body,
-                { color: colors.textPrimary, padding: spacing.s3 },
-              ]}
-            />
-          </Animated.View>
-        </View>
-
-        <Animated.ScrollView
-          onScroll={onScroll}
-          scrollEventThrottle={16}
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-        >
-          {filtered.length === 0 ? (
+      <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
+        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <View style={styles.header}>
+            <Text style={[typography.h1, { color: colors.textPrimary }]}>
+              History
+            </Text>
             <Text
+              style={[typography.label, { color: colors.textTertiary }]}
+            >
+              {filtered.length} entries
+            </Text>
+          </View>
+
+          {/* Search */}
+          <View style={{ paddingHorizontal: spacing.s6, paddingBottom: 8 }}>
+            <View
               style={[
-                typography.body,
+                styles.searchRow,
                 {
-                  color: colors.textTertiary,
-                  textAlign: 'center',
-                  marginTop: spacing.s12,
+                  backgroundColor: colors.bgSurface,
+                  borderColor: colors.border,
                 },
+                shadows.card,
               ]}
             >
-              {query ? 'No matches.' : 'Your recordings will appear here.'}
-            </Text>
-          ) : (
-            <StaggeredList stagger={60}>
-              {filtered.map((r) => (
-                <HistoryRow
-                  key={r.id}
-                  recording={r}
+              <Search size={16} color={colors.textTertiary} strokeWidth={2} />
+              <TextInput
+                value={q}
+                onChangeText={setQ}
+                placeholder="Search notes…"
+                placeholderTextColor={colors.textTertiary}
+                style={[
+                  typography.body,
+                  { flex: 1, color: colors.textPrimary },
+                ]}
+              />
+              {!!q && (
+                <Pressable onPress={() => setQ('')} hitSlop={8}>
+                  <XIcon
+                    size={14}
+                    color={colors.textTertiary}
+                    strokeWidth={2}
+                  />
+                </Pressable>
+              )}
+            </View>
+          </View>
+
+          {/* Tag filter pills */}
+          <View style={{ paddingBottom: 10 }}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.pillRow}
+            >
+              {active.length > 0 && (
+                <Pressable
                   onPress={() => {
-                    hapticMedium();
-                    router.push(`/recording/${r.id}`);
+                    hapticLight();
+                    setActive([]);
                   }}
-                  onLongPress={() => {
-                    Alert.alert('Delete recording?', 'This cannot be undone.', [
-                      { text: 'Cancel', style: 'cancel' },
+                  style={[
+                    styles.clearPill,
+                    { backgroundColor: colors.textPrimary },
+                  ]}
+                >
+                  <XIcon size={10} color="#FFFFFF" strokeWidth={2.5} />
+                  <Text
+                    style={[
+                      typography.label,
                       {
-                        text: 'Delete',
-                        style: 'destructive',
-                        onPress: () => remove(r.id),
+                        color: '#FFFFFF',
+                        fontFamily: 'Inter_600SemiBold',
                       },
-                    ]);
-                  }}
-                />
-              ))}
-            </StaggeredList>
-          )}
-        </Animated.ScrollView>
-      </SafeAreaView>
+                    ]}
+                  >
+                    Clear
+                  </Text>
+                </Pressable>
+              )}
+              {allTags.map((tg) => {
+                const isActive = active.includes(tg.t);
+                return (
+                  <Pressable
+                    key={tg.t}
+                    onPress={() => toggleTag(tg.t)}
+                    style={[
+                      styles.filterPill,
+                      {
+                        backgroundColor: isActive ? tg.c : tg.c + '20',
+                        borderColor: isActive ? tg.c : tg.c + '55',
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        typography.label,
+                        {
+                          color: isActive ? '#FFFFFF' : tg.c,
+                          fontFamily: 'Inter_600SemiBold',
+                        },
+                      ]}
+                    >
+                      #{tg.t}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+
+          <ScrollView
+            contentContainerStyle={{ paddingBottom: 120 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {groups.map(([date, arr]) => (
+              <View key={date} style={{ marginBottom: 8 }}>
+                <View style={styles.groupHeader}>
+                  <Text
+                    style={[
+                      typography.label,
+                      {
+                        color: colors.textTertiary,
+                        fontFamily: 'Inter_600SemiBold',
+                        letterSpacing: 1,
+                      },
+                    ]}
+                  >
+                    {date.toUpperCase()}
+                  </Text>
+                  <Text
+                    style={[typography.label, { color: colors.textTertiary }]}
+                  >
+                    {arr.length}
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.groupCard,
+                    {
+                      backgroundColor: colors.bgSurface,
+                      borderColor: colors.border,
+                    },
+                    shadows.card,
+                  ]}
+                >
+                  {arr.map((it, i) => (
+                    <View
+                      key={it.id}
+                      style={[
+                        styles.entryRow,
+                        i > 0 && {
+                          borderTopColor: colors.border,
+                          borderTopWidth: StyleSheet.hairlineWidth,
+                        },
+                      ]}
+                    >
+                      <View style={styles.entryMeta}>
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 6,
+                          }}
+                        >
+                          <Mic
+                            size={10}
+                            color={colors.textTertiary}
+                            strokeWidth={2}
+                          />
+                          <Text
+                            style={[
+                              typography.label,
+                              { color: colors.textTertiary },
+                            ]}
+                          >
+                            {it.time}
+                          </Text>
+                          <Text
+                            style={[
+                              typography.label,
+                              { color: colors.textTertiary },
+                            ]}
+                          >
+                            ·
+                          </Text>
+                          <Text
+                            style={[
+                              typography.label,
+                              { color: colors.textTertiary },
+                            ]}
+                          >
+                            {it.dur}
+                          </Text>
+                        </View>
+                        <View
+                          style={{ flexDirection: 'row', gap: 4 }}
+                        >
+                          {it.tags.map((tg) => (
+                            <TagChip key={tg.t} label={tg.t} color={tg.c} />
+                          ))}
+                        </View>
+                      </View>
+                      <Text
+                        style={[
+                          typography.body,
+                          {
+                            color: colors.textPrimary,
+                            marginTop: 6,
+                            lineHeight: 20,
+                          },
+                        ]}
+                      >
+                        {it.text}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ))}
+            {filtered.length === 0 && (
+              <View style={{ paddingHorizontal: spacing.s6, paddingTop: spacing.s10, alignItems: 'center' }}>
+                <View
+                  style={[
+                    styles.noMatchIcon,
+                    { backgroundColor: colors.bgMuted },
+                  ]}
+                >
+                  <Search
+                    size={22}
+                    color={colors.textTertiary}
+                    strokeWidth={2}
+                  />
+                </View>
+                <Text
+                  style={[
+                    typography.body,
+                    {
+                      color: colors.textPrimary,
+                      fontFamily: 'Inter_600SemiBold',
+                    },
+                  ]}
+                >
+                  No matches
+                </Text>
+                <Text
+                  style={[
+                    typography.caption,
+                    { color: colors.textTertiary, marginTop: 2 },
+                  ]}
+                >
+                  Try a different tag or search term
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </View>
     </SceneTransition>
   );
 }
 
-function HistoryRow({
-  recording,
-  onPress,
-  onLongPress,
-}: {
-  recording: Recording;
-  onPress: () => void;
-  onLongPress: () => void;
-}) {
-  const { colors } = useTheme();
-  return (
-    <View style={{ marginBottom: spacing.s3 }}>
-      <SharedElementCard onPress={onPress}>
-        <Pressable onLongPress={onLongPress} delayLongPress={500}>
-          <View
-            style={[
-              styles.row,
-              shadows.card,
-              {
-                backgroundColor: colors.bgSurface,
-                borderColor: colors.border,
-                borderRadius: radius.lg,
-              },
-            ]}
-          >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={[typography.caption, { color: colors.textTertiary }]}>
-                {formatRelative(recording.createdAt)}
-              </Text>
-              <Text style={[typography.caption, { color: colors.textTertiary }]}>
-                {formatDuration(recording.durationSec)}
-              </Text>
-            </View>
-            <Text
-              style={[
-                typography.h3,
-                { color: colors.textPrimary, marginTop: 4 },
-              ]}
-              numberOfLines={1}
-            >
-              {recording.structured.symptoms[0] ?? 'Entry'}
-            </Text>
-            <Text
-              style={[typography.body, { color: colors.textSecondary, marginTop: 4 }]}
-              numberOfLines={2}
-            >
-              {recording.structured.notes || recording.transcript}
-            </Text>
-            {recording.tags.length > 0 && (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.s3, gap: 6 }}>
-                {recording.tags.map((t) => (
-                  <View
-                    key={t}
-                    style={[
-                      styles.chip,
-                      {
-                        backgroundColor: colors.bgMuted,
-                        borderRadius: radius.sm,
-                      },
-                    ]}
-                  >
-                    <Text style={[typography.caption, { color: colors.textSecondary }]}>
-                      {t}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        </Pressable>
-      </SharedElementCard>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  content: {
+  header: {
+    paddingTop: spacing.s3,
     paddingHorizontal: spacing.s6,
-    paddingTop: spacing.s4,
-    paddingBottom: spacing.s12,
+    paddingBottom: spacing.s3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  search: {
-    marginTop: spacing.s3,
+  searchRow: {
+    height: 44,
+    borderRadius: 9999,
     borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  row: {
-    padding: spacing.s5,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  chip: {
-    paddingHorizontal: spacing.s3,
+  pillRow: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: spacing.s6,
     paddingVertical: 4,
+  },
+  filterPill: {
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 9999,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clearPill: {
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 9999,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  groupHeader: {
+    paddingHorizontal: spacing.s6,
+    paddingTop: 12,
+    paddingBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  groupCard: {
+    marginHorizontal: spacing.s6,
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+  },
+  entryRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  entryMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  noMatchIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
 });
