@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
   FadeIn,
+  interpolateColor,
   SharedValue,
   useAnimatedProps,
   useAnimatedStyle,
@@ -525,7 +526,11 @@ function CheckRow({
 
   const rowStyle = useAnimatedStyle(() => ({
     transform: [{ scale: rowScale.value }],
-    backgroundColor: `rgba(90,143,110,${tintLevel.value * 0.08})`,
+    backgroundColor: interpolateColor(
+      tintLevel.value,
+      [0, 1],
+      ['rgba(90,143,110,0)', 'rgba(90,143,110,0.08)']
+    ),
     opacity: 0.5 + tintLevel.value * 0.5,
   }));
   const xpStyle = useAnimatedStyle(() => ({
