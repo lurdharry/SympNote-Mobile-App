@@ -132,15 +132,13 @@ export function tentativeAppointmentTitle(): string {
  * equal slice of XP so the paywall progress bar reflects what the user
  * has actually done, not a fabricated number.
  *
- * Stages tracked (5 total, 20 XP each):
- *   1. Privacy acknowledged (hook screen completed)
- *   2. Qualifier — all 4 answers set
- *   3. Focus area picked
- *   4. Care team stage passed (answer set, even if empty)
- *   5. First recording saved
+ * Stages tracked (4 total, 25 XP each):
+ *   1. Qualifier — all 4 answers set
+ *   2. Focus area picked
+ *   3. Care team stage passed (answer set, even if empty)
+ *   4. First recording saved
  */
 export function computeOnboardingProgress(input: {
-  hasSeenPrivacy: boolean;
   answers: Answers;
   recordingCount: number;
 }): {
@@ -150,10 +148,8 @@ export function computeOnboardingProgress(input: {
   stagesTotal: number;
 } {
   const total = 100;
-  const stagesTotal = 5;
+  const stagesTotal = 4;
   let stagesComplete = 0;
-
-  if (input.hasSeenPrivacy) stagesComplete += 1;
 
   const qualifierKeys = [
     'regularity',

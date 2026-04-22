@@ -89,13 +89,11 @@ export default function ScreenPaywall() {
   const complete = useProfileStore((s) => s.completeOnboarding);
 
   // Real onboarding completion — each stage the user finished is worth
-  // 20 XP. This replaces the hardcoded "90 / 100 XP" that implied a
+  // 25 XP. This replaces the hardcoded "90 / 100 XP" that implied a
   // gamification system we don't have.
-  const hasSeenPrivacy = useProfileStore((s) => s.hasSeenPrivacyNotice);
   const answers = useProfileStore((s) => s.onboardingAnswers);
   const recordingCount = useRecordingsStore((s) => s.recordings.length);
   const progress = computeOnboardingProgress({
-    hasSeenPrivacy,
     answers,
     recordingCount,
   });
