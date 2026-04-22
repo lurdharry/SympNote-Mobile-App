@@ -9,7 +9,7 @@ import Animated, {
   withDelay,
   withTiming,
 } from 'react-native-reanimated';
-import { makeStyles, useTheme } from '../../theme';
+import { fontScale, makeStyles, scale, useTheme, verticalScale } from '../../theme';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 /**
@@ -23,8 +23,8 @@ export function HistoryEmpty() {
   const reduced = useReducedMotion();
   const clock = useClock();
 
-  const width = 280;
-  const height = 80;
+  const width = scale(280);
+  const height = verticalScale(80);
 
   const linePath = useDerivedValue(() => {
     const p = Skia.Path.Make();
@@ -83,8 +83,8 @@ const useStyles = makeStyles((theme) => ({
   headline: {
     ...theme.typography.serifHeadline,
     color: theme.colors.textPrimary,
-    fontSize: 22,
-    lineHeight: 28,
+    fontSize: fontScale(22),
+    lineHeight: fontScale(28),
     marginTop: theme.spacing.s5,
     textAlign: 'center',
   },
@@ -93,6 +93,6 @@ const useStyles = makeStyles((theme) => ({
     color: theme.colors.textTertiary,
     marginTop: theme.spacing.s2,
     textAlign: 'center',
-    maxWidth: 280,
+    maxWidth: scale(280),
   },
 }));

@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { makeStyles, useTheme } from '../../theme';
+import { makeStyles, moderateScale, scale, useTheme, verticalScale } from '../../theme';
 import { UrgencyLevel } from '../../stores/types';
 
 type Props = {
@@ -42,17 +42,17 @@ const useStyles = makeStyles((theme) => ({
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(6),
     borderRadius: theme.radius.full,
     borderWidth: StyleSheet.hairlineWidth,
     alignSelf: 'flex-start',
   },
   dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 6,
+    width: moderateScale(6),
+    height: moderateScale(6),
+    borderRadius: moderateScale(3),
+    marginRight: moderateScale(6),
   },
   label: { ...theme.typography.label, letterSpacing: 0.3 },
 }));

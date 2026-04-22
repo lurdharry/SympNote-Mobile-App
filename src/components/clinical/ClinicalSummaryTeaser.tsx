@@ -8,7 +8,7 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { makeStyles, spacing, useTheme } from '../../theme';
+import { fontScale, makeStyles, moderateScale, spacing, useTheme } from '../../theme';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 /**
@@ -168,7 +168,7 @@ const useStyles = makeStyles((theme) => ({
   loading: {
     ...theme.typography.body,
     color: theme.colors.textSecondary,
-    lineHeight: 22,
+    lineHeight: fontScale(22),
   },
   chiefLabel: {
     ...theme.typography.label,
@@ -178,9 +178,9 @@ const useStyles = makeStyles((theme) => ({
   chiefBody: {
     ...theme.typography.serifHeadline,
     color: theme.colors.textPrimary,
-    fontSize: 22,
-    lineHeight: 28,
-    marginTop: 6,
+    fontSize: fontScale(22),
+    lineHeight: fontScale(28),
+    marginTop: moderateScale(6),
   },
   statsRow: {
     flexDirection: 'row',
@@ -193,14 +193,14 @@ const useStyles = makeStyles((theme) => ({
   stat: { flex: 1, alignItems: 'center' },
   statNumber: {
     fontFamily: 'Fraunces_300Light',
-    fontSize: 28,
-    lineHeight: 30,
+    fontSize: fontScale(28),
+    lineHeight: fontScale(30),
     letterSpacing: -0.6,
   },
   statLabel: {
     ...theme.typography.caption,
     color: theme.colors.textTertiary,
-    marginTop: 2,
+    marginTop: moderateScale(2),
   },
   divider: {
     width: StyleSheet.hairlineWidth,

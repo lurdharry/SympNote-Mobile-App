@@ -7,7 +7,7 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { makeStyles, spacing, useTheme } from '../../theme';
+import { fontScale, makeStyles, moderateScale, spacing, useTheme } from '../../theme';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 /**
@@ -203,8 +203,8 @@ function Bullet({
           styles.marker,
           {
             color: markerColor,
-            fontSize: variant === 'checklist' ? 16 : 14,
-            marginTop: variant === 'checklist' ? 0 : 2,
+            fontSize: variant === 'checklist' ? fontScale(16) : fontScale(14),
+            marginTop: variant === 'checklist' ? 0 : moderateScale(2),
           },
         ]}
       >
@@ -234,7 +234,7 @@ const useStyles = makeStyles((theme) => ({
     gap: theme.spacing.s3,
     marginBottom: theme.spacing.s3,
   },
-  rule: { height: 2, borderRadius: 1 },
+  rule: { height: moderateScale(2), borderRadius: 1 },
   heading: { ...theme.typography.label, letterSpacing: 0.3 },
   body: {
     padding: theme.spacing.s5,
@@ -246,14 +246,14 @@ const useStyles = makeStyles((theme) => ({
   paragraph: {
     ...theme.typography.body,
     color: theme.colors.textPrimary,
-    lineHeight: 22,
+    lineHeight: fontScale(22),
   },
   bulletRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  marker: { marginRight: theme.spacing.s3, width: 14 },
+  marker: { marginRight: theme.spacing.s3, width: moderateScale(14) },
   bulletBody: {
     ...theme.typography.body,
     color: theme.colors.textPrimary,
     flex: 1,
-    lineHeight: 22,
+    lineHeight: fontScale(22),
   },
 }));

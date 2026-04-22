@@ -9,13 +9,14 @@ import Svg, {
   G,
   Circle,
 } from "react-native-svg";
+import { moderateScale } from "../../theme";
 
 type Props = {
   size?: number;
   rounded?: boolean;
 };
 
-export function SympnoteMark({ size = 64, rounded = true }: Props) {
+export function SympnoteMark({ size = moderateScale(64), rounded = true }: Props) {
   const id = useMemo(() => "sn-" + Math.random().toString(36).slice(2, 8), []);
   const radius = rounded ? 16 : 0;
 

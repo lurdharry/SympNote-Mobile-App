@@ -11,6 +11,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { SympnoteMark } from "./SympnoteMark";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
+import { moderateScale } from "../../theme";
 
 /**
  * Hero version of the brand mark with two staggered pulse rings (per
@@ -23,7 +24,7 @@ import { useReducedMotion } from "../../hooks/useReducedMotion";
  */
 type Props = { size?: number };
 
-export function SympnoteHero({ size = 128 }: Props) {
+export function SympnoteHero({ size = moderateScale(128) }: Props) {
   const reduced = useReducedMotion();
   const ring1 = useSharedValue(0);
   const ring2 = useSharedValue(0);

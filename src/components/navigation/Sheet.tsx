@@ -11,7 +11,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { hapticLight } from '../../services/haptics';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { makeStyles, useTheme } from '../../theme';
+import { makeStyles, moderateScale, scale, useTheme, verticalScale } from '../../theme';
 
 type Props = {
   visible: boolean;
@@ -101,17 +101,17 @@ const useStyles = makeStyles((theme) => ({
     left: 0,
     right: 0,
     bottom: 0,
-    paddingTop: 10,
+    paddingTop: verticalScale(10),
     backgroundColor: theme.colors.bgSurface,
     borderTopLeftRadius: theme.radius.xl,
     borderTopRightRadius: theme.radius.xl,
   },
   grabber: {
-    width: 44,
-    height: 4,
-    borderRadius: 2,
+    width: scale(44),
+    height: verticalScale(4),
+    borderRadius: moderateScale(2),
     alignSelf: 'center',
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
     backgroundColor: theme.colors.border,
   },
 }));

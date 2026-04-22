@@ -8,7 +8,7 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { makeStyles, useTheme } from '../../theme';
+import { fontScale, makeStyles, moderateScale, useTheme } from '../../theme';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 type Props = {
@@ -74,15 +74,19 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: theme.radius.lg,
   },
   rule: {
-    width: 3,
+    width: moderateScale(3),
     alignSelf: 'stretch',
-    borderRadius: 1.5,
+    borderRadius: moderateScale(1.5),
     marginRight: theme.spacing.s4,
   },
   heading: { ...theme.typography.label, letterSpacing: 0.3 },
   items: { marginTop: theme.spacing.s3, gap: theme.spacing.s2 },
   row: { flexDirection: 'row', alignItems: 'flex-start' },
-  bullet: { fontSize: 14, marginRight: 8, marginTop: 3 },
+  bullet: {
+    fontSize: fontScale(14),
+    marginRight: moderateScale(8),
+    marginTop: moderateScale(3),
+  },
   itemText: {
     ...theme.typography.body,
     color: theme.colors.textPrimary,

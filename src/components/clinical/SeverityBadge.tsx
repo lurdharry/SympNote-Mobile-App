@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { makeStyles, useTheme } from '../../theme';
+import { fontScale, makeStyles, moderateScale, scale, useTheme, verticalScale } from '../../theme';
 
 type Props = {
   severity: number;
@@ -49,18 +49,18 @@ const useStyles = makeStyles((theme) => ({
   wrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(8),
     borderRadius: theme.radius.full,
     borderWidth: StyleSheet.hairlineWidth,
     alignSelf: 'flex-start',
   },
   numeral: {
     fontFamily: 'Fraunces_300Light',
-    fontSize: 22,
-    lineHeight: 22,
+    fontSize: fontScale(22),
+    lineHeight: fontScale(22),
     letterSpacing: -0.4,
-    marginRight: 8,
+    marginRight: moderateScale(8),
   },
   label: { ...theme.typography.label, letterSpacing: 0.3 },
 }));

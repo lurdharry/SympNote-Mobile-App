@@ -9,7 +9,7 @@ import Animated, {
   withDelay,
   withTiming,
 } from 'react-native-reanimated';
-import { makeStyles, useTheme } from '../../theme';
+import { fontScale, makeStyles, moderateScale, scale, useTheme } from '../../theme';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 /**
@@ -23,8 +23,8 @@ export function PrepEmpty() {
 
   const cols = 5;
   const rows = 4;
-  const dotR = 3;
-  const gap = 22;
+  const dotR = moderateScale(3);
+  const gap = moderateScale(22);
   const width = cols * gap + gap;
   const height = rows * gap + gap;
 
@@ -117,8 +117,8 @@ const useStyles = makeStyles((theme) => ({
   headline: {
     ...theme.typography.serifHeadline,
     color: theme.colors.textPrimary,
-    fontSize: 22,
-    lineHeight: 28,
+    fontSize: fontScale(22),
+    lineHeight: fontScale(28),
     marginTop: theme.spacing.s5,
     textAlign: 'center',
   },
@@ -127,6 +127,6 @@ const useStyles = makeStyles((theme) => ({
     color: theme.colors.textTertiary,
     marginTop: theme.spacing.s2,
     textAlign: 'center',
-    maxWidth: 280,
+    maxWidth: scale(280),
   },
 }));
