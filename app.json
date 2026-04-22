@@ -7,7 +7,7 @@
     "scheme": "sympnote",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": false,
+      "supportsTablet": true,
       "bundleIdentifier": "com.sympnote.app",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Sympnote uses the microphone so we can transcribe what you're saying about your symptoms.",
