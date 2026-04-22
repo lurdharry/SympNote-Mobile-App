@@ -18,6 +18,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { TextInput as RNTextInput } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { RadialGradient } from 'react-native-svg';
 import Svg, {
   Circle as SvgCircle,
@@ -71,6 +72,42 @@ function useTypewriter(text: string, charMs: number, enabled: boolean) {
 }
 
 const XP_PER_STEP = 10;
+
+/**
+ * Per-step visual identity. Each row gets its own gradient tile, glow
+ * color, and XP-badge gradient so the three steps read as a sequence
+ * of distinct achievements rather than three identical checkboxes.
+ */
+type StepTint = {
+  tileGrad: [string, string];
+  badgeGrad: [string, string];
+  glow: string;
+  text: string;
+};
+
+const STEP_TINTS: StepTint[] = [
+  // Analyzing — teal/accent
+  {
+    tileGrad: ['#3BA79F', '#1F504E'],
+    badgeGrad: ['#2C6E6B', '#1F504E'],
+    glow: '#2C6E6B',
+    text: '#FFFFFF',
+  },
+  // Building — amber/gold
+  {
+    tileGrad: ['#F6C06A', '#D9964A'],
+    badgeGrad: ['#D9964A', '#B45309'],
+    glow: '#F6C06A',
+    text: '#FFFFFF',
+  },
+  // Personalizing — coral/warm
+  {
+    tileGrad: ['#F5A3A3', '#C45C3F'],
+    badgeGrad: ['#E07A5F', '#C45C3F'],
+    glow: '#E07A5F',
+    text: '#FFFFFF',
+  },
+];
 
 export default function ScreenAnalyzing() {
   const router = useRouter();
@@ -232,7 +269,7 @@ export default function ScreenAnalyzing() {
                   label={s.t}
                   Icon={s.Icon}
                   done={done[i]!}
-                  success={colors.success}
+                  tint={STEP_TINTS[i]!}
                 />
               ))}
             </View>
@@ -479,35 +516,42 @@ function CheckRow({
   label,
   Icon,
   done,
-  success,
+  tint,
 }: {
   label: string;
   Icon: IconRef;
   done: boolean;
-  success: string;
+  tint: StepTint;
 }) {
   const { colors } = useTheme();
   const styles = useStyles();
   const reduced = useReducedMotion();
 
-  // Pop the whole row forward by a hair when it transitions to done,
-  // and settle back — gives a tactile "checked off" feel.
+  // Row scale pop + fill level drive most of the transition.
   const rowScale = useSharedValue(1);
-  const tintLevel = useSharedValue(0);
+  const fill = useSharedValue(done ? 1 : 0);
+  // Shimmer sweeps across the row once when it lands.
+  const shimmer = useSharedValue(0);
+
   useEffect(() => {
     if (!done) return;
     if (reduced) {
-      tintLevel.value = 1;
+      fill.value = 1;
       return;
     }
     rowScale.value = withSequence(
       withTiming(1.04, { duration: 160, easing: Easing.out(Easing.cubic) }),
       withSpring(1, { damping: 10, stiffness: 200 })
     );
-    tintLevel.value = withTiming(1, { duration: 280 });
-  }, [done, reduced, rowScale, tintLevel]);
+    fill.value = withTiming(1, { duration: 420, easing: Easing.out(Easing.cubic) });
+    shimmer.value = 0;
+    shimmer.value = withDelay(
+      80,
+      withTiming(1, { duration: 720, easing: Easing.out(Easing.cubic) })
+    );
+  }, [done, reduced, rowScale, fill, shimmer]);
 
-  // The +10 XP badge bounces in when the row lands.
+  // +XP chip bounce.
   const xpScale = useSharedValue(done ? 1 : 0);
   const xpOpacity = useSharedValue(done ? 1 : 0);
   useEffect(() => {
@@ -524,48 +568,126 @@ function CheckRow({
     );
   }, [done, reduced, xpScale, xpOpacity]);
 
-  const rowStyle = useAnimatedStyle(() => ({
+  // Root wrapper — lifts and glows as the row completes.
+  const wrapStyle = useAnimatedStyle(() => ({
     transform: [{ scale: rowScale.value }],
-    backgroundColor: interpolateColor(
-      tintLevel.value,
-      [0, 1],
-      ['rgba(90,143,110,0)', 'rgba(90,143,110,0.08)']
-    ),
-    opacity: 0.5 + tintLevel.value * 0.5,
+    shadowOpacity: fill.value * 0.25,
+    shadowRadius: 8 + fill.value * 12,
   }));
+
+  // Card background — neutral to tinted surface.
+  const cardStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(
+      fill.value,
+      [0, 1],
+      [colors.bgSurface, '#FFFFFF']
+    ),
+    borderColor: interpolateColor(
+      fill.value,
+      [0, 1],
+      [colors.border, tint.glow + '66']
+    ),
+    opacity: 0.55 + fill.value * 0.45,
+  }));
+
+  // Shimmer bar slides left→right across the card once.
+  const shimmerStyle = useAnimatedStyle(() => ({
+    opacity: shimmer.value < 0.05 ? 0 : shimmer.value > 0.95 ? 0 : 0.85,
+    transform: [{ translateX: -80 + shimmer.value * 360 }],
+  }));
+
+  // Icon tile — grayscale when idle, saturated gradient when done.
+  const tileIdleStyle = useAnimatedStyle(() => ({
+    opacity: 1 - fill.value,
+  }));
+  const tileDoneStyle = useAnimatedStyle(() => ({
+    opacity: fill.value,
+  }));
+
+  // Glow under the icon tile when done.
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: fill.value * 0.6,
+    transform: [{ scale: 1 + fill.value * 0.3 }],
+  }));
+
   const xpStyle = useAnimatedStyle(() => ({
     transform: [{ scale: xpScale.value }],
     opacity: xpOpacity.value,
   }));
 
   return (
-    <Animated.View style={[styles.checkRow, rowStyle]}>
-      <View
-        style={[
-          styles.checkIcon,
-          { backgroundColor: done ? success : colors.bgMuted },
-        ]}
-      >
-        {done ? (
-          <Check size={moderateScale(16)} color="#FFFFFF" strokeWidth={3} />
-        ) : (
-          <Icon size={moderateScale(16)} color={colors.textSecondary} strokeWidth={2} />
-        )}
-      </View>
-      <Text
-        style={[
-          typography.bodyLarge,
-          {
-            color: done ? colors.textPrimary : colors.textTertiary,
-            fontFamily: done ? 'Inter_500Medium' : 'Inter_400Regular',
-            flex: 1,
-          },
-        ]}
-      >
-        {label}
-      </Text>
-      <Animated.View style={[styles.xpBadge, { borderColor: success + '55' }, xpStyle]}>
-        <Text style={[styles.xpBadgeText, { color: success }]}>+10 XP</Text>
+    <Animated.View
+      style={[styles.rowWrap, { shadowColor: tint.glow }, wrapStyle]}
+    >
+      <Animated.View style={[styles.rowCard, cardStyle]}>
+        {/* Shimmer sweep — clipped to the card. */}
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.shimmer, shimmerStyle]}
+        >
+          <LinearGradient
+            colors={[
+              'rgba(255,255,255,0)',
+              'rgba(255,255,255,0.9)',
+              'rgba(255,255,255,0)',
+            ]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
+
+        {/* Icon tile — idle (muted circle) cross-fades into a gradient. */}
+        <View style={styles.iconTile}>
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.tileGlow, { backgroundColor: tint.glow }, glowStyle]}
+          />
+          <Animated.View
+            style={[styles.tileFace, { backgroundColor: colors.bgMuted }, tileIdleStyle]}
+          >
+            <Icon
+              size={moderateScale(16)}
+              color={colors.textSecondary}
+              strokeWidth={2}
+            />
+          </Animated.View>
+          <Animated.View
+            style={[styles.tileFace, tileDoneStyle]}
+          >
+            <LinearGradient
+              colors={tint.tileGrad}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <Check size={moderateScale(16)} color={tint.text} strokeWidth={3} />
+          </Animated.View>
+        </View>
+
+        <Text
+          style={[
+            typography.bodyLarge,
+            styles.rowLabel,
+            {
+              color: done ? colors.textPrimary : colors.textTertiary,
+              fontFamily: done ? 'Inter_600SemiBold' : 'Inter_400Regular',
+            },
+          ]}
+        >
+          {label}
+        </Text>
+
+        {/* Gradient +XP chip. */}
+        <Animated.View style={[styles.xpChip, xpStyle]}>
+          <LinearGradient
+            colors={tint.badgeGrad}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <Text style={styles.xpChipText}>+{XP_PER_STEP} XP</Text>
+        </Animated.View>
       </Animated.View>
     </Animated.View>
   );
@@ -684,5 +806,73 @@ const useStyles = makeStyles((theme) => ({
     fontFamily: 'Inter_700Bold',
     fontSize: moderateScale(11),
     letterSpacing: 0.4,
+  },
+  rowWrap: {
+    borderRadius: theme.radius.lg,
+    shadowOffset: { width: 0, height: moderateScale(6) },
+    elevation: 6,
+  },
+  rowCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(12),
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(12),
+    borderRadius: theme.radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+  },
+  shimmer: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: moderateScale(80),
+  },
+  iconTile: {
+    width: moderateScale(36),
+    height: moderateScale(36),
+    borderRadius: moderateScale(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  tileGlow: {
+    position: 'absolute',
+    top: -moderateScale(4),
+    left: -moderateScale(4),
+    right: -moderateScale(4),
+    bottom: -moderateScale(4),
+    borderRadius: moderateScale(16),
+  },
+  tileFace: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: moderateScale(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  rowLabel: {
+    flex: 1,
+    letterSpacing: -0.1,
+  },
+  xpChip: {
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(4),
+    borderRadius: theme.radius.full,
+    overflow: 'hidden',
+    minWidth: moderateScale(58),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  xpChipText: {
+    color: '#FFFFFF',
+    fontFamily: 'Inter_700Bold',
+    fontSize: moderateScale(11),
+    letterSpacing: 0.6,
   },
 }));
