@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme, radius, spacing, typography } from '../../theme';
+import { makeStyles, radius, spacing, typography, useTheme } from '../../theme';
 import { SharedElementScene } from '../../components/navigation/SharedElementScene';
 import { StaggeredList } from '../../components/animated/StaggeredList';
 import { Button } from '../../components/ui/Button';
@@ -22,6 +22,7 @@ export default function RecordingDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { colors } = useTheme();
+  const styles = useStyles();
   const recording = useRecordingsStore((s) => s.getById(id!));
   const remove = useRecordingsStore((s) => s.remove);
   const { closeScene } = useTransition();
@@ -199,10 +200,10 @@ function LineOrDash({ text }: { text: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   content: {
-    paddingHorizontal: spacing.s6,
-    paddingVertical: spacing.s6,
-    paddingBottom: spacing.s12,
+    paddingHorizontal: theme.spacing.s6,
+    paddingVertical: theme.spacing.s6,
+    paddingBottom: theme.spacing.s12,
   },
-});
+}));

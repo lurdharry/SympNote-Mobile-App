@@ -11,7 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X as XIcon } from 'lucide-react-native';
-import { useTheme, radius, spacing, typography, shadows } from '../theme';
+import { makeStyles, shadows, spacing, typography, useTheme } from '../theme';
 import { SceneTransition } from '../components/navigation/SceneTransition';
 import { PrimaryButton } from '../components/ui/PrimaryButton';
 import { useAppointmentsStore } from '../stores/useAppointmentsStore';
@@ -29,6 +29,7 @@ import { uuid } from '../utils/uuid';
 export default function AppointmentNew() {
   const router = useRouter();
   const { colors } = useTheme();
+  const styles = useStyles();
 
   const [doctorName, setDoctorName] = useState('');
   const [specialty, setSpecialty] = useState('');
@@ -178,6 +179,7 @@ function Field({
   helper?: string;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View style={{ marginTop: spacing.s5 }}>
       <Text
@@ -229,16 +231,16 @@ function Field({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },
   safe: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.s6,
-    paddingTop: spacing.s4,
-    paddingBottom: spacing.s3,
+    paddingHorizontal: theme.spacing.s6,
+    paddingTop: theme.spacing.s4,
+    paddingBottom: theme.spacing.s3,
     gap: 12,
   },
   closeBtn: {
@@ -249,14 +251,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   content: {
-    paddingHorizontal: spacing.s6,
-    paddingTop: spacing.s3,
-    paddingBottom: spacing.s6,
+    paddingHorizontal: theme.spacing.s6,
+    paddingTop: theme.spacing.s3,
+    paddingBottom: theme.spacing.s6,
   },
   input: {
-    borderRadius: radius.md,
+    borderRadius: theme.radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-});
+}));

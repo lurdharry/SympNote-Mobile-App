@@ -34,7 +34,7 @@ import {
   Users,
   X as XIcon,
 } from "lucide-react-native";
-import { useTheme, radius, spacing, typography, shadows } from "../theme";
+import { makeStyles, shadows, spacing, typography, useTheme } from "../theme";
 import { StreakPill } from "../components/ui/StreakPill";
 import { ProgressRing } from "../components/ui/ProgressRing";
 import { hapticLight, hapticSuccess } from "../services/haptics";
@@ -72,6 +72,7 @@ type SettingsSection = {
 export default function ScreenSettings() {
   const router = useRouter();
   const { colors } = useTheme();
+  const styles = useStyles();
 
   const recordings = useRecordingsStore((s) => s.recordings);
   const appointments = useAppointmentsStore((s) => s.appointments);
@@ -520,6 +521,7 @@ function SectionGroup({
   setHaptics: (v: boolean) => void;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View style={{ paddingHorizontal: spacing.s6, marginBottom: spacing.s5 }}>
       <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>{title}</Text>
@@ -563,6 +565,7 @@ function SettingsRowItem({
   setHaptics: (v: boolean) => void;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   const isToggle = !!row.toggleKey;
   const toggleVal = row.toggleKey === "voiceOnly" ? voiceOnly : false;
   const onToggle = (v: boolean) => {
@@ -650,12 +653,12 @@ function SettingsRowItem({
   return content;
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   safe: { flex: 1 },
   header: {
-    paddingTop: spacing.s4,
-    paddingBottom: spacing.s3,
-    paddingHorizontal: spacing.s6,
+    paddingTop: theme.spacing.s4,
+    paddingBottom: theme.spacing.s3,
+    paddingHorizontal: theme.spacing.s6,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -672,7 +675,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     padding: 16,
-    borderRadius: radius.lg,
+    borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
   },
   avatar: {
@@ -698,7 +701,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   group: {
-    borderRadius: radius.lg,
+    borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
   },
@@ -730,7 +733,7 @@ const styles = StyleSheet.create({
   },
   milestoneCard: {
     padding: 16,
-    borderRadius: radius.lg,
+    borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
   },
   badgeGrid: {
@@ -752,11 +755,11 @@ const styles = StyleSheet.create({
   },
   signOut: {
     height: 48,
-    borderRadius: 9999,
+    borderRadius: theme.radius.full,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
     borderWidth: StyleSheet.hairlineWidth,
   },
-});
+}));

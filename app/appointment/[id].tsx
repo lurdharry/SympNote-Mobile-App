@@ -11,7 +11,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
-import { useTheme, radius, spacing, typography } from '../../theme';
+import { makeStyles, spacing, typography, useTheme } from '../../theme';
 import { SharedElementScene } from '../../components/navigation/SharedElementScene';
 import { StaggeredList } from '../../components/animated/StaggeredList';
 import { Button } from '../../components/ui/Button';
@@ -27,6 +27,7 @@ export default function AppointmentDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { colors } = useTheme();
+  const styles = useStyles();
   const appt = useAppointmentsStore((s) => s.getById(id!));
   const update = useAppointmentsStore((s) => s.update);
   const remove = useAppointmentsStore((s) => s.remove);
@@ -163,10 +164,10 @@ export default function AppointmentDetail() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   content: {
-    paddingHorizontal: spacing.s6,
-    paddingVertical: spacing.s6,
-    paddingBottom: spacing.s12,
+    paddingHorizontal: theme.spacing.s6,
+    paddingVertical: theme.spacing.s6,
+    paddingBottom: theme.spacing.s12,
   },
-});
+}));

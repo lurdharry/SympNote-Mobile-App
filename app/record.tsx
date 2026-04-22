@@ -9,7 +9,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X as XIcon } from 'lucide-react-native';
-import { useTheme, spacing, typography } from '../theme';
+import { makeStyles, spacing, typography, useTheme } from '../theme';
 import { SceneTransition } from '../components/navigation/SceneTransition';
 import { TypewriterText } from '../components/animated/TypewriterText';
 import { IdlePhase } from '../components/recording/IdlePhase';
@@ -38,6 +38,7 @@ import { hapticHeavy, hapticLight } from '../services/haptics';
 export default function RecordModal() {
   const router = useRouter();
   const { colors } = useTheme();
+  const styles = useStyles();
   const { kind } = useLocalSearchParams<{ kind?: string }>();
   const flow = useRecordingFlow();
 
@@ -199,16 +200,16 @@ function kindToLabel(raw?: string): string | null {
   return null;
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },
   safe: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.s6,
-    paddingTop: spacing.s4,
-    paddingBottom: spacing.s3,
+    paddingHorizontal: theme.spacing.s6,
+    paddingTop: theme.spacing.s4,
+    paddingBottom: theme.spacing.s3,
     gap: 12,
   },
   closeBtn: {
@@ -219,7 +220,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   content: {
-    paddingHorizontal: spacing.s6,
-    paddingBottom: spacing.s12,
+    paddingHorizontal: theme.spacing.s6,
+    paddingBottom: theme.spacing.s12,
   },
-});
+}));
