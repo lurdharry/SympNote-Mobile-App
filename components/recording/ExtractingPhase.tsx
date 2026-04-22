@@ -24,7 +24,7 @@ import {
   Rect,
   vec,
 } from '@shopify/react-native-skia';
-import { useTheme, radius, spacing, typography } from '../../theme';
+import { makeStyles, spacing, typography, useTheme } from '../../theme';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { hapticLight } from '../../services/haptics';
 import {
@@ -101,6 +101,7 @@ export function ExtractingPhase({
   onDone,
 }: Props) {
   const { colors } = useTheme();
+  const styles = useStyles();
   const reduced = useReducedMotion();
   const { width } = useWindowDimensions();
 
@@ -272,6 +273,7 @@ function TranscriptCard({
   scanPhase: ReturnType<typeof useSharedValue<number>>;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
 
   // Tokenize transcript for inline highlighting: split on whitespace but
   // keep delimiters, so we can highlight matched phrases word-by-word.
@@ -289,14 +291,7 @@ function TranscriptCard({
 
   return (
     <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.bgSurface,
-          borderColor: colors.border,
-          borderRadius: radius.lg,
-        },
-      ]}
+      style={styles.card}
       onLayout={(e) => setHeight(e.nativeEvent.layout.height)}
     >
       <Text
@@ -403,6 +398,7 @@ function BinGrid({
   structured: StructuredWithSources | null;
   filled: Record<string, boolean>;
 }) {
+  const styles = useStyles();
   if (bins.length === 0) {
     // Render static placeholders while layout hasn't been measured yet
     // so the onLayout fires with the correct frame.
@@ -454,6 +450,7 @@ function BinCell({
   tone?: 'accent' | 'warn';
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   const reduced = useReducedMotion();
   const fill = useSharedValue(0);
 
@@ -479,9 +476,7 @@ function BinCell({
       style={[
         styles.bin,
         {
-          backgroundColor: colors.bgSurface,
           borderColor: filled ? toneColor + '99' : colors.border,
-          borderRadius: radius.md,
         },
       ]}
     >
@@ -489,7 +484,8 @@ function BinCell({
         pointerEvents="none"
         style={[
           StyleSheet.absoluteFillObject,
-          { backgroundColor: toneColor + '22', borderRadius: radius.md },
+          styles.binFill,
+          { backgroundColor: toneColor + '22' },
           fillStyle,
         ]}
       />
@@ -617,12 +613,15 @@ function FlyingWord({
 
 /* ---------------------------- styles ---------------------------- */
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   card: {
-    padding: spacing.s5,
+    padding: theme.spacing.s5,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
     position: 'relative',
+    backgroundColor: theme.colors.bgSurface,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.lg,
   },
   scanOverlay: {
     position: 'absolute',
@@ -634,14 +633,19 @@ const styles = StyleSheet.create({
   binRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.s3,
+    gap: theme.spacing.s3,
   },
   bin: {
     width: '48%',
     minHeight: 72,
-    padding: spacing.s4,
+    padding: theme.spacing.s4,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
     justifyContent: 'center',
+    backgroundColor: theme.colors.bgSurface,
+    borderRadius: theme.radius.md,
   },
-});
+  binFill: {
+    borderRadius: theme.radius.md,
+  },
+}));

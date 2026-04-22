@@ -15,7 +15,6 @@ import { SceneTransition } from "../../components/navigation/SceneTransition";
 import { SympnoteHero } from "../../components/brand/SympnoteHero";
 import { PrimaryButton } from "../../components/ui/PrimaryButton";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
-import { useProfileStore } from "../../stores/useProfileStore";
 
 const FULL_HEADLINE = "Your doctor's visit,\nfinally prepared.";
 
@@ -23,7 +22,6 @@ export default function ScreenHook() {
   const router = useRouter();
   const { colors } = useTheme();
   const reduced = useReducedMotion();
-  const acknowledgePrivacy = useProfileStore((s) => s.acknowledgePrivacy);
 
   const [typed, setTyped] = useState(reduced ? FULL_HEADLINE : "");
 
@@ -38,8 +36,6 @@ export default function ScreenHook() {
     return () => clearInterval(id);
   }, [reduced]);
 
-  // Staggered entrance — use the design handoff's timings (150 → 1200 →
-  // 1400 → 1600ms).
   const headerOp = useSharedValue(0);
   const heroOp = useSharedValue(0);
   const subOp = useSharedValue(0);
@@ -55,10 +51,6 @@ export default function ScreenHook() {
     ctaOp.value = withDelay(1600, withTiming(1, dur));
   }, [headerOp, heroOp, subOp, chipsOp, ctaOp]);
 
-  const header = useAnimatedStyle(() => ({
-    opacity: headerOp.value,
-    transform: [{ translateY: (1 - headerOp.value) * 12 }],
-  }));
   const hero = useAnimatedStyle(() => ({
     opacity: heroOp.value,
     transform: [{ translateY: (1 - heroOp.value) * 12 }],
@@ -77,7 +69,6 @@ export default function ScreenHook() {
   }));
 
   const handleGetStarted = () => {
-    acknowledgePrivacy();
     router.push("/onboarding/questions");
   };
 
@@ -85,28 +76,40 @@ export default function ScreenHook() {
     <SceneTransition mode="crossfade-parallax-up">
       <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
         <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
-          {/* Hero */}
           <View style={styles.heroArea}>
             <Animated.View style={[{ marginBottom: spacing.s6 }, hero]}>
               <SympnoteHero size={124} />
             </Animated.View>
 
-            <Text
-              style={[
-                typography.display,
-                {
-                  color: colors.textPrimary,
-                  textAlign: "center",
-                  paddingHorizontal: spacing.s2,
-                  minHeight: 96,
-                },
-              ]}
-            >
-              {typed}
-              {typed.length < FULL_HEADLINE.length && (
-                <Text style={{ color: colors.accent }}>▍</Text>
-              )}
-            </Text>
+            <View style={styles.headlineSlot}>
+              <Text
+                aria-hidden
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+                style={[
+                  typography.display,
+                  styles.headlineGhost,
+                  { paddingHorizontal: spacing.s2 },
+                ]}
+              >
+                {FULL_HEADLINE}
+              </Text>
+              <Text
+                style={[
+                  typography.display,
+                  styles.headlineLive,
+                  {
+                    color: colors.textPrimary,
+                    paddingHorizontal: spacing.s2,
+                  },
+                ]}
+              >
+                {typed}
+                {typed.length < FULL_HEADLINE.length && (
+                  <Text style={{ color: colors.accent }}>▍</Text>
+                )}
+              </Text>
+            </View>
 
             <Animated.Text
               style={[
@@ -180,6 +183,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: spacing.s6,
     marginTop: -spacing.s6,
+  },
+  headlineSlot: {
+    alignSelf: "stretch",
+    position: "relative",
+  },
+  headlineGhost: {
+    color: "transparent",
+    textAlign: "center",
+  },
+  headlineLive: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    textAlign: "center",
   },
   chips: {
     marginTop: spacing.s6,

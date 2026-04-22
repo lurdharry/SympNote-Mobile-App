@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useTheme, typography } from '../../theme';
+import { makeStyles, useTheme } from '../../theme';
 import { UrgencyLevel } from '../../stores/types';
 
 type Props = {
@@ -16,6 +16,7 @@ const LABELS: Record<UrgencyLevel, string> = {
 
 export function UrgencyChip({ urgency }: Props) {
   const { colors } = useTheme();
+  const styles = useStyles();
   const tone =
     urgency === 'urgent'
       ? colors.error
@@ -31,28 +32,19 @@ export function UrgencyChip({ urgency }: Props) {
         { backgroundColor: tone + '18', borderColor: tone + '55' },
       ]}
     >
-      <View
-        style={[styles.dot, { backgroundColor: tone }]}
-      />
-      <Text
-        style={[
-          typography.label,
-          { color: tone, letterSpacing: 0.3 },
-        ]}
-      >
-        {LABELS[urgency]}
-      </Text>
+      <View style={[styles.dot, { backgroundColor: tone }]} />
+      <Text style={[styles.label, { color: tone }]}>{LABELS[urgency]}</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 999,
+    borderRadius: theme.radius.full,
     borderWidth: StyleSheet.hairlineWidth,
     alignSelf: 'flex-start',
   },
@@ -62,4 +54,5 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     marginRight: 6,
   },
-});
+  label: { ...theme.typography.label, letterSpacing: 0.3 },
+}));

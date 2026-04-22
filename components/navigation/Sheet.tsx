@@ -11,13 +11,13 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { hapticLight } from '../../services/haptics';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { useTheme, radius } from '../../theme';
+import { makeStyles, useTheme } from '../../theme';
 
 type Props = {
   visible: boolean;
   onDismiss: () => void;
   children: React.ReactNode;
-  heightRatio?: number; // 0..1
+  heightRatio?: number;
 };
 
 /**
@@ -26,6 +26,7 @@ type Props = {
  */
 export function Sheet({ visible, onDismiss, children, heightRatio = 0.75 }: Props) {
   const { colors, isDark } = useTheme();
+  const styles = useStyles();
   const reduced = useReducedMotion();
   const { height } = useWindowDimensions();
   const sheetH = height * heightRatio;
@@ -84,19 +85,8 @@ export function Sheet({ visible, onDismiss, children, heightRatio = 0.75 }: Prop
         />
       </Animated.View>
       <GestureDetector gesture={drag}>
-        <Animated.View
-          style={[
-            styles.sheet,
-            {
-              height: sheetH,
-              backgroundColor: colors.bgSurface,
-              borderTopLeftRadius: radius.xl,
-              borderTopRightRadius: radius.xl,
-            },
-            sheet,
-          ]}
-        >
-          <Animated.View style={[styles.grabber, { backgroundColor: colors.border }]} />
+        <Animated.View style={[styles.sheet, { height: sheetH }, sheet]}>
+          <Animated.View style={styles.grabber} />
           {children}
         </Animated.View>
       </GestureDetector>
@@ -104,14 +94,24 @@ export function Sheet({ visible, onDismiss, children, heightRatio = 0.75 }: Prop
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   root: { zIndex: 10 },
-  sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: 10 },
+  sheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingTop: 10,
+    backgroundColor: theme.colors.bgSurface,
+    borderTopLeftRadius: theme.radius.xl,
+    borderTopRightRadius: theme.radius.xl,
+  },
   grabber: {
     width: 44,
     height: 4,
     borderRadius: 2,
     alignSelf: 'center',
     marginBottom: 8,
+    backgroundColor: theme.colors.border,
   },
-});
+}));

@@ -1,20 +1,20 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert } from 'react-native';
-import { SharedValue, useSharedValue } from 'react-native-reanimated';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Alert } from "react-native";
+import { SharedValue, useSharedValue } from "react-native-reanimated";
 import {
   ensureSpeechPermission,
   startRecognition,
   describeSpeechError,
   SpeechHandle,
-} from '../../services/speech';
-import { structureTranscript, GeminiQuotaError } from '../../services/ai';
-import { hapticHeavy, hapticLight, hapticMedium } from '../../services/haptics';
-import { useProfileStore } from '../../stores/useProfileStore';
-import { Phase, StructuredWithSources } from './types';
+} from "../../services/speech";
+import { structureTranscript, GeminiQuotaError } from "../../services/ai";
+import { hapticHeavy, hapticLight, hapticMedium } from "../../services/haptics";
+import { useProfileStore } from "../../stores/useProfileStore";
+import { Phase, StructuredWithSources } from "./types";
 
 const DEBUG = __DEV__;
 const log = (...args: unknown[]) => {
-  if (DEBUG) console.log('[recording-flow]', ...args);
+  if (DEBUG) console.log("[recording-flow]", ...args);
 };
 
 export type RecordingFlow = {
@@ -29,7 +29,7 @@ export type RecordingFlow = {
   reviewError: string | null;
   /** Seconds until retry is allowed. 0 = allowed now. */
   retryInSec: number;
-  acknowledgePrivacy: () => void;
+
   beginRecording: () => Promise<void>;
   endRecording: () => Promise<void>;
   toggleRecording: () => void;
@@ -40,16 +40,10 @@ export type RecordingFlow = {
 };
 
 export function useRecordingFlow(): RecordingFlow {
-  // Privacy acknowledgement now happens on Screen 1 (pain hook). If a
-  // user somehow reaches this flow without it, we still show the
-  // disclosure once rather than blocking.
-  const hasSeenPrivacy = useProfileStore((s) => s.hasSeenPrivacyNotice);
-  const ackPrivacyStore = useProfileStore((s) => s.acknowledgePrivacy);
-
-  const [phase, setPhaseRaw] = useState<Phase>(hasSeenPrivacy ? 'idle' : 'privacy');
+  const [phase, setPhaseRaw] = useState<Phase>("idle");
   const [durationSec, setDurationSec] = useState(0);
-  const [liveTranscript, setLiveTranscript] = useState('');
-  const [reviewText, setReviewText] = useState('');
+  const [liveTranscript, setLiveTranscript] = useState("");
+  const [reviewText, setReviewText] = useState("");
   const [structured, setStructured] = useState<StructuredWithSources | null>(null);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [retryInSec, setRetryInSec] = useState(0);
@@ -62,14 +56,14 @@ export function useRecordingFlow(): RecordingFlow {
   // Wrap setPhase so we can trace transitions.
   const setPhase = useCallback((next: Phase) => {
     setPhaseRaw((prev) => {
-      if (prev !== next) log('phase', prev, '→', next);
+      if (prev !== next) log("phase", prev, "→", next);
       return next;
     });
   }, []);
 
   const stopSpeechIfActive = useCallback(() => {
     if (speechRef.current) {
-      log('abort active speech handle');
+      log("abort active speech handle");
       speechRef.current.abort();
       speechRef.current = null;
     }
@@ -82,7 +76,7 @@ export function useRecordingFlow(): RecordingFlow {
   // Cleanup on unmount ONLY. Empty deps avoid React 19 effect re-runs.
   useEffect(() => {
     return () => {
-      log('unmount cleanup');
+      log("unmount cleanup");
       stopSpeechIfActive();
     };
   }, [stopSpeechIfActive]);
@@ -96,60 +90,55 @@ export function useRecordingFlow(): RecordingFlow {
     return () => clearInterval(id);
   }, [retryInSec]);
 
-  const acknowledgePrivacy = useCallback(() => {
-    ackPrivacyStore();
-    setPhase('idle');
-  }, [ackPrivacyStore, setPhase]);
-
   const resetForNewAttempt = useCallback(() => {
-    setLiveTranscript('');
-    setReviewText('');
+    setLiveTranscript("");
+    setReviewText("");
     setStructured(null);
   }, []);
 
   const beginRecording = useCallback(async () => {
     if (speechRef.current) {
-      log('begin blocked: speech already active');
+      log("begin blocked: speech already active");
       return;
     }
-    log('begin: requesting permissions');
+    log("begin: requesting permissions");
     const perm = await ensureSpeechPermission();
     if (!perm.granted) {
-      Alert.alert('Permissions needed', perm.reason ?? 'Enable microphone and speech in Settings.');
+      Alert.alert("Permissions needed", perm.reason ?? "Enable microphone and speech in Settings.");
       return;
     }
     hapticHeavy();
     resetForNewAttempt();
     startedAtRef.current = Date.now();
     setDurationSec(0);
-    setPhase('recording');
-    log('begin: starting recognition');
+    setPhase("recording");
+    log("begin: starting recognition");
     try {
       speechRef.current = startRecognition({
-        onStart: () => log('speech started'),
+        onStart: () => log("speech started"),
         onPartial: (t) => setLiveTranscript(t),
         onFinal: (t) => {
-          log('speech final:', t.slice(0, 60));
+          log("speech final:", t.slice(0, 60));
           setLiveTranscript(t);
         },
         onVolume: (v) => {
           meterSv.value = v;
         },
         onError: (code, message) => {
-          log('speech error', code, message);
-          if (code === 'no-speech') return;
-          Alert.alert('Speech recognition issue', describeSpeechError(code));
+          log("speech error", code, message);
+          if (code === "no-speech") return;
+          Alert.alert("Speech recognition issue", describeSpeechError(code));
         },
-        onEnd: () => log('speech ended'),
+        onEnd: () => log("speech ended"),
       });
       durationTimerRef.current = setInterval(() => {
         setDurationSec(Math.floor((Date.now() - startedAtRef.current) / 1000));
       }, 500);
     } catch (e) {
-      log('begin: threw', e);
+      log("begin: threw", e);
       speechRef.current = null;
-      setPhase('idle');
-      Alert.alert('Could not start recording', String(e));
+      setPhase("idle");
+      Alert.alert("Could not start recording", String(e));
     }
   }, [meterSv, resetForNewAttempt, setPhase]);
 
@@ -163,34 +152,34 @@ export function useRecordingFlow(): RecordingFlow {
     speechRef.current = null;
     const duration = Math.round((Date.now() - startedAtRef.current) / 1000);
     if (!speech) {
-      log('end: no active speech handle');
-      setPhase('idle');
+      log("end: no active speech handle");
+      setPhase("idle");
       return;
     }
-    log('end: stopping speech (duration:', duration, ')');
+    log("end: stopping speech (duration:", duration, ")");
     speech.stop();
     // Give recognizer a moment to flush a final result event.
     await new Promise((r) => setTimeout(r, 500));
-    const transcript = (speech.getTranscript() || liveTranscript || '').trim();
-    log('end: transcript length:', transcript.length);
+    const transcript = (speech.getTranscript() || liveTranscript || "").trim();
+    log("end: transcript length:", transcript.length);
     if (!transcript || duration < 1) {
-      setPhase('idle');
+      setPhase("idle");
       Alert.alert(
-        'Nothing captured',
+        "Nothing captured",
         duration < 1
-          ? 'Tap the mic, speak a sentence, then tap again to finish.'
-          : "We didn't catch any words. Try speaking a bit louder and closer to the mic."
+          ? "Tap the mic, speak a sentence, then tap again to finish."
+          : "We didn't catch any words. Try speaking a bit louder and closer to the mic.",
       );
       return;
     }
     setReviewText(transcript);
     setDurationSec(duration);
-    setPhase('review');
+    setPhase("review");
   }, [liveTranscript, setPhase]);
 
   const toggleRecording = useCallback(() => {
-    if (phase === 'idle') void beginRecording();
-    else if (phase === 'recording') void endRecording();
+    if (phase === "idle") void beginRecording();
+    else if (phase === "recording") void endRecording();
   }, [phase, beginRecording, endRecording]);
 
   /**
@@ -201,7 +190,7 @@ export function useRecordingFlow(): RecordingFlow {
   const skipToTyping = useCallback(() => {
     resetForNewAttempt();
     setDurationSec(0);
-    setPhase('review');
+    setPhase("review");
   }, [resetForNewAttempt, setPhase]);
 
   const discardAndRetry = useCallback(() => {
@@ -209,42 +198,40 @@ export function useRecordingFlow(): RecordingFlow {
     resetForNewAttempt();
     setReviewError(null);
     setRetryInSec(0);
-    setPhase('idle');
+    setPhase("idle");
   }, [resetForNewAttempt, setPhase]);
 
   const processWithAI = useCallback(async () => {
     const text = reviewText.trim();
     if (!text) {
-      Alert.alert('Nothing to process', 'Add or record something first.');
+      Alert.alert("Nothing to process", "Add or record something first.");
       return;
     }
     hapticMedium();
     setReviewError(null);
     setRetryInSec(0);
-    setPhase('extracting');
-    log('extracting: calling Gemini');
+    setPhase("extracting");
+    log("extracting: calling Gemini");
     try {
       const s = await structureTranscript(text);
-      log('extracting: done');
+      log("extracting: done");
       setStructured(s);
       // ExtractingPhase plays the flying-word animation, then calls
       // setStructuredDone to advance to 'extracted'.
     } catch (e) {
-      log('extracting: failed', e);
+      log("extracting: failed", e);
       if (e instanceof GeminiQuotaError) {
         setReviewError(e.message);
         setRetryInSec(e.retryAfterSec ?? 0);
       } else {
-        setReviewError(
-          e instanceof Error ? e.message : 'Could not structure transcript.'
-        );
+        setReviewError(e instanceof Error ? e.message : "Could not structure transcript.");
       }
-      setPhase('review');
+      setPhase("review");
     }
   }, [reviewText, setPhase]);
 
   const setStructuredDone = useCallback(() => {
-    setPhase('extracted');
+    setPhase("extracted");
   }, [setPhase]);
 
   return {
@@ -257,7 +244,6 @@ export function useRecordingFlow(): RecordingFlow {
     meterSv,
     reviewError,
     retryInSec,
-    acknowledgePrivacy,
     beginRecording,
     endRecording,
     toggleRecording,

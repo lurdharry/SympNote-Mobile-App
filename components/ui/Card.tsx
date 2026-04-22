@@ -1,11 +1,11 @@
 import React from 'react';
-import { Pressable, StyleProp, View, ViewStyle, StyleSheet } from 'react-native';
+import { Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { useTheme, radius, spacing, shadows } from '../../theme';
+import { makeStyles, spacing } from '../../theme';
 
 type Props = {
   children: React.ReactNode;
@@ -22,7 +22,7 @@ export function Card({
   elevated = false,
   padding = spacing.s5,
 }: Props) {
-  const { colors } = useTheme();
+  const styles = useStyles();
   const scale = useSharedValue(1);
   const anim = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
@@ -40,13 +40,8 @@ export function Card({
         }}
         style={[
           styles.card,
-          {
-            backgroundColor: colors.bgSurface,
-            borderRadius: radius.lg,
-            padding,
-            borderColor: colors.border,
-          },
-          elevated ? shadows.elevated : shadows.card,
+          { padding },
+          elevated ? styles.elevated : styles.flat,
           style,
         ]}
       >
@@ -56,8 +51,13 @@ export function Card({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   card: {
+    backgroundColor: theme.colors.bgSurface,
+    borderRadius: theme.radius.lg,
+    borderColor: theme.colors.border,
     borderWidth: StyleSheet.hairlineWidth,
   },
-});
+  elevated: theme.shadows.elevated,
+  flat: theme.shadows.card,
+}));

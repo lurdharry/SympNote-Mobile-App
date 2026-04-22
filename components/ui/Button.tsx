@@ -1,66 +1,56 @@
-import React from 'react';
-import {
-  ActivityIndicator,
-  StyleProp,
-  StyleSheet,
-  Text,
-  View,
-  ViewStyle,
-} from 'react-native';
-import { BreathingButton } from '../animated/BreathingButton';
-import { useTheme, radius, spacing, typography } from '../../theme';
-import { hapticLight, hapticMedium, hapticHeavy } from '../../services/haptics';
+import React from "react";
+import { ActivityIndicator, StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
+import { BreathingButton } from "../animated/BreathingButton";
+import { makeStyles, useTheme } from "../../theme";
+import { hapticLight, hapticMedium, hapticHeavy } from "../../services/haptics";
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'destructive';
+type Variant = "primary" | "secondary" | "ghost" | "destructive";
 
 type Props = {
   label: string;
   onPress?: () => void;
   variant?: Variant;
-  haptic?: 'light' | 'medium' | 'heavy' | 'none';
+  haptic?: "light" | "medium" | "heavy" | "none";
   breathe?: boolean;
   disabled?: boolean;
   loading?: boolean;
   style?: StyleProp<ViewStyle>;
   fullWidth?: boolean;
-  size?: 'md' | 'lg';
+  size?: "md" | "lg";
 };
 
 export function Button({
   label,
   onPress,
-  variant = 'primary',
-  haptic = 'medium',
+  variant = "primary",
+  haptic = "medium",
   breathe = false,
   disabled,
   loading,
   style,
   fullWidth = true,
-  size = 'lg',
+  size = "lg",
 }: Props) {
   const { colors } = useTheme();
+  const styles = useStyles();
 
   const bg =
-    variant === 'primary'
+    variant === "primary"
       ? colors.accent
-      : variant === 'secondary'
-      ? colors.bgSurface
-      : variant === 'destructive'
-      ? colors.error
-      : 'transparent';
+      : variant === "secondary"
+        ? colors.bgSurface
+        : variant === "destructive"
+          ? colors.error
+          : "transparent";
 
-  const fg =
-    variant === 'primary' || variant === 'destructive'
-      ? '#FFFFFF'
-      : colors.textPrimary;
+  const fg = variant === "primary" || variant === "destructive" ? "#FFFFFF" : colors.textPrimary;
 
-  const borderColor =
-    variant === 'secondary' ? colors.border : 'transparent';
+  const borderColor = variant === "secondary" ? colors.border : "transparent";
 
   const handle = () => {
-    if (haptic === 'light') hapticLight();
-    else if (haptic === 'medium') hapticMedium();
-    else if (haptic === 'heavy') hapticHeavy();
+    if (haptic === "light") hapticLight();
+    else if (haptic === "medium") hapticMedium();
+    else if (haptic === "heavy") hapticHeavy();
     onPress?.();
   };
 
@@ -75,11 +65,10 @@ export function Button({
         {
           backgroundColor: bg,
           borderColor,
-          borderWidth: variant === 'secondary' ? StyleSheet.hairlineWidth : 0,
-          height: size === 'lg' ? 56 : 48,
-          paddingHorizontal: spacing.s6,
+          borderWidth: variant === "secondary" ? StyleSheet.hairlineWidth : 0,
+          height: size === "lg" ? 56 : 48,
           opacity: disabled ? 0.55 : 1,
-          alignSelf: fullWidth ? 'stretch' : 'flex-start',
+          alignSelf: fullWidth ? "stretch" : "flex-start",
         },
         style,
       ]}
@@ -88,22 +77,20 @@ export function Button({
         {loading ? (
           <ActivityIndicator color={fg} />
         ) : (
-          <Text
-            style={[typography.label, { color: fg, letterSpacing: 0.26 }]}
-          >
-            {label}
-          </Text>
+          <Text style={[styles.label, { color: fg }]}>{label}</Text>
         )}
       </View>
     </BreathingButton>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   btn: {
-    borderRadius: radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: theme.radius.full,
+    paddingHorizontal: theme.spacing.s6,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-});
+  row: { flexDirection: "row", alignItems: "center", gap: 6 },
+  label: { ...theme.typography.label, letterSpacing: 0.26 },
+}));

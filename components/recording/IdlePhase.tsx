@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { useTheme, spacing, typography } from '../../theme';
+import { makeStyles } from '../../theme';
 import { VoiceReactiveOrb } from './VoiceReactiveOrb';
 import { hapticLight } from '../../services/haptics';
 
@@ -16,7 +16,7 @@ type Props = {
 };
 
 export function IdlePhase({ onStart, onTypeInstead }: Props) {
-  const { colors } = useTheme();
+  const styles = useStyles();
   const [idx, setIdx] = useState(0);
 
   useEffect(() => {
@@ -26,25 +26,15 @@ export function IdlePhase({ onStart, onTypeInstead }: Props) {
 
   return (
     <View>
-      <View style={{ minHeight: 56, marginTop: spacing.s3 }}>
-        <Text
-          key={idx}
-          style={[typography.body, { color: colors.textTertiary }]}
-        >
+      <View style={styles.promptSlot}>
+        <Text key={idx} style={styles.prompt}>
           {PROMPTS[idx]}
         </Text>
       </View>
 
-      <View style={{ alignItems: 'center', marginVertical: spacing.s10 }}>
+      <View style={styles.orbArea}>
         <VoiceReactiveOrb active={false} onPress={onStart} size={220} />
-        <Text
-          style={[
-            typography.caption,
-            { color: colors.textTertiary, marginTop: spacing.s5 },
-          ]}
-        >
-          Tap to record
-        </Text>
+        <Text style={styles.caption}>Tap to record</Text>
 
         {onTypeInstead && (
           <Pressable
@@ -52,24 +42,31 @@ export function IdlePhase({ onStart, onTypeInstead }: Props) {
               hapticLight();
               onTypeInstead();
             }}
-            style={{ marginTop: spacing.s5, padding: spacing.s2 }}
+            style={styles.typePress}
             hitSlop={8}
           >
-            <Text
-              style={[
-                typography.label,
-                {
-                  color: colors.accent,
-                  textDecorationLine: 'underline',
-                  letterSpacing: 0.3,
-                },
-              ]}
-            >
-              Or type instead
-            </Text>
+            <Text style={styles.typeText}>Or type instead</Text>
           </Pressable>
         )}
       </View>
     </View>
   );
 }
+
+const useStyles = makeStyles((theme) => ({
+  promptSlot: { minHeight: 56, marginTop: theme.spacing.s3 },
+  prompt: { ...theme.typography.body, color: theme.colors.textTertiary },
+  orbArea: { alignItems: 'center', marginVertical: theme.spacing.s10 },
+  caption: {
+    ...theme.typography.caption,
+    color: theme.colors.textTertiary,
+    marginTop: theme.spacing.s5,
+  },
+  typePress: { marginTop: theme.spacing.s5, padding: theme.spacing.s2 },
+  typeText: {
+    ...theme.typography.label,
+    color: theme.colors.accent,
+    textDecorationLine: 'underline',
+    letterSpacing: 0.3,
+  },
+}));

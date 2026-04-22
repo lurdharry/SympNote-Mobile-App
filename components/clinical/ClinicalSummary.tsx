@@ -7,22 +7,13 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { useTheme, radius, spacing, typography, shadows } from '../../theme';
+import { makeStyles, spacing, useTheme } from '../../theme';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 /**
- * Renders a Gemini-authored clinical summary (markdown-ish) into a
- * scannable set of editorial section cards. Each section has an accent
- * rule that draws in, a serif heading, and richly formatted body.
- *
- * Special-cases:
- * - "Worth flagging" section → red accent + ⚠ list
- * - "Before your visit" section → checklist rendering with hollow circles
- * - Any **bold** prefix on a bullet gets rendered in accent color
- *
- * When `stagger` is true (default), sections animate in sequentially so
- * the user feels the AI "composing" the note. Pass stagger={false} for
- * static rendering (e.g. on the appointment detail screen).
+ * Renders a Gemini-authored clinical summary into editorial section
+ * cards. Handles "Worth flagging" red-accent variant, "Before your
+ * visit" checklist variant, and standard narrative + bullet body.
  */
 
 type Section = {
@@ -87,6 +78,7 @@ function SectionCard({
   delay: number;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   const reduced = useReducedMotion();
   const opacity = useSharedValue(0);
   const ruleWidth = useSharedValue(0);
@@ -123,18 +115,9 @@ function SectionCard({
     <Animated.View style={cardStyle}>
       <View style={styles.headingRow}>
         <Animated.View
-          style={[
-            styles.rule,
-            { backgroundColor: accent },
-            ruleStyle,
-          ]}
+          style={[styles.rule, { backgroundColor: accent }, ruleStyle]}
         />
-        <Text
-          style={[
-            typography.label,
-            { color: accent, letterSpacing: 0.3 },
-          ]}
-        >
+        <Text style={[styles.heading, { color: accent }]}>
           {section.heading}
         </Text>
       </View>
@@ -143,14 +126,12 @@ function SectionCard({
         style={[
           styles.body,
           {
-            backgroundColor: colors.bgSurface,
             borderColor:
               section.variant === 'flag'
                 ? colors.error + '55'
                 : colors.border,
-            borderRadius: radius.lg,
           },
-          section.variant === 'flag' ? null : shadows.card,
+          section.variant === 'flag' ? null : styles.bodyShadow,
         ]}
       >
         <SectionBody body={section.body} variant={section.variant} />
@@ -166,7 +147,7 @@ function SectionBody({
   body: string;
   variant: Section['variant'];
 }) {
-  const { colors } = useTheme();
+  const styles = useStyles();
   const lines = body
     .split('\n')
     .map((l) => l.trim())
@@ -175,17 +156,7 @@ function SectionBody({
   const isBulleted = lines.every((l) => /^[-*⚠]/.test(l));
 
   if (!isBulleted) {
-    // Narrative paragraph
-    return (
-      <Text
-        style={[
-          typography.body,
-          { color: colors.textPrimary, lineHeight: 22 },
-        ]}
-      >
-        {body}
-      </Text>
-    );
+    return <Text style={styles.paragraph}>{body}</Text>;
   }
 
   return (
@@ -209,8 +180,8 @@ function Bullet({
   variant: Section['variant'];
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
 
-  // Extract leading **bold:** prefix as the "hook".
   const match = text.match(/^\*\*(.+?):\*\*\s*(.*)$/);
   const hook = match?.[1] ?? null;
   const rest = match?.[2] ?? text;
@@ -228,22 +199,18 @@ function Bullet({
   return (
     <View style={styles.bulletRow}>
       <Text
-        style={{
-          color: markerColor,
-          fontSize: variant === 'checklist' ? 16 : 14,
-          marginRight: spacing.s3,
-          marginTop: variant === 'checklist' ? 0 : 2,
-          width: 14,
-        }}
+        style={[
+          styles.marker,
+          {
+            color: markerColor,
+            fontSize: variant === 'checklist' ? 16 : 14,
+            marginTop: variant === 'checklist' ? 0 : 2,
+          },
+        ]}
       >
         {marker}
       </Text>
-      <Text
-        style={[
-          typography.body,
-          { color: colors.textPrimary, flex: 1, lineHeight: 22 },
-        ]}
-      >
+      <Text style={styles.bulletBody}>
         {hook && (
           <Text
             style={{
@@ -260,23 +227,33 @@ function Bullet({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   headingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.s3,
-    marginBottom: spacing.s3,
+    gap: theme.spacing.s3,
+    marginBottom: theme.spacing.s3,
   },
-  rule: {
-    height: 2,
-    borderRadius: 1,
-  },
+  rule: { height: 2, borderRadius: 1 },
+  heading: { ...theme.typography.label, letterSpacing: 0.3 },
   body: {
-    padding: spacing.s5,
+    padding: theme.spacing.s5,
     borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: theme.colors.bgSurface,
+    borderRadius: theme.radius.lg,
   },
-  bulletRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  bodyShadow: theme.shadows.card,
+  paragraph: {
+    ...theme.typography.body,
+    color: theme.colors.textPrimary,
+    lineHeight: 22,
   },
-});
+  bulletRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  marker: { marginRight: theme.spacing.s3, width: 14 },
+  bulletBody: {
+    ...theme.typography.body,
+    color: theme.colors.textPrimary,
+    flex: 1,
+    lineHeight: 22,
+  },
+}));

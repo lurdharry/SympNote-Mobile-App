@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Text } from 'react-native';
 import { Canvas, Path, Skia, useClock } from '@shopify/react-native-skia';
 import Animated, {
   Easing,
@@ -9,7 +9,7 @@ import Animated, {
   withDelay,
   withTiming,
 } from 'react-native-reanimated';
-import { useTheme, spacing, typography } from '../../theme';
+import { makeStyles, useTheme } from '../../theme';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 /**
@@ -19,14 +19,13 @@ import { useReducedMotion } from '../../hooks/useReducedMotion';
  */
 export function HistoryEmpty() {
   const { colors } = useTheme();
+  const styles = useStyles();
   const reduced = useReducedMotion();
   const clock = useClock();
 
   const width = 280;
   const height = 80;
 
-  // Pulled into a derived path so it updates at display refresh off the
-  // JS thread.
   const linePath = useDerivedValue(() => {
     const p = Skia.Path.Make();
     const steps = 80;
@@ -34,10 +33,7 @@ export function HistoryEmpty() {
     p.moveTo(0, height / 2);
     for (let i = 1; i <= steps; i++) {
       const x = (i / steps) * width;
-      // Amplitude envelope — tall near the left, tapering to nothing on
-      // the right so the line feels like it's "trailing off."
       const envelope = Math.pow(1 - i / steps, 1.6);
-      // Three phase-shifted sine waves for organic feel.
       const amp = height * 0.28 * envelope;
       const y =
         height / 2 +
@@ -48,7 +44,6 @@ export function HistoryEmpty() {
     return p;
   });
 
-  // Fade-in on mount.
   const fadeIn = useSharedValue(0);
   useEffect(() => {
     fadeIn.value = withDelay(
@@ -70,31 +65,8 @@ export function HistoryEmpty() {
           strokeJoin="round"
         />
       </Canvas>
-      <Text
-        style={[
-          typography.serifHeadline,
-          {
-            color: colors.textPrimary,
-            fontSize: 22,
-            lineHeight: 28,
-            marginTop: spacing.s5,
-            textAlign: 'center',
-          },
-        ]}
-      >
-        Nothing yet.
-      </Text>
-      <Text
-        style={[
-          typography.body,
-          {
-            color: colors.textTertiary,
-            marginTop: spacing.s2,
-            textAlign: 'center',
-            maxWidth: 280,
-          },
-        ]}
-      >
+      <Text style={styles.headline}>Nothing yet.</Text>
+      <Text style={styles.caption}>
         Every recording you make will show up here — in your own words,
         organized.
       </Text>
@@ -102,10 +74,25 @@ export function HistoryEmpty() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   wrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.s12,
+    paddingVertical: theme.spacing.s12,
   },
-});
+  headline: {
+    ...theme.typography.serifHeadline,
+    color: theme.colors.textPrimary,
+    fontSize: 22,
+    lineHeight: 28,
+    marginTop: theme.spacing.s5,
+    textAlign: 'center',
+  },
+  caption: {
+    ...theme.typography.body,
+    color: theme.colors.textTertiary,
+    marginTop: theme.spacing.s2,
+    textAlign: 'center',
+    maxWidth: 280,
+  },
+}));

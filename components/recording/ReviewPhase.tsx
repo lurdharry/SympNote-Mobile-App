@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
-import { useTheme, radius, spacing, typography } from '../../theme';
+import { makeStyles, spacing, useTheme } from '../../theme';
 import { Button } from '../ui/Button';
 import { formatDuration } from '../../utils/date';
 
@@ -10,9 +10,7 @@ type Props = {
   durationSec: number;
   onProcess: () => void;
   onDiscard: () => void;
-  /** Human-readable error from the last process attempt, or null. */
   error?: string | null;
-  /** Seconds until retry is allowed (quota backoff). 0 = retry allowed. */
   retryInSec?: number;
 };
 
@@ -26,78 +24,34 @@ export function ReviewPhase({
   retryInSec = 0,
 }: Props) {
   const { colors } = useTheme();
+  const styles = useStyles();
   const blocked = retryInSec > 0;
   const processLabel = blocked ? `Try again in ${retryInSec}s` : 'Process with AI';
 
   return (
     <View style={{ marginTop: spacing.s6 }}>
-      <Text
-        style={[
-          typography.label,
-          { color: colors.textTertiary, marginBottom: 8 },
-        ]}
-      >
+      <Text style={styles.caption}>
         Here's what we heard ({formatDuration(durationSec)})
       </Text>
-      <View
-        style={[
-          styles.box,
-          {
-            backgroundColor: colors.bgSurface,
-            borderColor: colors.border,
-            borderRadius: radius.md,
-          },
-        ]}
-      >
+      <View style={styles.box}>
         <TextInput
           value={text}
           onChangeText={onChange}
           multiline
           placeholder="Your transcript will appear here…"
           placeholderTextColor={colors.textTertiary}
-          style={[
-            typography.bodyLarge,
-            {
-              color: colors.textPrimary,
-              padding: spacing.s4,
-              minHeight: 120,
-              textAlignVertical: 'top',
-            },
-          ]}
+          style={styles.input}
         />
       </View>
-      <Text
-        style={[
-          typography.caption,
-          { color: colors.textTertiary, marginTop: spacing.s3 },
-        ]}
-      >
+      <Text style={styles.hint}>
         Edit anything that got misheard before we send it to the AI. The
         transcript stays on your device unless you tap Process.
       </Text>
 
       {error && (
-        <View
-          style={[
-            styles.errorBox,
-            {
-              backgroundColor: colors.bgMuted,
-              borderColor: colors.error,
-              borderRadius: radius.md,
-            },
-          ]}
-        >
-          <Text style={[typography.label, { color: colors.error }]}>
-            AI unavailable
-          </Text>
-          <Text
-            style={[
-              typography.body,
-              { color: colors.textPrimary, marginTop: 4 },
-            ]}
-          >
-            {error}
-          </Text>
+        <View style={styles.errorBox}>
+          <Text style={styles.errorLabel}>AI unavailable</Text>
+          <Text style={styles.errorBody}>{error}</Text>
         </View>
       )}
 
@@ -120,11 +74,42 @@ export function ReviewPhase({
   );
 }
 
-const styles = StyleSheet.create({
-  box: { borderWidth: StyleSheet.hairlineWidth },
-  errorBox: {
-    marginTop: spacing.s4,
-    padding: spacing.s4,
-    borderWidth: StyleSheet.hairlineWidth,
+const useStyles = makeStyles((theme) => ({
+  caption: {
+    ...theme.typography.label,
+    color: theme.colors.textTertiary,
+    marginBottom: 8,
   },
-});
+  box: {
+    borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: theme.colors.bgSurface,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+  },
+  input: {
+    ...theme.typography.bodyLarge,
+    color: theme.colors.textPrimary,
+    padding: theme.spacing.s4,
+    minHeight: 120,
+    textAlignVertical: 'top',
+  },
+  hint: {
+    ...theme.typography.caption,
+    color: theme.colors.textTertiary,
+    marginTop: theme.spacing.s3,
+  },
+  errorBox: {
+    marginTop: theme.spacing.s4,
+    padding: theme.spacing.s4,
+    borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: theme.colors.bgMuted,
+    borderColor: theme.colors.error,
+    borderRadius: theme.radius.md,
+  },
+  errorLabel: { ...theme.typography.label, color: theme.colors.error },
+  errorBody: {
+    ...theme.typography.body,
+    color: theme.colors.textPrimary,
+    marginTop: 4,
+  },
+}));

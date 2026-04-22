@@ -11,7 +11,7 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
 } from 'react-native-reanimated';
-import { useTheme, radius, spacing, typography } from '../../theme';
+import { makeStyles, useTheme } from '../../theme';
 
 type Props = TextInputProps & {
   label?: string;
@@ -19,6 +19,7 @@ type Props = TextInputProps & {
 
 export function TextInput({ label, style, onFocus, onBlur, ...rest }: Props) {
   const { colors } = useTheme();
+  const styles = useStyles();
   const [focused, setFocused] = useState(false);
   const border = useSharedValue(0);
 
@@ -29,12 +30,8 @@ export function TextInput({ label, style, onFocus, onBlur, ...rest }: Props) {
 
   return (
     <View>
-      {label && (
-        <Text style={[typography.label, { color: colors.textSecondary, marginBottom: 6 }]}>
-          {label}
-        </Text>
-      )}
-      <Animated.View style={[styles.wrap, { backgroundColor: colors.bgSurface }, anim]}>
+      {label && <Text style={styles.label}>{label}</Text>}
+      <Animated.View style={[styles.wrap, anim]}>
         <RNTextInput
           placeholderTextColor={colors.textTertiary}
           onFocus={(e) => {
@@ -47,11 +44,7 @@ export function TextInput({ label, style, onFocus, onBlur, ...rest }: Props) {
             border.value = withTiming(0, { duration: 180 });
             onBlur?.(e);
           }}
-          style={[
-            typography.body,
-            { color: colors.textPrimary, padding: spacing.s4 },
-            style,
-          ]}
+          style={[styles.input, style]}
           {...rest}
         />
       </Animated.View>
@@ -59,9 +52,20 @@ export function TextInput({ label, style, onFocus, onBlur, ...rest }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
+  label: {
+    ...theme.typography.label,
+    color: theme.colors.textSecondary,
+    marginBottom: 6,
+  },
   wrap: {
     borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: radius.md,
+    borderRadius: theme.radius.md,
+    backgroundColor: theme.colors.bgSurface,
   },
-});
+  input: {
+    ...theme.typography.body,
+    color: theme.colors.textPrimary,
+    padding: theme.spacing.s4,
+  },
+}));

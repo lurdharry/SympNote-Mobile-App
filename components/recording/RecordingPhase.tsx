@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import { SharedValue } from 'react-native-reanimated';
-import { useTheme, spacing, typography } from '../../theme';
+import { makeStyles } from '../../theme';
 import { VoiceReactiveOrb } from './VoiceReactiveOrb';
 import { formatDuration } from '../../utils/date';
 
@@ -13,9 +13,8 @@ type Props = {
 };
 
 /**
- * Active recording scene. The VoiceReactiveOrb does double duty as both
- * the visualizer AND the stop button — no separate waveform bar, no
- * separate affordance. The live transcript streams underneath.
+ * Active recording scene. The orb is both the visualizer and stop
+ * button. Live transcript streams underneath.
  */
 export function RecordingPhase({
   meterSv,
@@ -23,55 +22,49 @@ export function RecordingPhase({
   durationSec,
   onStop,
 }: Props) {
-  const { colors } = useTheme();
+  const styles = useStyles();
 
   return (
-    <View style={{ alignItems: 'center', marginVertical: spacing.s8 }}>
+    <View style={styles.root}>
       <VoiceReactiveOrb active meterSv={meterSv} onPress={onStop} size={240} />
 
-      <Text
-        style={[
-          typography.numberEditorial,
-          {
-            color: colors.warning,
-            marginTop: spacing.s5,
-            fontSize: 24,
-            lineHeight: 26,
-          },
-        ]}
-      >
-        {formatDuration(durationSec)}
-      </Text>
+      <Text style={styles.duration}>{formatDuration(durationSec)}</Text>
 
       {!!liveTranscript && (
-        <View
-          style={{ marginTop: spacing.s4, paddingHorizontal: spacing.s4 }}
-        >
-          <Text
-            style={[
-              typography.bodyLarge,
-              {
-                color: colors.textPrimary,
-                textAlign: 'center',
-                minHeight: 26,
-                fontSize: 18,
-                lineHeight: 26,
-              },
-            ]}
-          >
-            {liveTranscript}
-          </Text>
+        <View style={styles.transcriptWrap}>
+          <Text style={styles.transcript}>{liveTranscript}</Text>
         </View>
       )}
 
-      <Text
-        style={[
-          typography.caption,
-          { color: colors.textTertiary, marginTop: spacing.s5 },
-        ]}
-      >
-        Tap to finish
-      </Text>
+      <Text style={styles.caption}>Tap to finish</Text>
     </View>
   );
 }
+
+const useStyles = makeStyles((theme) => ({
+  root: { alignItems: 'center', marginVertical: theme.spacing.s8 },
+  duration: {
+    ...theme.typography.numberEditorial,
+    color: theme.colors.warning,
+    marginTop: theme.spacing.s5,
+    fontSize: 24,
+    lineHeight: 26,
+  },
+  transcriptWrap: {
+    marginTop: theme.spacing.s4,
+    paddingHorizontal: theme.spacing.s4,
+  },
+  transcript: {
+    ...theme.typography.bodyLarge,
+    color: theme.colors.textPrimary,
+    textAlign: 'center',
+    minHeight: 26,
+    fontSize: 18,
+    lineHeight: 26,
+  },
+  caption: {
+    ...theme.typography.caption,
+    color: theme.colors.textTertiary,
+    marginTop: theme.spacing.s5,
+  },
+}));

@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useTheme, radius, spacing, typography } from '../../theme';
+import { makeStyles, spacing } from '../../theme';
 import { Button } from '../ui/Button';
 import { FieldRow } from './FieldRow';
 import { FIELDS, StructuredWithSources, fieldValue } from './types';
@@ -13,14 +13,8 @@ type Props = {
   onSave: () => void;
 };
 
-/**
- * Shown after Gemini structures the transcript. Goes beyond the flat
- * fields: leads with severity + urgency + body system at the top, a red
- * flag alert (if any), then the detail rows below. This is where the user
- * sees the AI isn't just re-listing what they said — it's *classifying*.
- */
 export function ExtractedPhase({ structured, onSave }: Props) {
-  const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View style={{ marginTop: spacing.s6, gap: spacing.s5 }}>
       <Header structured={structured} />
@@ -30,14 +24,7 @@ export function ExtractedPhase({ structured, onSave }: Props) {
       )}
 
       <View style={{ gap: spacing.s3 }}>
-        <Text
-          style={[
-            typography.label,
-            { color: colors.textTertiary, letterSpacing: 0.3 },
-          ]}
-        >
-          Details
-        </Text>
+        <Text style={styles.sectionLabel}>Details</Text>
         {FIELDS.map((f) => (
           <FieldRow
             key={f.key}
@@ -51,70 +38,30 @@ export function ExtractedPhase({ structured, onSave }: Props) {
         ) : null}
       </View>
 
-      <Button
-        label="Save entry"
-        breathe
-        haptic="heavy"
-        onPress={onSave}
-      />
+      <Button label="Save entry" breathe haptic="heavy" onPress={onSave} />
     </View>
   );
 }
 
 function Header({ structured }: { structured: StructuredWithSources }) {
-  const { colors } = useTheme();
+  const styles = useStyles();
   return (
-    <View
-      style={[
-        styles.header,
-        {
-          backgroundColor: colors.bgSurface,
-          borderColor: colors.border,
-          borderRadius: radius.lg,
-        },
-      ]}
-    >
+    <View style={styles.header}>
       <View style={styles.row}>
         <SeverityBadge severity={structured.severity} />
         <UrgencyChip urgency={structured.urgency} />
       </View>
       {!!structured.bodySystem && (
         <View style={{ marginTop: spacing.s3 }}>
-          <Text
-            style={[typography.label, { color: colors.textTertiary, letterSpacing: 0.3 }]}
-          >
-            Body system
-          </Text>
-          <Text
-            style={[
-              typography.serifHeadline,
-              {
-                color: colors.textPrimary,
-                fontSize: 22,
-                lineHeight: 28,
-                marginTop: 4,
-              },
-            ]}
-          >
-            {structured.bodySystem}
-          </Text>
+          <Text style={styles.sectionLabel}>Body system</Text>
+          <Text style={styles.bodySystem}>{structured.bodySystem}</Text>
         </View>
       )}
       {structured.symptoms.length > 0 && (
-        <View style={{ marginTop: spacing.s3, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+        <View style={styles.symptomRow}>
           {structured.symptoms.slice(0, 4).map((s) => (
-            <View
-              key={s}
-              style={{
-                backgroundColor: colors.bgMuted,
-                paddingHorizontal: spacing.s3,
-                paddingVertical: 4,
-                borderRadius: 999,
-              }}
-            >
-              <Text style={[typography.bodySmall, { color: colors.textPrimary }]}>
-                {s}
-              </Text>
+            <View key={s} style={styles.symptomChip}>
+              <Text style={styles.symptomText}>{s}</Text>
             </View>
           ))}
         </View>
@@ -123,15 +70,46 @@ function Header({ structured }: { structured: StructuredWithSources }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   header: {
-    padding: spacing.s5,
+    padding: theme.spacing.s5,
     borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: theme.colors.bgSurface,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.lg,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.s3,
+    gap: theme.spacing.s3,
     flexWrap: 'wrap',
   },
-});
+  sectionLabel: {
+    ...theme.typography.label,
+    color: theme.colors.textTertiary,
+    letterSpacing: 0.3,
+  },
+  bodySystem: {
+    ...theme.typography.serifHeadline,
+    color: theme.colors.textPrimary,
+    fontSize: 22,
+    lineHeight: 28,
+    marginTop: 4,
+  },
+  symptomRow: {
+    marginTop: theme.spacing.s3,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  symptomChip: {
+    backgroundColor: theme.colors.bgMuted,
+    paddingHorizontal: theme.spacing.s3,
+    paddingVertical: 4,
+    borderRadius: theme.radius.full,
+  },
+  symptomText: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.textPrimary,
+  },
+}));

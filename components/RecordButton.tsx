@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { VoiceReactiveOrb } from './recording/VoiceReactiveOrb';
 import { ShimmerText } from './animated/ShimmerText';
-import { useTheme, spacing, typography } from '../theme';
+import { makeStyles } from '../theme';
 import { hapticHeavy, hapticMedium } from '../services/haptics';
 import {
   ensureSpeechPermission,
@@ -24,11 +24,10 @@ type Phase = 'idle' | 'recording' | 'processing' | 'done';
 
 /**
  * Home-tab recorder. Shares the VoiceReactiveOrb with onboarding so the
- * visual language is unified — the same living orb you met during first
- * recording is how you record forever after.
+ * visual language is unified.
  */
 export function RecordButton({ onSaved }: Props) {
-  const { colors } = useTheme();
+  const styles = useStyles();
   const [phase, setPhase] = useState<Phase>('idle');
   const [dur, setDur] = useState(0);
   const [liveTranscript, setLiveTranscript] = useState('');
@@ -145,31 +144,9 @@ export function RecordButton({ onSaved }: Props) {
 
       {phase === 'recording' && (
         <View style={styles.info}>
-          <Text
-            style={[
-              typography.numberEditorial,
-              {
-                color: colors.warning,
-                fontSize: 22,
-                lineHeight: 24,
-              },
-            ]}
-          >
-            {formatDuration(dur)}
-          </Text>
+          <Text style={styles.duration}>{formatDuration(dur)}</Text>
           {!!liveTranscript && (
-            <Text
-              numberOfLines={2}
-              style={[
-                typography.body,
-                {
-                  color: colors.textPrimary,
-                  textAlign: 'center',
-                  marginTop: spacing.s2,
-                  paddingHorizontal: spacing.s4,
-                },
-              ]}
-            >
+            <Text numberOfLines={2} style={styles.liveTranscript}>
               {liveTranscript}
             </Text>
           )}
@@ -179,29 +156,15 @@ export function RecordButton({ onSaved }: Props) {
       {phase === 'processing' && (
         <ShimmerText
           text="Processing..."
-          textStyle={{ ...typography.body, color: colors.textSecondary }}
-          containerStyle={{ marginTop: spacing.s4 }}
+          textStyle={styles.shimmerText}
+          containerStyle={styles.shimmerWrap}
         />
       )}
 
-      {phase === 'done' && (
-        <Text
-          style={[
-            typography.body,
-            { color: colors.success, marginTop: spacing.s4 },
-          ]}
-        >
-          Saved
-        </Text>
-      )}
+      {phase === 'done' && <Text style={styles.saved}>Saved</Text>}
 
       {(phase === 'idle' || phase === 'recording') && (
-        <Text
-          style={[
-            typography.caption,
-            { color: colors.textTertiary, marginTop: spacing.s4 },
-          ]}
-        >
+        <Text style={styles.caption}>
           {phase === 'recording' ? 'Tap to finish' : 'Tap to record'}
         </Text>
       )}
@@ -209,10 +172,32 @@ export function RecordButton({ onSaved }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   wrap: { alignItems: 'center' },
-  info: {
-    alignItems: 'center',
-    marginTop: spacing.s5,
+  info: { alignItems: 'center', marginTop: theme.spacing.s5 },
+  duration: {
+    ...theme.typography.numberEditorial,
+    color: theme.colors.warning,
+    fontSize: 22,
+    lineHeight: 24,
   },
-});
+  liveTranscript: {
+    ...theme.typography.body,
+    color: theme.colors.textPrimary,
+    textAlign: 'center',
+    marginTop: theme.spacing.s2,
+    paddingHorizontal: theme.spacing.s4,
+  },
+  shimmerText: { ...theme.typography.body, color: theme.colors.textSecondary },
+  shimmerWrap: { marginTop: theme.spacing.s4 },
+  saved: {
+    ...theme.typography.body,
+    color: theme.colors.success,
+    marginTop: theme.spacing.s4,
+  },
+  caption: {
+    ...theme.typography.caption,
+    color: theme.colors.textTertiary,
+    marginTop: theme.spacing.s4,
+  },
+}));

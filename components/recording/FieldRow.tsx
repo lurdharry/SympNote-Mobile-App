@@ -6,7 +6,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { useTheme, radius, spacing, typography } from '../../theme';
+import { makeStyles } from '../../theme';
 
 type Props = {
   label: string;
@@ -15,7 +15,7 @@ type Props = {
 };
 
 export function FieldRow({ label, value, active }: Props) {
-  const { colors } = useTheme();
+  const styles = useStyles();
   const bg = useSharedValue(0);
 
   useEffect(() => {
@@ -32,33 +32,26 @@ export function FieldRow({ label, value, active }: Props) {
   }));
 
   return (
-    <Animated.View
-      style={[
-        styles.row,
-        { borderColor: colors.border, borderRadius: radius.md },
-        style,
-      ]}
-    >
-      <Text style={[typography.label, { color: colors.textTertiary }]}>
-        {label}
-      </Text>
-      <Text
-        style={[
-          typography.bodyLarge,
-          { color: colors.textPrimary, marginTop: 2 },
-        ]}
-      >
-        {value || '—'}
-      </Text>
+    <Animated.View style={[styles.row, style]}>
+      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.value}>{value || '—'}</Text>
     </Animated.View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   row: {
     borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: spacing.s4,
-    paddingVertical: spacing.s3,
-    marginBottom: spacing.s3,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: theme.spacing.s4,
+    paddingVertical: theme.spacing.s3,
+    marginBottom: theme.spacing.s3,
   },
-});
+  label: { ...theme.typography.label, color: theme.colors.textTertiary },
+  value: {
+    ...theme.typography.bodyLarge,
+    color: theme.colors.textPrimary,
+    marginTop: 2,
+  },
+}));

@@ -8,7 +8,7 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { useTheme, radius, spacing, typography } from '../../theme';
+import { makeStyles, useTheme } from '../../theme';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 type Props = {
@@ -17,11 +17,11 @@ type Props = {
 
 /**
  * Alert card listing things the patient should make sure their doctor
- * hears first. Styled with an error accent and a subtle pulsing left rule
- * to draw attention without being alarmist.
+ * hears first. Styled with an error accent and a subtle pulsing left rule.
  */
 export function RedFlagAlert({ items }: Props) {
   const { colors } = useTheme();
+  const styles = useStyles();
   const reduced = useReducedMotion();
   const pulse = useSharedValue(0);
 
@@ -44,49 +44,19 @@ export function RedFlagAlert({ items }: Props) {
   if (items.length === 0) return null;
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.bgSurface,
-          borderColor: colors.error + '55',
-          borderRadius: radius.lg,
-        },
-      ]}
-    >
+    <View style={[styles.card, { borderColor: colors.error + '55' }]}>
       <Animated.View
         style={[styles.rule, { backgroundColor: colors.error }, ruleStyle]}
       />
       <View style={{ flex: 1 }}>
-        <Text
-          style={[
-            typography.label,
-            { color: colors.error, letterSpacing: 0.3 },
-          ]}
-        >
+        <Text style={[styles.heading, { color: colors.error }]}>
           Worth flagging
         </Text>
-        <View style={{ marginTop: spacing.s3, gap: spacing.s2 }}>
+        <View style={styles.items}>
           {items.map((item, i) => (
             <View key={`${i}-${item}`} style={styles.row}>
-              <Text
-                style={{
-                  color: colors.error,
-                  fontSize: 14,
-                  marginRight: 8,
-                  marginTop: 3,
-                }}
-              >
-                ⚠
-              </Text>
-              <Text
-                style={[
-                  typography.body,
-                  { color: colors.textPrimary, flex: 1 },
-                ]}
-              >
-                {item}
-              </Text>
+              <Text style={[styles.bullet, { color: colors.error }]}>⚠</Text>
+              <Text style={styles.itemText}>{item}</Text>
             </View>
           ))}
         </View>
@@ -95,20 +65,27 @@ export function RedFlagAlert({ items }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   card: {
     flexDirection: 'row',
-    padding: spacing.s5,
+    padding: theme.spacing.s5,
     borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: theme.colors.bgSurface,
+    borderRadius: theme.radius.lg,
   },
   rule: {
     width: 3,
     alignSelf: 'stretch',
     borderRadius: 1.5,
-    marginRight: spacing.s4,
+    marginRight: theme.spacing.s4,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  heading: { ...theme.typography.label, letterSpacing: 0.3 },
+  items: { marginTop: theme.spacing.s3, gap: theme.spacing.s2 },
+  row: { flexDirection: 'row', alignItems: 'flex-start' },
+  bullet: { fontSize: 14, marginRight: 8, marginTop: 3 },
+  itemText: {
+    ...theme.typography.body,
+    color: theme.colors.textPrimary,
+    flex: 1,
   },
-});
+}));

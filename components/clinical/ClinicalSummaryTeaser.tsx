@@ -8,19 +8,12 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated';
-import { useTheme, radius, spacing, typography, shadows } from '../../theme';
+import { makeStyles, spacing, useTheme } from '../../theme';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 
 /**
- * Teaser view of a clinical summary for the paywall.
- * Shows the Chief concern (the AI's distilled one-liner) + a stats strip
- * derived from the markdown sections. This is proof-of-value — the FULL
- * summary stays locked in the Prep tab / Appointment detail screens.
- *
- * Design intent: the user sees that clinical reasoning happened (chief
- * concern is not the raw transcript; stats are real counts). That's the
- * conversion lever. We don't dump the full doctor-ready note here because
- * that's what they're paying for.
+ * Teaser view of a clinical summary for the paywall. Shows the Chief
+ * concern + a stats strip derived from the markdown sections.
  */
 
 type TeaserData = {
@@ -52,7 +45,6 @@ function parseTeaser(text: string): TeaserData {
       .filter((l) => /^[-*⚠]/.test(l.trim())).length;
 
     if (heading.includes('chief')) {
-      // First non-empty sentence.
       const sentence = body.split(/(?<=[.!?])\s/)[0] ?? body;
       chiefConcern = sentence.trim();
     } else if (heading.includes('pattern')) {
@@ -75,6 +67,7 @@ type Props = {
 
 export function ClinicalSummaryTeaser({ text }: Props) {
   const { colors } = useTheme();
+  const styles = useStyles();
   const reduced = useReducedMotion();
 
   const data = useMemo<TeaserData | null>(
@@ -103,27 +96,11 @@ export function ClinicalSummaryTeaser({ text }: Props) {
     transform: [{ translateY: ty.value }],
   }));
 
-  // Loading state — summary still being generated in the background.
   if (!data) {
     return (
       <Animated.View style={[{ marginTop: spacing.s4 }, anim]}>
-        <View
-          style={[
-            styles.card,
-            {
-              backgroundColor: colors.bgSurface,
-              borderColor: colors.border,
-              borderRadius: radius.lg,
-            },
-            shadows.card,
-          ]}
-        >
-          <Text
-            style={[
-              typography.body,
-              { color: colors.textSecondary, lineHeight: 22 },
-            ]}
-          >
+        <View style={styles.card}>
+          <Text style={styles.loading}>
             Your first summary is being prepared from your recording…
           </Text>
         </View>
@@ -139,123 +116,101 @@ export function ClinicalSummaryTeaser({ text }: Props) {
 
   return (
     <Animated.View style={[{ marginTop: spacing.s4 }, anim]}>
-      <View
-        style={[
-          styles.card,
-          {
-            backgroundColor: colors.bgSurface,
-            borderColor: colors.border,
-            borderRadius: radius.lg,
-          },
-          shadows.card,
-        ]}
-      >
-        <Text
-          style={[
-            typography.label,
-            { color: colors.accent, letterSpacing: 0.3 },
-          ]}
-        >
-          Chief concern
-        </Text>
-        <Text
-          style={[
-            typography.serifHeadline,
-            {
-              color: colors.textPrimary,
-              fontSize: 22,
-              lineHeight: 28,
-              marginTop: 6,
-            },
-          ]}
-        >
+      <View style={styles.card}>
+        <Text style={styles.chiefLabel}>Chief concern</Text>
+        <Text style={styles.chiefBody}>
           {data.chiefConcern ?? 'Entry logged.'}
         </Text>
 
         {stats.length > 0 && (
-          <View
-            style={[
-              styles.statsRow,
-              { borderTopColor: colors.border },
-            ]}
-          >
+          <View style={styles.statsRow}>
             {stats.map((s, i) => (
               <React.Fragment key={s.label}>
                 <View style={styles.stat}>
                   <Text
-                    style={{
-                      fontFamily: 'Fraunces_300Light',
-                      fontSize: 28,
-                      lineHeight: 30,
-                      letterSpacing: -0.6,
-                      color:
-                        s.tone === 'warn'
-                          ? colors.error
-                          : colors.textPrimary,
-                    }}
-                  >
-                    {s.value}
-                  </Text>
-                  <Text
                     style={[
-                      typography.caption,
+                      styles.statNumber,
                       {
-                        color: colors.textTertiary,
-                        marginTop: 2,
+                        color:
+                          s.tone === 'warn'
+                            ? colors.error
+                            : colors.textPrimary,
                       },
                     ]}
                   >
-                    {s.label}
+                    {s.value}
                   </Text>
+                  <Text style={styles.statLabel}>{s.label}</Text>
                 </View>
-                {i < stats.length - 1 && (
-                  <View
-                    style={[
-                      styles.divider,
-                      { backgroundColor: colors.border },
-                    ]}
-                  />
-                )}
+                {i < stats.length - 1 && <View style={styles.divider} />}
               </React.Fragment>
             ))}
           </View>
         )}
       </View>
 
-      <Text
-        style={[
-          typography.bodySmall,
-          {
-            color: colors.textSecondary,
-            marginTop: spacing.s3,
-            textAlign: 'center',
-          },
-        ]}
-      >
+      <Text style={styles.footer}>
         Subscribe to unlock your full doctor-ready summary — and every one after.
       </Text>
     </Animated.View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   card: {
-    padding: spacing.s5,
+    padding: theme.spacing.s5,
     borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: theme.colors.bgSurface,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.lg,
+    ...theme.shadows.card,
+  },
+  loading: {
+    ...theme.typography.body,
+    color: theme.colors.textSecondary,
+    lineHeight: 22,
+  },
+  chiefLabel: {
+    ...theme.typography.label,
+    color: theme.colors.accent,
+    letterSpacing: 0.3,
+  },
+  chiefBody: {
+    ...theme.typography.serifHeadline,
+    color: theme.colors.textPrimary,
+    fontSize: 22,
+    lineHeight: 28,
+    marginTop: 6,
   },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacing.s4,
-    paddingTop: spacing.s4,
+    marginTop: theme.spacing.s4,
+    paddingTop: theme.spacing.s4,
     borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.colors.border,
   },
-  stat: {
-    flex: 1,
-    alignItems: 'center',
+  stat: { flex: 1, alignItems: 'center' },
+  statNumber: {
+    fontFamily: 'Fraunces_300Light',
+    fontSize: 28,
+    lineHeight: 30,
+    letterSpacing: -0.6,
+  },
+  statLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.textTertiary,
+    marginTop: 2,
   },
   divider: {
     width: StyleSheet.hairlineWidth,
     alignSelf: 'stretch',
+    backgroundColor: theme.colors.border,
   },
-});
+  footer: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.s3,
+    textAlign: 'center',
+  },
+}));

@@ -14,20 +14,15 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useTheme, primaryGradient, shadows } from '../../theme';
+import { makeStyles, primaryGradient } from '../../theme';
 import { hapticMedium } from '../../services/haptics';
 
 /**
  * Primary CTA per design handoff.
  *
- *  - 56px pill
- *  - Teal 3-stop gradient (#3BA79F → #2C6E6B → #1F504E, 135deg)
- *  - `shadow-accent-glow` (teal shadow bloom underneath)
+ *  - 56px pill, 3-stop teal gradient, accent glow shadow
  *  - Inner top highlight (subtle white inset)
- *  - 120ms press scale → 0.98
- *  - Medium haptic on tap
- *
- * `icon` renders to the right of the label.
+ *  - 120ms press scale → 0.98, medium haptic
  */
 type Props = {
   label: string;
@@ -46,7 +41,7 @@ export function PrimaryButton({
   loading,
   style,
 }: Props) {
-  const { colors } = useTheme();
+  const styles = useStyles();
   const scale = useSharedValue(1);
 
   const animStyle = useAnimatedStyle(() => ({
@@ -74,13 +69,7 @@ export function PrimaryButton({
         accessibilityLabel={label}
         accessibilityState={{ disabled: !!disabled, busy: !!loading }}
       >
-        <View
-          style={[
-            styles.shell,
-            shadows.accentGlow,
-            { opacity: disabled ? 0.4 : 1 },
-          ]}
-        >
+        <View style={[styles.shell, { opacity: disabled ? 0.4 : 1 }]}>
           <LinearGradient
             colors={[
               primaryGradient[0],
@@ -91,14 +80,7 @@ export function PrimaryButton({
             end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFill}
           />
-          {/* Inner top highlight — matches the HTML "inset 0 1px 0 rgba(255,255,255,0.2)" */}
-          <View
-            pointerEvents="none"
-            style={[
-              styles.innerHighlight,
-              { backgroundColor: 'rgba(255,255,255,0.2)' },
-            ]}
-          />
+          <View pointerEvents="none" style={styles.innerHighlight} />
           <View style={styles.content}>
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
@@ -115,13 +97,14 @@ export function PrimaryButton({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   shell: {
     height: 56,
-    borderRadius: 9999,
+    borderRadius: theme.radius.full,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+    ...theme.shadows.accentGlow,
   },
   innerHighlight: {
     position: 'absolute',
@@ -129,12 +112,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: theme.spacing.s6,
   },
   label: {
     color: '#FFFFFF',
@@ -142,4 +126,4 @@ const styles = StyleSheet.create({
     fontSize: 17,
     letterSpacing: -0.17,
   },
-});
+}));

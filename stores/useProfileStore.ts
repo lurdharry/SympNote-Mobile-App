@@ -1,13 +1,12 @@
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import { mmkvStorage } from './mmkv';
-import { UserProfile, SubscriptionStatus } from './types';
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import { mmkvStorage } from "./mmkv";
+import { UserProfile, SubscriptionStatus } from "./types";
 
-export type ThemePreference = 'auto' | 'light' | 'dark';
-export type ReduceMotionPreference = 'auto' | 'on' | 'off';
+export type ThemePreference = "auto" | "light" | "dark";
+export type ReduceMotionPreference = "auto" | "on" | "off";
 
 type State = UserProfile & {
-  hasSeenPrivacyNotice: boolean;
   themePreference: ThemePreference;
   hapticsEnabled: boolean;
   reduceMotionOverride: ReduceMotionPreference;
@@ -18,7 +17,6 @@ type Actions = {
   completeOnboarding: () => void;
   resetOnboarding: () => void;
   setSubscription: (status: SubscriptionStatus, trialEndsAt?: string | null) => void;
-  acknowledgePrivacy: () => void;
   setThemePreference: (pref: ThemePreference) => void;
   setHapticsEnabled: (enabled: boolean) => void;
   setReduceMotionOverride: (pref: ReduceMotionPreference) => void;
@@ -27,12 +25,12 @@ type Actions = {
 const initial: State = {
   onboardingComplete: false,
   onboardingAnswers: {},
-  subscriptionStatus: 'none',
+  subscriptionStatus: "none",
   trialEndsAt: null,
-  hasSeenPrivacyNotice: false,
-  themePreference: 'auto',
+
+  themePreference: "auto",
   hapticsEnabled: true,
-  reduceMotionOverride: 'auto',
+  reduceMotionOverride: "auto",
 };
 
 export const useProfileStore = create<State & Actions>()(
@@ -43,23 +41,18 @@ export const useProfileStore = create<State & Actions>()(
         set((s) => ({
           onboardingAnswers: { ...s.onboardingAnswers, [key]: value },
         })),
-      completeOnboarding: () =>
-        set(() => ({ onboardingComplete: true })),
+      completeOnboarding: () => set(() => ({ onboardingComplete: true })),
       resetOnboarding: () => set(() => ({ ...initial })),
       setSubscription: (status, trialEndsAt = null) =>
         set(() => ({ subscriptionStatus: status, trialEndsAt })),
-      acknowledgePrivacy: () =>
-        set(() => ({ hasSeenPrivacyNotice: true })),
-      setThemePreference: (pref) =>
-        set(() => ({ themePreference: pref })),
-      setHapticsEnabled: (enabled) =>
-        set(() => ({ hapticsEnabled: enabled })),
-      setReduceMotionOverride: (pref) =>
-        set(() => ({ reduceMotionOverride: pref })),
+
+      setThemePreference: (pref) => set(() => ({ themePreference: pref })),
+      setHapticsEnabled: (enabled) => set(() => ({ hapticsEnabled: enabled })),
+      setReduceMotionOverride: (pref) => set(() => ({ reduceMotionOverride: pref })),
     }),
     {
-      name: 'profile',
+      name: "profile",
       storage: createJSONStorage(() => mmkvStorage),
-    }
-  )
+    },
+  ),
 );

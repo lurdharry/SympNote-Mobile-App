@@ -1,18 +1,18 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useTheme, typography } from '../../theme';
+import { makeStyles, useTheme } from '../../theme';
 
 type Props = {
-  severity: number; // 1-10
+  severity: number;
 };
 
 /**
  * Color-coded severity pill. Green for mild, amber for moderate, red for
- * severe. Numerical display uses the Fraunces light numeral to match the
- * editorial style of the rest of the app.
+ * severe.
  */
 export function SeverityBadge({ severity }: Props) {
   const { colors } = useTheme();
+  const styles = useStyles();
 
   let tone: 'mild' | 'moderate' | 'severe';
   if (severity <= 3) tone = 'mild';
@@ -39,38 +39,28 @@ export function SeverityBadge({ severity }: Props) {
         },
       ]}
     >
-      <Text
-        style={{
-          fontFamily: 'Fraunces_300Light',
-          fontSize: 22,
-          lineHeight: 22,
-          color: toneColor,
-          letterSpacing: -0.4,
-          marginRight: 8,
-        }}
-      >
-        {severity}/10
-      </Text>
-      <Text
-        style={[
-          typography.label,
-          { color: toneColor, letterSpacing: 0.3 },
-        ]}
-      >
-        {label}
-      </Text>
+      <Text style={[styles.numeral, { color: toneColor }]}>{severity}/10</Text>
+      <Text style={[styles.label, { color: toneColor }]}>{label}</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   wrap: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 999,
+    borderRadius: theme.radius.full,
     borderWidth: StyleSheet.hairlineWidth,
     alignSelf: 'flex-start',
   },
-});
+  numeral: {
+    fontFamily: 'Fraunces_300Light',
+    fontSize: 22,
+    lineHeight: 22,
+    letterSpacing: -0.4,
+    marginRight: 8,
+  },
+  label: { ...theme.typography.label, letterSpacing: 0.3 },
+}));
