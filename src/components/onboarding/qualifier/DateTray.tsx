@@ -1,7 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+} from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Calendar, ChevronRight } from 'lucide-react-native';
+import { Calendar, ChevronDown } from 'lucide-react-native';
 import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
@@ -10,7 +16,6 @@ import {
   makeStyles,
   moderateScale,
   scale,
-  spacing,
   useTheme,
   verticalScale,
 } from '../../../theme';
@@ -26,7 +31,6 @@ type Preset = { label: string; addDays: number };
 
 const PRESETS: Preset[] = [
   { label: 'Tomorrow', addDays: 1 },
-  { label: 'In 3 days', addDays: 3 },
   { label: '1 week', addDays: 7 },
   { label: '2 weeks', addDays: 14 },
   { label: '1 month', addDays: 30 },
@@ -48,16 +52,15 @@ function daysBetween(a: Date, b: Date): number {
   return Math.round((startOfDay(b).getTime() - startOfDay(a).getTime()) / 86400000);
 }
 
-function formatLong(d: Date): string {
+function formatHero(d: Date): string {
   return d.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
+    weekday: 'long',
+    month: 'long',
     day: 'numeric',
-    year: 'numeric',
   });
 }
 
-function formatPretty(d: Date): string {
+function formatPersist(d: Date): string {
   return d.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -66,9 +69,11 @@ function formatPretty(d: Date): string {
 }
 
 /**
- * Answer UI for the appointment-date question. Lets the user tap a
- * preset, open the native date picker for a custom date, or mark the
- * appointment as not yet scheduled.
+ * Answer UI for the appointment-date question. One unified card —
+ * editorial date as the hero, tapping it toggles the native picker
+ * inline; a quiet preset row sits below; a single gradient CTA
+ * confirms. "Not scheduled" is demoted to a text link so the primary
+ * path reads as one clear decision.
  */
 export function DateTray({ onAnswer, disabled }: Props) {
   const { colors } = useTheme();
@@ -79,12 +84,19 @@ export function DateTray({ onAnswer, disabled }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const daysFromNow = daysBetween(today, selected);
-  const countdownLabel =
+  const countdown =
     daysFromNow === 0
       ? 'today'
       : daysFromNow === 1
       ? 'tomorrow'
       : `in ${daysFromNow} days`;
+
+  const activePreset = PRESETS.find((p) => p.addDays === daysFromNow);
+
+  const toggle = () => {
+    hapticLight();
+    setPickerOpen((v) => !v);
+  };
 
   const handlePreset = (p: Preset) => {
     hapticLight();
@@ -92,269 +104,256 @@ export function DateTray({ onAnswer, disabled }: Props) {
   };
 
   const handlePickerChange = (_ev: DateTimePickerEvent, date?: Date) => {
-    // Android auto-dismisses; iOS stays open on spinner/inline. We close
-    // explicitly after a value comes through so the flow feels decisive.
     if (Platform.OS !== 'ios') setPickerOpen(false);
     if (date) setSelected(startOfDay(date));
   };
 
-  const openPicker = () => {
-    hapticLight();
-    setPickerOpen(true);
-  };
-
-  const dismissPicker = () => setPickerOpen(false);
-
-  const confirm = () => {
-    onAnswer({
-      t: formatPretty(selected),
-      v: 'scheduled',
-    });
-  };
+  const confirm = () =>
+    onAnswer({ t: formatPersist(selected), v: 'scheduled' });
 
   const markUnscheduled = () =>
     onAnswer({ t: 'Not scheduled yet', v: 'none' });
 
-  // Which preset (if any) is currently active.
-  const activePreset = PRESETS.find((p) => p.addDays === daysFromNow);
-
   return (
-    <View style={styles.root}>
-      {/* Selected-date card — tappable to open the picker. */}
-      <Pressable
-        onPress={openPicker}
-        disabled={disabled}
-        accessibilityRole="button"
-        accessibilityLabel={`Pick date. Currently ${formatLong(selected)}`}
-        style={({ pressed }) => [
-          styles.card,
-          { opacity: pressed || disabled ? 0.85 : 1 },
-        ]}
-      >
-        <View style={styles.iconTile}>
-          <Calendar size={moderateScale(18)} color={colors.accent} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.cardLabel}>Appointment date</Text>
-          <Text style={styles.dateValue}>{formatPretty(selected)}</Text>
-          <Text style={styles.countdown}>{countdownLabel}</Text>
-        </View>
-        <ChevronRight size={moderateScale(18)} color={colors.textTertiary} />
-      </Pressable>
-
-      {/* Preset chips. */}
-      <View style={styles.presets}>
-        {PRESETS.map((p) => {
-          const active = activePreset?.label === p.label;
-          return (
-            <Pressable
-              key={p.label}
-              onPress={() => handlePreset(p)}
-              disabled={disabled}
-              style={({ pressed }) => [
-                styles.chip,
-                active && styles.chipActive,
-                {
-                  borderColor: active
-                    ? colors.accent
-                    : colors.border,
-                  opacity: pressed || disabled ? 0.6 : 1,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={p.label}
-              accessibilityState={{ selected: active }}
-            >
-              <Text
-                style={[
-                  styles.chipLabel,
-                  { color: active ? colors.accent : colors.textPrimary },
-                ]}
-              >
-                {p.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      {/* Action row. */}
-      <View style={styles.actions}>
+    <Animated.View layout={LinearTransition.duration(220).easing(Easing.out(Easing.cubic))} style={styles.root}>
+      {/* Hero card — tap the header row to toggle the picker. */}
+      <View style={styles.card}>
         <Pressable
-          onPress={markUnscheduled}
+          onPress={toggle}
           disabled={disabled}
-          style={({ pressed }) => [
-            styles.secondaryBtn,
-            { opacity: pressed || disabled ? 0.6 : 1 },
-          ]}
           accessibilityRole="button"
-          accessibilityLabel="Not scheduled yet"
-        >
-          <Text style={styles.secondaryLabel}>Not scheduled</Text>
-        </Pressable>
-        <Pressable
-          onPress={confirm}
-          disabled={disabled}
+          accessibilityLabel={`Pick date. Currently ${formatHero(selected)}. Tap to change.`}
           style={({ pressed }) => [
-            styles.primaryBtn,
+            styles.heroPressable,
             { opacity: pressed || disabled ? 0.85 : 1 },
           ]}
-          accessibilityRole="button"
-          accessibilityLabel={`Use ${formatPretty(selected)}`}
         >
-          <LinearGradient
-            colors={['#3BA79F', '#2C6E6B']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <Text style={styles.primaryLabel}>Use this date</Text>
+          <View style={styles.heroHead}>
+            <View style={styles.iconTile}>
+              <Calendar size={moderateScale(14)} color={colors.accent} />
+            </View>
+            <Text style={styles.eyebrow}>Appointment</Text>
+            <View style={{ flex: 1 }} />
+            <Animated.View
+              style={[
+                styles.changeHint,
+                pickerOpen && styles.changeHintOpen,
+              ]}
+            >
+              <ChevronDown
+                size={moderateScale(14)}
+                color={colors.textTertiary}
+              />
+            </Animated.View>
+          </View>
+          <Text style={styles.heroDate}>{formatHero(selected)}</Text>
+          <Text style={styles.heroCountdown}>{countdown}</Text>
         </Pressable>
+
+        {pickerOpen && (
+          <Animated.View
+            entering={FadeIn.duration(200)}
+            exiting={FadeOut.duration(160)}
+            style={styles.pickerBay}
+          >
+            <DateTimePicker
+              value={selected}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              minimumDate={today}
+              onChange={handlePickerChange}
+              themeVariant="light"
+              accentColor={colors.accent}
+            />
+          </Animated.View>
+        )}
+
+        <View style={styles.presets}>
+          {PRESETS.map((p) => {
+            const active = activePreset?.label === p.label;
+            return (
+              <Pressable
+                key={p.label}
+                onPress={() => handlePreset(p)}
+                disabled={disabled}
+                style={({ pressed }) => [
+                  styles.chip,
+                  active && {
+                    backgroundColor: colors.accent + '18',
+                    borderColor: colors.accent,
+                  },
+                  {
+                    opacity: pressed || disabled ? 0.6 : 1,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={p.label}
+                accessibilityState={{ selected: active }}
+              >
+                <Text
+                  style={[
+                    styles.chipLabel,
+                    { color: active ? colors.accent : colors.textSecondary },
+                  ]}
+                >
+                  {p.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
 
-      {/* Native picker. Rendered inline as a spinner on iOS, dialog on
-          Android. Kept below the tray so the preset state is still
-          visible on iOS while the picker is open. */}
-      {pickerOpen && Platform.OS === 'ios' && (
-        <View style={styles.pickerWrap}>
-          <View style={styles.pickerHeader}>
-            <Text style={styles.pickerHeaderLabel}>Pick a date</Text>
-            <Pressable onPress={dismissPicker} hitSlop={8}>
-              <Text style={styles.pickerDone}>Done</Text>
-            </Pressable>
-          </View>
-          <DateTimePicker
-            value={selected}
-            mode="date"
-            display="spinner"
-            minimumDate={today}
-            onChange={handlePickerChange}
-          />
-        </View>
-      )}
-      {pickerOpen && Platform.OS !== 'ios' && (
-        <DateTimePicker
-          value={selected}
-          mode="date"
-          display="default"
-          minimumDate={today}
-          onChange={handlePickerChange}
+      {/* Primary CTA — single, strong. */}
+      <Pressable
+        onPress={confirm}
+        disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel={`Use ${formatHero(selected)}`}
+        style={({ pressed }) => [
+          styles.cta,
+          { opacity: pressed || disabled ? 0.88 : 1 },
+        ]}
+      >
+        <LinearGradient
+          colors={['#3BA79F', '#2C6E6B']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
         />
-      )}
-    </View>
+        <Text style={styles.ctaLabel}>Use this date</Text>
+      </Pressable>
+
+      {/* De-emphasized escape hatch. */}
+      <Pressable
+        onPress={markUnscheduled}
+        disabled={disabled}
+        hitSlop={8}
+        style={styles.linkBtn}
+        accessibilityRole="button"
+        accessibilityLabel="Not scheduled yet"
+      >
+        <Text style={styles.linkLabel}>Not scheduled yet</Text>
+      </Pressable>
+    </Animated.View>
   );
 }
 
 const useStyles = makeStyles((theme) => ({
-  root: { gap: spacing.s3 },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  root: {
     gap: moderateScale(12),
-    padding: moderateScale(14),
-    borderRadius: theme.radius.md,
+  },
+  card: {
+    borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
-    backgroundColor: theme.colors.bgSurface,
     borderColor: theme.colors.border,
+    backgroundColor: theme.colors.bgSurface,
+    overflow: 'hidden',
     ...theme.shadows.card,
   },
+  heroPressable: {
+    paddingHorizontal: scale(16),
+    paddingTop: verticalScale(14),
+    paddingBottom: verticalScale(12),
+  },
+  heroHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(8),
+    marginBottom: verticalScale(8),
+  },
   iconTile: {
-    width: moderateScale(40),
-    height: moderateScale(40),
+    width: moderateScale(24),
+    height: moderateScale(24),
+    borderRadius: moderateScale(7),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.accent + '1F',
+  },
+  eyebrow: {
+    ...theme.typography.caption,
+    color: theme.colors.textTertiary,
+    fontFamily: 'Inter_600SemiBold',
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+  },
+  changeHint: {
+    width: moderateScale(20),
+    height: moderateScale(20),
     borderRadius: moderateScale(10),
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.accent + '1A',
+    backgroundColor: theme.colors.bgMuted,
   },
-  cardLabel: {
-    ...theme.typography.label,
-    color: theme.colors.textTertiary,
+  changeHintOpen: {
+    transform: [{ rotate: '180deg' }],
   },
-  dateValue: {
-    ...theme.typography.h3,
+  heroDate: {
+    fontFamily: 'Fraunces_500Medium',
+    fontSize: fontScale(26),
+    lineHeight: fontScale(30),
+    letterSpacing: -0.6,
     color: theme.colors.textPrimary,
-    marginTop: moderateScale(2),
   },
-  countdown: {
-    ...theme.typography.caption,
+  heroCountdown: {
+    ...theme.typography.label,
     color: theme.colors.accent,
-    marginTop: moderateScale(2),
+    marginTop: moderateScale(4),
     fontFamily: 'Inter_600SemiBold',
+    letterSpacing: 0.3,
+  },
+  pickerBay: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.colors.border,
+    paddingHorizontal: scale(6),
+    paddingVertical: verticalScale(4),
   },
   presets: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: moderateScale(6),
+    paddingHorizontal: scale(12),
+    paddingTop: verticalScale(10),
+    paddingBottom: verticalScale(12),
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.colors.border,
   },
   chip: {
-    paddingHorizontal: scale(12),
-    paddingVertical: verticalScale(8),
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(6),
     borderRadius: theme.radius.full,
     borderWidth: StyleSheet.hairlineWidth,
-    backgroundColor: theme.colors.bgSurface,
-  },
-  chipActive: {
-    backgroundColor: theme.colors.accent + '14',
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.bgPrimary,
   },
   chipLabel: {
-    ...theme.typography.label,
-    fontSize: fontScale(13),
     fontFamily: 'Inter_600SemiBold',
+    fontSize: fontScale(12),
     letterSpacing: 0.2,
   },
-  actions: {
-    flexDirection: 'row',
-    gap: spacing.s2,
-  },
-  secondaryBtn: {
-    flex: 1,
-    height: verticalScale(44),
-    borderRadius: theme.radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.bgMuted,
-  },
-  secondaryLabel: {
-    ...theme.typography.label,
-    color: theme.colors.textPrimary,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  primaryBtn: {
-    flex: 2,
-    height: verticalScale(44),
+  cta: {
+    height: verticalScale(52),
     borderRadius: theme.radius.full,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+    ...theme.shadows.accentGlow,
   },
-  primaryLabel: {
+  ctaLabel: {
     ...theme.typography.body,
     color: '#FFFFFF',
     fontFamily: 'Inter_600SemiBold',
+    fontSize: fontScale(16),
+    letterSpacing: -0.1,
   },
-  pickerWrap: {
-    backgroundColor: theme.colors.bgSurface,
-    borderRadius: theme.radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.colors.border,
-    overflow: 'hidden',
+  linkBtn: {
+    alignSelf: 'center',
+    paddingVertical: verticalScale(4),
   },
-  pickerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: scale(14),
-    paddingVertical: verticalScale(10),
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
-  },
-  pickerHeaderLabel: {
-    ...theme.typography.label,
-    color: theme.colors.textSecondary,
-  },
-  pickerDone: {
-    ...theme.typography.label,
-    color: theme.colors.accent,
-    fontFamily: 'Inter_700Bold',
+  linkLabel: {
+    ...theme.typography.caption,
+    color: theme.colors.textTertiary,
+    textDecorationLine: 'underline',
+    letterSpacing: 0.3,
   },
 }));
