@@ -1,73 +1,47 @@
-import React, { useEffect } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import React from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Lock } from 'lucide-react-native';
 import {
-  Activity,
-  Lock,
-  Mic,
-  Sparkles,
-} from 'lucide-react-native';
-import Svg, {
-  Circle as SvgCircle,
-  Defs,
-  RadialGradient,
-  Stop,
-} from 'react-native-svg';
-import { makeStyles, moderateScale, radius, scale, shadows, spacing, typography, useTheme, verticalScale } from '../../theme';
-import { SceneTransition } from '../../components/navigation/SceneTransition';
-import { BackButton } from '../../components/ui/BackButton';
-import { PrimaryButton } from '../../components/ui/PrimaryButton';
-import { WaveBars } from '../../components/ui/WaveBars';
-import { Confetti } from '../../components/ui/Confetti';
-import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { StructuredEntry } from '../../stores/types';
-import { RECORDING_PROMPTS } from '../../constants/prompts';
-import { FIELD_META, FieldKey } from '../../constants/fields';
-import { useOnboardingRecorder } from '../../hooks/useOnboardingRecorder';
-
-/**
- * Screen 06 — First recording.
- *
- * Demonstrates the full live-record → transcript → structured-summary
- * choreography. Uses the real on-device speech engine when permission
- * is granted; falls back to a scripted demo (per handoff) if the user
- * taps the mic without granting access, so the onboarding never dead-
- * ends.
- */
-
-const PROMPTS = RECORDING_PROMPTS;
-
-type IconRef = typeof Activity;
-
-function fieldDisplay(s: StructuredEntry, key: FieldKey): string {
-  switch (key) {
-    case 'symptoms': return s.symptoms.filter(Boolean).join(', ') || '—';
-    case 'location': return s.location || '—';
-    case 'duration': return s.duration || '—';
-    case 'severity': return `${s.severity}/10`;
-    case 'triggers': return s.triggers.filter(Boolean).join(', ') || '—';
-  }
-}
+  makeStyles,
+  spacing,
+  typography,
+  useTheme,
+  verticalScale,
+} from '@/theme';
+import { SceneTransition } from '@/components/navigation/SceneTransition';
+import { BackButton } from '@/components/ui/BackButton';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { WaveBars } from '@/components/ui/WaveBars';
+import { Confetti } from '@/components/ui/Confetti';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useOnboardingRecorder } from '@/hooks/useOnboardingRecorder';
+import { RECORDING_PROMPTS } from '@/constants/prompts';
+import { MicOrb } from '@/components/first-recording/MicOrb';
+import { ShimmerLines } from '@/components/first-recording/ShimmerLines';
+import { TranscriptCard } from '@/components/first-recording/TranscriptCard';
+import { StructuredCard } from '@/components/first-recording/StructuredCard';
+import { ErrorCard } from '@/components/first-recording/ErrorCard';
 
 type Phase = 'idle' | 'recording' | 'processing' | 'structured' | 'error';
 
-export default function ScreenFirstRecording() {
+const primaryLabel = (phase: Phase): string => {
+  switch (phase) {
+    case 'structured':
+      return 'Continue';
+    case 'recording':
+      return 'Tap mic to finish';
+    case 'processing':
+      return 'Structuring…';
+    case 'error':
+      return 'Retry above';
+    default:
+      return 'Tap mic to begin';
+  }
+};
+
+const ScreenFirstRecording: React.FC = () => {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useStyles();
@@ -83,8 +57,8 @@ export default function ScreenFirstRecording() {
     errorMessage,
     retryInSec,
     onMic,
-    retryStructuring: onRetryStructuring,
-    resetToIdle: onRecordAgain,
+    retryStructuring,
+    resetToIdle,
     saveFirstRecording,
   } = useOnboardingRecorder();
 
@@ -93,6 +67,13 @@ export default function ScreenFirstRecording() {
     saveFirstRecording();
     router.push('/onboarding/paywall');
   };
+
+  const hasTranscript =
+    !!transcript &&
+    (phase === 'recording' ||
+      phase === 'processing' ||
+      phase === 'structured' ||
+      phase === 'error');
 
   return (
     <SceneTransition mode="scale-fade">
@@ -148,14 +129,14 @@ export default function ScreenFirstRecording() {
                       },
                     ]}
                   >
-                    {PROMPTS[promptIdx]}
+                    {RECORDING_PROMPTS[promptIdx]}
                   </Text>
                 )}
                 {phase === 'recording' && <WaveBars />}
                 {phase === 'processing' && <ShimmerLines />}
               </View>
 
-              <View style={[styles.encryptedRow]}>
+              <View style={styles.encryptedRow}>
                 <Lock size={12} color={colors.textTertiary} />
                 <Text
                   style={[
@@ -168,13 +149,7 @@ export default function ScreenFirstRecording() {
               </View>
             </View>
 
-            {(phase === 'recording' ||
-              phase === 'processing' ||
-              phase === 'structured' ||
-              phase === 'error') &&
-              !!transcript && (
-                <TranscriptCard text={transcript} typing={false} />
-              )}
+            {hasTranscript && <TranscriptCard text={transcript} typing={false} />}
 
             {phase === 'structured' && structured && (
               <StructuredCard
@@ -188,47 +163,28 @@ export default function ScreenFirstRecording() {
               <ErrorCard
                 message={errorMessage ?? 'Something went wrong.'}
                 retryInSec={retryInSec}
-                onRetry={onRetryStructuring}
-                onStartOver={onRecordAgain}
+                onRetry={retryStructuring}
+                onStartOver={resetToIdle}
               />
             )}
           </ScrollView>
 
-          <View
-            style={{
-              paddingHorizontal: spacing.s6,
-              paddingTop: 8,
-              gap: 8,
-            }}
-          >
+          <View style={styles.ctaArea}>
             {phase === 'structured' && (
               <Pressable
-                onPress={onRecordAgain}
+                onPress={resetToIdle}
                 hitSlop={8}
-                style={{ alignSelf: 'center', paddingVertical: 4 }}
+                style={styles.recordAgain}
               >
                 <Text
-                  style={[
-                    typography.caption,
-                    { color: colors.textTertiary },
-                  ]}
+                  style={[typography.caption, { color: colors.textTertiary }]}
                 >
                   Record again
                 </Text>
               </Pressable>
             )}
             <PrimaryButton
-              label={
-                phase === 'structured'
-                  ? 'Continue'
-                  : phase === 'recording'
-                  ? 'Tap mic to finish'
-                  : phase === 'processing'
-                  ? 'Structuring…'
-                  : phase === 'error'
-                  ? 'Retry above'
-                  : 'Tap mic to begin'
-              }
+              label={primaryLabel(phase)}
               disabled={phase !== 'structured'}
               onPress={onContinue}
             />
@@ -237,493 +193,9 @@ export default function ScreenFirstRecording() {
       </View>
     </SceneTransition>
   );
-}
+};
 
-/* -------------------- Mic orb -------------------- */
-
-function MicOrb({
-  phase,
-  onPress,
-  reduced,
-}: {
-  phase: Phase;
-  onPress: () => void;
-  reduced: boolean;
-}) {
-  const styles = useStyles();
-  const active = phase === 'recording';
-  const pulse1 = useSharedValue(0);
-  const pulse2 = useSharedValue(0);
-
-  useEffect(() => {
-    if (reduced || phase !== 'idle') return;
-    pulse1.value = withRepeat(
-      withTiming(1, { duration: 1800, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-      -1,
-      false
-    );
-    pulse2.value = withRepeat(
-      withTiming(1, { duration: 1800, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
-      -1,
-      false
-    );
-    // Offset ring 2 by 900ms
-    const id = setTimeout(() => {
-      pulse2.value = 0;
-      pulse2.value = withRepeat(
-        withTiming(1, {
-          duration: 1800,
-          easing: Easing.bezier(0.4, 0, 0.6, 1),
-        }),
-        -1,
-        false
-      );
-    }, 900);
-    return () => clearTimeout(id);
-  }, [reduced, phase, pulse1, pulse2]);
-
-  const ring1 = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + pulse1.value * 0.35 }],
-    opacity: 0.45 * (1 - pulse1.value),
-  }));
-  const ring2 = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + pulse2.value * 0.35 }],
-    opacity: 0.45 * (1 - pulse2.value),
-  }));
-
-  const scale = useSharedValue(1);
-  useEffect(() => {
-    scale.value = withSpring(active ? 0.96 : 1, {
-      damping: 18,
-      stiffness: 200,
-    });
-  }, [active, scale]);
-  const core = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  return (
-    <View style={{ width: 160, height: 160, alignItems: 'center', justifyContent: 'center' }}>
-      {phase === 'idle' && (
-        <>
-          <Animated.View
-            style={[
-              StyleSheet.absoluteFill,
-              styles.micPulse,
-              { backgroundColor: 'rgba(44,110,107,0.18)' },
-              ring1,
-            ]}
-            pointerEvents="none"
-          />
-          <Animated.View
-            style={[
-              StyleSheet.absoluteFill,
-              styles.micPulse,
-              { backgroundColor: 'rgba(246,192,106,0.22)' },
-              ring2,
-            ]}
-            pointerEvents="none"
-          />
-        </>
-      )}
-
-      <Animated.View style={core}>
-        <Pressable
-          onPress={onPress}
-          disabled={phase !== 'idle'}
-          accessibilityRole="button"
-          accessibilityLabel="Start voice log"
-        >
-          <View
-            style={[
-              styles.micCore,
-              active ? styles.micCoreActive : styles.micCoreIdle,
-            ]}
-          >
-            <MicOrbGradient active={active} />
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { alignItems: 'center', justifyContent: 'center' },
-              ]}
-              pointerEvents="none"
-            >
-              {active ? (
-                <View style={styles.stopShape} />
-              ) : (
-                <Mic size={44} color="#FFFFFF" strokeWidth={2} />
-              )}
-            </View>
-          </View>
-        </Pressable>
-      </Animated.View>
-    </View>
-  );
-}
-
-function MicOrbGradient({ active }: { active: boolean }) {
-  return (
-    <Svg width="100%" height="100%" viewBox="0 0 120 120">
-      <Defs>
-        <RadialGradient id="micG" cx="0.3" cy="0.3" r="0.8">
-          <Stop offset="0" stopColor={active ? '#F5B873' : '#4DB8B0'} />
-          <Stop offset="0.8" stopColor={active ? '#C97A1E' : '#2C6E6B'} />
-        </RadialGradient>
-      </Defs>
-      <SvgCircle cx={60} cy={60} r={60} fill="url(#micG)" />
-    </Svg>
-  );
-}
-
-/* -------------------- Shimmer lines (processing) -------------------- */
-
-function ShimmerLines() {
-  const { colors } = useTheme();
-  const styles = useStyles();
-  const t = useSharedValue(0);
-  const reduced = useReducedMotion();
-  useEffect(() => {
-    if (reduced) return;
-    t.value = withRepeat(
-      withTiming(1, { duration: 1800, easing: Easing.linear }),
-      -1,
-      false
-    );
-  }, [reduced, t]);
-  const bg = useAnimatedStyle(() => ({
-    transform: [{ translateX: -200 + t.value * 400 }],
-  }));
-  return (
-    <View style={{ width: '100%', maxWidth: 260, gap: 8 }}>
-      {[16, 14, 12].map((w, i) => (
-        <View
-          key={i}
-          style={[
-            styles.shimmer,
-            { backgroundColor: colors.bgMuted, width: `${w * 6}%` },
-          ]}
-        >
-          <Animated.View
-            style={[StyleSheet.absoluteFill, bg]}
-            pointerEvents="none"
-          >
-            <LinearGradient
-              colors={[
-                'rgba(245,241,234,0)',
-                'rgba(245,241,234,0.8)',
-                'rgba(245,241,234,0)',
-              ]}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={StyleSheet.absoluteFill}
-            />
-          </Animated.View>
-        </View>
-      ))}
-    </View>
-  );
-}
-
-/* -------------------- Transcript + Structured cards -------------------- */
-
-function TranscriptCard({ text, typing }: { text: string; typing: boolean }) {
-  const { colors } = useTheme();
-  const styles = useStyles();
-  return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.bgSurface,
-          borderColor: colors.border,
-        },
-        shadows.card,
-      ]}
-    >
-      <View style={styles.cardHeader}>
-        <Mic size={12} color={colors.textTertiary} />
-        <Text
-          style={[
-            typography.label,
-            { color: colors.textTertiary, letterSpacing: 0.8 },
-          ]}
-        >
-          TRANSCRIPT
-        </Text>
-      </View>
-      <Text
-        style={[
-          typography.body,
-          { color: colors.textPrimary, lineHeight: 22 },
-        ]}
-      >
-        {text}
-        {typing && <Text style={{ color: colors.accent }}>▍</Text>}
-      </Text>
-    </View>
-  );
-}
-
-function StructuredCard({
-  structured,
-  fieldCount,
-  burst,
-}: {
-  structured: StructuredEntry;
-  fieldCount: number;
-  burst: boolean;
-}) {
-  const { colors } = useTheme();
-  const styles = useStyles();
-  return (
-    <View
-      style={[
-        styles.card,
-        styles.aiCard,
-        {
-          backgroundColor: colors.bgSurface,
-          borderColor: colors.accent,
-        },
-        shadows.card,
-      ]}
-    >
-      {/* Decorative gold blob top-right */}
-      <View
-        pointerEvents="none"
-        style={[
-          styles.aiBlob,
-          { backgroundColor: colors.gold, opacity: 0.1 },
-        ]}
-      />
-      <View style={[styles.cardHeader, { marginBottom: spacing.s3 }]}>
-        <Sparkles size={14} color={colors.accent} />
-        <Text
-          style={[
-            typography.label,
-            {
-              color: colors.accent,
-              fontFamily: 'DMSans_700Bold',
-              letterSpacing: 0.8,
-              flex: 1,
-            },
-          ]}
-        >
-          AI SUMMARY
-        </Text>
-        {burst && (
-          <View
-            style={[
-              styles.xpBadge,
-              { backgroundColor: colors.success },
-            ]}
-          >
-            <Text
-              style={[
-                typography.label,
-                {
-                  color: '#FFFFFF',
-                  fontFamily: 'DMSans_700Bold',
-                },
-              ]}
-            >
-              +50 XP
-            </Text>
-          </View>
-        )}
-      </View>
-      <View style={{ gap: 10 }}>
-        {FIELD_META.slice(0, fieldCount).map((f, i) => (
-          <FieldRow
-            key={f.key}
-            k={f.label}
-            v={fieldDisplay(structured, f.key)}
-            Icon={f.Icon}
-            tint={f.tint}
-            index={i}
-          />
-        ))}
-      </View>
-    </View>
-  );
-}
-
-function FieldRow({
-  k,
-  v,
-  Icon,
-  tint,
-  index,
-}: {
-  k: string;
-  v: string;
-  Icon: IconRef;
-  tint: string;
-  index: number;
-}) {
-  const { colors } = useTheme();
-  const styles = useStyles();
-  const opacity = useSharedValue(0);
-  const ty = useSharedValue(8);
-  useEffect(() => {
-    opacity.value = withTiming(1, {
-      duration: 320,
-      easing: Easing.out(Easing.cubic),
-    });
-    ty.value = withSpring(0, { damping: 18, stiffness: 140 });
-  }, [index, opacity, ty]);
-  const style = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ translateY: ty.value }],
-  }));
-
-  return (
-    <Animated.View
-      style={[
-        styles.fieldRow,
-        { backgroundColor: colors.bgPrimary },
-        style,
-      ]}
-    >
-      <View
-        style={{
-          width: 28,
-          height: 28,
-          borderRadius: 8,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: tint + '22',
-        }}
-      >
-        <Icon size={16} color={tint} strokeWidth={2} />
-      </View>
-      <Text
-        style={[
-          typography.label,
-          { color: colors.textTertiary, width: 64 },
-        ]}
-      >
-        {k}
-      </Text>
-      <Text
-        style={[
-          typography.body,
-          {
-            color: colors.textPrimary,
-            fontFamily: 'DMSans_600SemiBold',
-            flex: 1,
-          },
-        ]}
-      >
-        {v}
-      </Text>
-    </Animated.View>
-  );
-}
-
-function ErrorCard({
-  message,
-  retryInSec,
-  onRetry,
-  onStartOver,
-}: {
-  message: string;
-  retryInSec: number;
-  onRetry: () => void;
-  onStartOver: () => void;
-}) {
-  const { colors } = useTheme();
-  const styles = useStyles();
-  const disabled = retryInSec > 0;
-  return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.bgSurface,
-          borderColor: colors.border,
-        },
-        shadows.card,
-      ]}
-    >
-      <Text
-        style={[
-          typography.label,
-          {
-            color: colors.coral,
-            letterSpacing: 0.8,
-            marginBottom: 6,
-            fontFamily: 'DMSans_700Bold',
-          },
-        ]}
-      >
-        STRUCTURING FAILED
-      </Text>
-      <Text
-        style={[
-          typography.body,
-          { color: colors.textPrimary, lineHeight: 20, marginBottom: 12 },
-        ]}
-      >
-        {message}
-      </Text>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        <Pressable
-          onPress={onRetry}
-          disabled={disabled}
-          style={({ pressed }) => [
-            {
-              flex: 1,
-              backgroundColor: disabled ? colors.bgMuted : colors.accent,
-              opacity: pressed ? 0.85 : 1,
-              paddingVertical: 10,
-              borderRadius: radius.sm,
-              alignItems: 'center',
-            },
-          ]}
-        >
-          <Text
-            style={[
-              typography.label,
-              {
-                color: disabled ? colors.textTertiary : '#FFFFFF',
-                fontFamily: 'DMSans_600SemiBold',
-              },
-            ]}
-          >
-            {disabled ? `Retry in ${retryInSec}s` : 'Retry'}
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={onStartOver}
-          style={({ pressed }) => [
-            {
-              flex: 1,
-              borderWidth: StyleSheet.hairlineWidth,
-              borderColor: colors.border,
-              backgroundColor: colors.bgPrimary,
-              opacity: pressed ? 0.85 : 1,
-              paddingVertical: 10,
-              borderRadius: radius.sm,
-              alignItems: 'center',
-            },
-          ]}
-        >
-          <Text
-            style={[
-              typography.label,
-              {
-                color: colors.textPrimary,
-                fontFamily: 'DMSans_600SemiBold',
-              },
-            ]}
-          >
-            Start over
-          </Text>
-        </Pressable>
-      </View>
-    </View>
-  );
-}
+export default ScreenFirstRecording;
 
 const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },
@@ -745,37 +217,6 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: 'center',
     paddingVertical: theme.spacing.s6,
   },
-  micPulse: {
-    borderRadius: theme.radius.full,
-  },
-  micCore: {
-    width: moderateScale(120),
-    height: moderateScale(120),
-    borderRadius: moderateScale(60),
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  micCoreIdle: {
-    shadowColor: '#2C6E6B',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.35,
-    shadowRadius: 24,
-    elevation: 10,
-  },
-  micCoreActive: {
-    shadowColor: '#C97A1E',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.4,
-    shadowRadius: 24,
-    elevation: 12,
-  },
-  stopShape: {
-    width: moderateScale(26),
-    height: moderateScale(26),
-    borderRadius: moderateScale(6),
-    backgroundColor: '#FFFFFF',
-  },
   subSlot: {
     height: verticalScale(60),
     marginTop: theme.spacing.s5,
@@ -789,46 +230,13 @@ const useStyles = makeStyles((theme) => ({
     alignItems: 'center',
     marginTop: theme.spacing.s3,
   },
-  shimmer: {
-    height: verticalScale(14),
-    borderRadius: moderateScale(7),
-    overflow: 'hidden',
+  ctaArea: {
+    paddingHorizontal: spacing.s6,
+    paddingTop: 8,
+    gap: 8,
   },
-  card: {
-    padding: moderateScale(16),
-    borderRadius: theme.radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    marginTop: theme.spacing.s4,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: moderateScale(6),
-    marginBottom: moderateScale(4),
-  },
-  aiCard: {
-    borderWidth: 2,
-    overflow: 'hidden',
-  },
-  aiBlob: {
-    position: 'absolute',
-    right: -scale(16),
-    top: -verticalScale(16),
-    width: moderateScale(96),
-    height: moderateScale(96),
-    borderRadius: moderateScale(48),
-  },
-  fieldRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: moderateScale(12),
-    paddingHorizontal: scale(12),
-    paddingVertical: verticalScale(8),
-    borderRadius: theme.radius.sm,
-  },
-  xpBadge: {
-    paddingHorizontal: scale(8),
-    paddingVertical: verticalScale(2),
-    borderRadius: theme.radius.full,
+  recordAgain: {
+    alignSelf: 'center',
+    paddingVertical: 4,
   },
 }));
