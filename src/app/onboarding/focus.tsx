@@ -1,15 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import React, { useEffect } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
+  interpolateColor,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -18,7 +13,15 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Check } from 'lucide-react-native';
-import { fontScale, makeStyles, moderateScale, spacing, typography, useTheme } from '../../theme';
+import {
+  fontScale,
+  makeStyles,
+  moderateScale,
+  scale,
+  typography,
+  useTheme,
+  verticalScale,
+} from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { BackButton } from '../../components/ui/BackButton';
 import { PrimaryButton } from '../../components/ui/PrimaryButton';
@@ -29,14 +32,13 @@ import { hapticLight } from '../../services/haptics';
 /**
  * Screen 03 — Focus area.
  *
- * 2-column grid of gradient tiles. Each tile is its own dramatic visual
- * (per design handoff: gradient bg, glossy white blobs in corners,
- * emoji above, label + sub). Selection adds a white check badge and
- * drops a colored accent-ring shadow.
+ * Stacked rich cards — each option renders a gradient icon tile, a
+ * title + one-line subtitle, and 3 example tag chips so users see
+ * concretely what they'd be logging. Selected state lifts the card
+ * with a glow in the option's gradient tail color and surfaces a
+ * checkmark on the right.
  */
-
 type Option = FocusOption;
-const OPTIONS = FOCUS_OPTIONS;
 
 export default function ScreenFocus() {
   const router = useRouter();
@@ -44,7 +46,7 @@ export default function ScreenFocus() {
   const styles = useStyles();
   const setAnswer = useProfileStore((s) => s.setOnboardingAnswer);
 
-  const [sel, setSel] = useState<string | null>(null);
+  const [sel, setSel] = React.useState<string | null>(null);
 
   const onSelect = (id: string) => {
     hapticLight();
@@ -61,45 +63,29 @@ export default function ScreenFocus() {
             <Text style={[typography.label, { color: colors.textTertiary }]}>
               5 of 9
             </Text>
-            <View style={{ width: 40 }} />
+            <View style={{ width: moderateScale(40) }} />
           </View>
 
           <ScrollView
             contentContainerStyle={styles.content}
             showsVerticalScrollIndicator={false}
           >
-            <Text
-              style={[
-                typography.label,
-                {
-                  color: colors.accent,
-                  fontFamily: 'DMSans_600SemiBold',
-                  letterSpacing: 1.1,
-                },
-              ]}
-            >
-              YOUR FOCUS
-            </Text>
-            <Text
-              style={[
-                typography.h1,
-                { color: colors.textPrimary, marginTop: 4 },
-              ]}
-            >
+            <Text style={styles.eyebrow}>YOUR FOCUS</Text>
+            <Text style={[typography.h1, styles.headline, { color: colors.textPrimary }]}>
               What are you tracking?
             </Text>
             <Text
               style={[
                 typography.body,
-                { color: colors.textSecondary, marginTop: 6 },
+                { color: colors.textSecondary, marginTop: moderateScale(6) },
               ]}
             >
-              We'll tailor prompts and summaries. Change this anytime.
+              We'll tailor prompts and summaries. You can change this anytime.
             </Text>
 
-            <View style={styles.grid}>
-              {OPTIONS.map((o, i) => (
-                <FocusTile
+            <View style={styles.list}>
+              {FOCUS_OPTIONS.map((o, i) => (
+                <FocusCard
                   key={o.id}
                   option={o}
                   selected={sel === o.id}
@@ -110,7 +96,7 @@ export default function ScreenFocus() {
             </View>
           </ScrollView>
 
-          <View style={{ paddingHorizontal: spacing.s6, paddingTop: 8 }}>
+          <View style={styles.cta}>
             <PrimaryButton
               label={sel ? 'Continue' : 'Pick one to continue'}
               disabled={!sel}
@@ -123,7 +109,7 @@ export default function ScreenFocus() {
   );
 }
 
-function FocusTile({
+function FocusCard({
   option,
   selected,
   index,
@@ -134,142 +120,163 @@ function FocusTile({
   index: number;
   onPress: () => void;
 }) {
+  const { colors } = useTheme();
   const styles = useStyles();
+
+  // Entrance.
   const opacity = useSharedValue(0);
   const ty = useSharedValue(12);
-  const scale = useSharedValue(1);
-
   useEffect(() => {
     opacity.value = withDelay(
-      120 + index * 70,
-      withTiming(1, { duration: 420, easing: Easing.out(Easing.cubic) })
+      120 + index * 60,
+      withTiming(1, { duration: 360, easing: Easing.out(Easing.cubic) })
     );
     ty.value = withDelay(
-      120 + index * 70,
+      120 + index * 60,
       withSpring(0, { damping: 18, stiffness: 140 })
     );
   }, [index, opacity, ty]);
 
+  // Selected-state progression (0 → 1).
+  const selected$ = useSharedValue(selected ? 1 : 0);
   useEffect(() => {
-    scale.value = withSpring(selected ? 1.02 : 1, {
+    selected$.value = withSpring(selected ? 1 : 0, {
       damping: 18,
       stiffness: 180,
     });
-  }, [selected, scale]);
+  }, [selected, selected$]);
 
-  const enter = useAnimatedStyle(() => ({
+  // Press feedback.
+  const press = useSharedValue(0);
+
+  const wrapStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
-    transform: [{ translateY: ty.value }, { scale: scale.value }],
+    transform: [
+      { translateY: ty.value },
+      { scale: 1 + selected$.value * 0.015 - press.value * 0.02 },
+    ],
+    shadowOpacity: 0.08 + selected$.value * 0.22,
+    shadowRadius: 12 + selected$.value * 14,
+  }));
+
+  const cardStyle = useAnimatedStyle(() => ({
+    borderColor: interpolateColor(
+      selected$.value,
+      [0, 1],
+      [colors.border, option.grad[1]]
+    ),
+    backgroundColor: interpolateColor(
+      selected$.value,
+      [0, 1],
+      [colors.bgSurface, '#FFFFFF']
+    ),
+  }));
+
+  const checkStyle = useAnimatedStyle(() => ({
+    opacity: selected$.value,
+    transform: [{ scale: 0.6 + selected$.value * 0.4 }],
+  }));
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: selected$.value * 0.4,
+    transform: [{ scale: 1 + selected$.value * 0.2 }],
   }));
 
   return (
-    <Animated.View style={[styles.tileSlot, enter]}>
+    <Animated.View style={[styles.cardWrap, { shadowColor: option.grad[1] }, wrapStyle]}>
       <Pressable
         onPress={onPress}
+        onPressIn={() => {
+          press.value = withTiming(1, { duration: 120 });
+        }}
+        onPressOut={() => {
+          press.value = withTiming(0, { duration: 220 });
+        }}
         accessibilityRole="button"
         accessibilityLabel={option.t}
         accessibilityState={{ selected }}
-        style={[
-          styles.tile,
-          selected && {
-            shadowColor: option.grad[1],
-            shadowOffset: { width: 0, height: 12 },
-            shadowOpacity: 0.35,
-            shadowRadius: 24,
-            elevation: 12,
-          },
-          !selected && {
-            shadowColor: '#1A1F1E',
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.1,
-            shadowRadius: 16,
-            elevation: 4,
-          },
-        ]}
       >
-        <LinearGradient
-          colors={option.grad}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-        {/* Glossy decorative blobs */}
-        <View
-          pointerEvents="none"
-          style={[
-            styles.blob,
-            {
-              width: 64,
-              height: 64,
-              right: -20,
-              top: -20,
-              backgroundColor: 'rgba(255,255,255,0.15)',
-            },
-          ]}
-        />
-        <View
-          pointerEvents="none"
-          style={[
-            styles.blob,
-            {
-              width: 80,
-              height: 80,
-              right: -32,
-              bottom: -32,
-              backgroundColor: 'rgba(255,255,255,0.08)',
-            },
-          ]}
-        />
-        {/* Double ring around the outside when selected */}
-        {selected && (
-          <View
-            pointerEvents="none"
-            style={[
-              styles.selectedRing,
-              {
-                borderColor: '#FFFFFF',
-              },
-            ]}
-          />
-        )}
-        {selected && (
-          <View
-            pointerEvents="none"
-            style={[
-              styles.selectedOuterRing,
-              { borderColor: option.grad[0] },
-            ]}
-          />
-        )}
-
-        <View style={styles.iconWrap}>
-          <option.Icon size={28} color={option.fg} strokeWidth={2} />
-        </View>
-
-        <View style={{ position: 'absolute', left: 14, right: 14, bottom: 14 }}>
-          <Text
-            style={[
-              styles.label,
-              { color: option.fg, fontFamily: 'DMSans_600SemiBold' },
-            ]}
-          >
-            {option.t}
-          </Text>
-          <Text
-            style={[
-              styles.sub,
-              { color: option.fg, opacity: 0.85, marginTop: 2 },
-            ]}
-          >
-            {option.s}
-          </Text>
-        </View>
-
-        {selected && (
-          <View style={styles.checkBadge}>
-            <Check size={14} color={option.grad[1]} strokeWidth={3} />
+        <Animated.View style={[styles.card, cardStyle]}>
+          {/* Gradient icon tile on the left */}
+          <View style={styles.tileWrap}>
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                styles.tileGlow,
+                { backgroundColor: option.grad[1] },
+                glowStyle,
+              ]}
+            />
+            <View style={styles.tile}>
+              <LinearGradient
+                colors={option.grad}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <option.Icon
+                size={moderateScale(22)}
+                color={option.fg}
+                strokeWidth={2}
+              />
+            </View>
           </View>
-        )}
+
+          {/* Content */}
+          <View style={styles.content2}>
+            <View style={styles.titleRow}>
+              <Text
+                style={[styles.title, { color: colors.textPrimary }]}
+                numberOfLines={1}
+              >
+                {option.t}
+              </Text>
+              <Animated.View
+                style={[
+                  styles.checkDot,
+                  { backgroundColor: option.grad[1] },
+                  checkStyle,
+                ]}
+              >
+                <Check
+                  size={moderateScale(12)}
+                  color="#FFFFFF"
+                  strokeWidth={3}
+                />
+              </Animated.View>
+            </View>
+            <Text
+              style={[styles.sub, { color: colors.textSecondary }]}
+              numberOfLines={2}
+            >
+              {option.s}
+            </Text>
+
+            <View style={styles.tags}>
+              {option.examples.map((t) => (
+                <View
+                  key={t}
+                  style={[
+                    styles.tag,
+                    {
+                      backgroundColor: option.grad[1] + '14',
+                      borderColor: option.grad[1] + '33',
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.tagText,
+                      { color: option.grad[1] },
+                    ]}
+                  >
+                    {t}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </Animated.View>
       </Pressable>
     </Animated.View>
   );
@@ -290,75 +297,97 @@ const useStyles = makeStyles((theme) => ({
     paddingTop: theme.spacing.s4,
     paddingBottom: theme.spacing.s6,
   },
-  grid: {
+  eyebrow: {
+    ...theme.typography.label,
+    color: theme.colors.accent,
+    fontFamily: 'DMSans_700Bold',
+    letterSpacing: 1.1,
+  },
+  headline: {
+    marginTop: moderateScale(4),
+  },
+  list: {
     marginTop: theme.spacing.s5,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: moderateScale(10),
   },
-  tileSlot: {
-    width: '48.5%',
-    aspectRatio: 1 / 1.05,
+  cta: {
+    paddingHorizontal: theme.spacing.s6,
+    paddingTop: verticalScale(8),
   },
-  tile: {
-    flex: 1,
+  cardWrap: {
+    borderRadius: theme.radius.lg,
+    shadowOffset: { width: 0, height: moderateScale(6) },
+    elevation: 4,
+  },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: moderateScale(14),
     padding: moderateScale(14),
-    borderRadius: moderateScale(18),
-    overflow: 'hidden',
+    borderRadius: theme.radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  tileWrap: {
     position: 'relative',
   },
-  blob: {
+  tileGlow: {
     position: 'absolute',
-    borderRadius: theme.radius.full,
+    top: -moderateScale(6),
+    left: -moderateScale(6),
+    right: -moderateScale(6),
+    bottom: -moderateScale(6),
+    borderRadius: moderateScale(18),
   },
-  selectedRing: {
-    position: 'absolute',
-    top: -3,
-    left: -3,
-    right: -3,
-    bottom: -3,
-    borderRadius: moderateScale(21),
-    borderWidth: 3,
-  },
-  selectedOuterRing: {
-    position: 'absolute',
-    top: -5,
-    left: -5,
-    right: -5,
-    bottom: -5,
-    borderRadius: moderateScale(23),
-    borderWidth: 2,
-  },
-  iconWrap: {
-    width: moderateScale(36),
-    height: moderateScale(36),
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    marginBottom: moderateScale(4),
-  },
-  label: {
-    fontSize: fontScale(15),
-    lineHeight: fontScale(18),
-  },
-  sub: {
-    fontSize: fontScale(11),
-    lineHeight: fontScale(14),
-    fontFamily: 'DMSans_500Medium',
-  },
-  checkBadge: {
-    position: 'absolute',
-    top: moderateScale(10),
-    right: moderateScale(10),
-    width: moderateScale(24),
-    height: moderateScale(24),
-    borderRadius: moderateScale(12),
-    backgroundColor: '#FFFFFF',
+  tile: {
+    width: moderateScale(52),
+    height: moderateScale(52),
+    borderRadius: moderateScale(14),
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
+  },
+  content2: {
+    flex: 1,
+    minWidth: 0,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(8),
+  },
+  title: {
+    ...theme.typography.h3,
+    fontFamily: 'DMSans_600SemiBold',
+    flex: 1,
+    letterSpacing: -0.1,
+  },
+  checkDot: {
+    width: moderateScale(22),
+    height: moderateScale(22),
+    borderRadius: moderateScale(11),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sub: {
+    ...theme.typography.bodySmall,
+    marginTop: moderateScale(2),
+    lineHeight: fontScale(18),
+  },
+  tags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: moderateScale(6),
+    marginTop: moderateScale(10),
+  },
+  tag: {
+    paddingHorizontal: scale(8),
+    paddingVertical: verticalScale(3),
+    borderRadius: theme.radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  tagText: {
+    fontFamily: 'DMSans_600SemiBold',
+    fontSize: fontScale(11),
+    letterSpacing: 0.2,
   },
 }));
