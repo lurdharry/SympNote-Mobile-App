@@ -2,6 +2,7 @@
 // RevenueCat project IDs are provisioned; the shape of this module is
 // designed to swap in without changing callers.
 
+import { addDays } from 'date-fns';
 import { useProfileStore } from '../stores/useProfileStore';
 
 export type Plan = {
@@ -27,7 +28,7 @@ export const PLANS: Plan[] = [
 export async function purchase(planId: Plan['id']): Promise<{ ok: true }> {
   // Simulate latency and then set a 3-day trial.
   await new Promise((r) => setTimeout(r, 1400));
-  const trialEnds = new Date(Date.now() + 3 * 86400000).toISOString();
+  const trialEnds = addDays(new Date(), 3).toISOString();
   useProfileStore.getState().setSubscription('trial', trialEnds);
   return { ok: true };
 }

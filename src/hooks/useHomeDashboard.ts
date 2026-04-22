@@ -1,64 +1,67 @@
 import { useMemo } from 'react';
-import { useAppointmentsStore } from '../stores/useAppointmentsStore';
-import { useRecordingsStore } from '../stores/useRecordingsStore';
-import { topTrendingSymptom } from '../utils/insights';
-import { timeGreeting } from '../utils/date';
+import { format, isSameDay, parseISO } from 'date-fns';
+import { sortBy } from 'lodash';
+import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
+import { useRecordingsStore } from '@/stores/useRecordingsStore';
+import { topTrendingSymptom } from '@/utils/insights';
+import { timeGreeting } from '@/utils/date';
 import {
   DEMO_TODAY_ENTRIES,
   DemoEntry,
-} from '../constants/demo/home';
+} from '@/constants/demo/home';
+import type { Appointment } from '@/stores/types';
+import type { Recording } from '@/stores/types';
+
+interface HomeDashboard {
+  nextAppointment: Appointment | undefined;
+  todayEntries: DemoEntry[];
+  nudge: ReturnType<typeof topTrendingSymptom>;
+  dateEyebrow: string;
+  greeting: string;
+  recordingsCount: number;
+}
+
+const TODAYS_ENTRY_LIMIT = 5;
+const TRANSCRIPT_PREVIEW_LEN = 110;
+
+const toDemoEntry = (r: Recording): DemoEntry => {
+  const d = parseISO(r.createdAt);
+  return {
+    time: format(d, 'hh:mm'),
+    period: format(d, 'a').toUpperCase() as 'AM' | 'PM',
+    text: r.transcript.slice(0, TRANSCRIPT_PREVIEW_LEN),
+    tags: r.tags.slice(0, 2).map((t) => ({ t, c: '#2C6E6B' })),
+    dur: `${Math.floor(r.durationSec / 60)}:${(r.durationSec % 60)
+      .toString()
+      .padStart(2, '0')}`,
+    kind: 'voice',
+  };
+};
 
 /**
- * Derived data the Home screen renders: the next upcoming
- * appointment, today's logged entries, the real trending-symptom
- * insight, and the date/greeting strings for the header.
+ * Derived data the Home screen renders: the next upcoming appointment,
+ * today's logged entries, the real trending-symptom insight, and the
+ * date/greeting strings for the header.
  *
  * Demo fallbacks kick in only for the today-entries list so the
  * timeline isn't empty during onboarding review.
  */
-export function useHomeDashboard() {
+export const useHomeDashboard = (): HomeDashboard => {
   const appointments = useAppointmentsStore((s) => s.appointments);
   const recordings = useRecordingsStore((s) => s.recordings);
 
   const nextAppointment = useMemo(() => {
     const now = Date.now();
-    return appointments
-      .filter((a) => new Date(a.date).getTime() >= now)
-      .sort(
-        (x, y) => new Date(x.date).getTime() - new Date(y.date).getTime()
-      )[0];
+    const upcoming = appointments.filter((a) => parseISO(a.date).getTime() >= now);
+    return sortBy(upcoming, (a) => parseISO(a.date).getTime())[0];
   }, [appointments]);
 
   const todayEntries = useMemo<DemoEntry[]>(() => {
     if (recordings.length === 0) return DEMO_TODAY_ENTRIES;
     const now = new Date();
-    const todays = recordings.filter((r) => {
-      const d = new Date(r.createdAt);
-      return (
-        d.getFullYear() === now.getFullYear() &&
-        d.getMonth() === now.getMonth() &&
-        d.getDate() === now.getDate()
-      );
-    });
+    const todays = recordings.filter((r) => isSameDay(parseISO(r.createdAt), now));
     if (todays.length === 0) return DEMO_TODAY_ENTRIES;
-    return todays.slice(0, 5).map<DemoEntry>((r) => {
-      const d = new Date(r.createdAt);
-      const h = d.getHours();
-      const hour12 = ((h + 11) % 12) + 1;
-      return {
-        time: `${hour12.toString().padStart(2, '0')}:${d
-          .getMinutes()
-          .toString()
-          .padStart(2, '0')}`,
-        period: h >= 12 ? 'PM' : 'AM',
-        text: r.transcript.slice(0, 110),
-        tags: r.tags.slice(0, 2).map((t) => ({ t, c: '#2C6E6B' })),
-        dur: `${Math.floor(r.durationSec / 60)}:${(r.durationSec % 60)
-          .toString()
-          .padStart(2, '0')}`,
-        kind: 'voice',
-      };
-    });
+    return todays.slice(0, TODAYS_ENTRY_LIMIT).map(toDemoEntry);
   }, [recordings]);
 
   const nudge = useMemo(() => {
@@ -66,11 +69,7 @@ export function useHomeDashboard() {
     return topTrendingSymptom(recordings, '30d');
   }, [recordings]);
 
-  const dateEyebrow = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-  });
+  const dateEyebrow = format(new Date(), 'EEEE, MMM d');
   const greeting = timeGreeting().replace('.', '');
 
   return {
@@ -81,4 +80,4 @@ export function useHomeDashboard() {
     greeting,
     recordingsCount: recordings.length,
   };
-}
+};

@@ -1,3 +1,4 @@
+import { clamp } from 'lodash';
 import {
   ExpoSpeechRecognitionModule,
   ExpoSpeechRecognitionErrorEvent,
@@ -16,25 +17,32 @@ import {
  * reach the internet you'll get error `network` or no results at all.
  */
 
-export type SpeechCallbacks = {
+export interface SpeechCallbacks {
   onPartial?: (transcript: string) => void;
   onFinal?: (transcript: string) => void;
-  onVolume?: (normalized: number) => void; // 0..1
+  onVolume?: (normalized: number) => void;
   onError?: (code: string, message: string) => void;
   onEnd?: () => void;
   onStart?: () => void;
-};
+}
 
-export type SpeechHandle = {
+export interface SpeechHandle {
   stop: () => void;
   abort: () => void;
   getTranscript: () => string;
-};
+}
 
-export async function ensureSpeechPermission(): Promise<{
+interface PermissionResult {
   granted: boolean;
   reason?: string;
-}> {
+}
+
+const STOP_FINAL_DELAY_MS = 600;
+const VOLUME_RAW_SHIFT = 2;
+const VOLUME_RAW_RANGE = 12;
+const VOLUME_FLOOR = 0.12;
+
+export async function ensureSpeechPermission(): Promise<PermissionResult> {
   const existing = await ExpoSpeechRecognitionModule.getPermissionsAsync();
   if (existing.granted) return { granted: true };
   const req = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
@@ -47,46 +55,46 @@ export async function ensureSpeechPermission(): Promise<{
   };
 }
 
+const normalizeVolume = (raw: number): number => {
+  const n = clamp((raw + VOLUME_RAW_SHIFT) / VOLUME_RAW_RANGE, 0, 1);
+  return VOLUME_FLOOR + n * (1 - VOLUME_FLOOR);
+};
+
 export function startRecognition(cb: SpeechCallbacks): SpeechHandle {
   let latest = '';
   let finished = false;
 
-  const resultSub = ExpoSpeechRecognitionModule.addListener(
-    'result',
-    (e: ExpoSpeechRecognitionResultEvent) => {
-      const t = e.results?.[0]?.transcript ?? '';
-      if (!t) return;
-      latest = t;
-      if (e.isFinal) cb.onFinal?.(t);
-      else cb.onPartial?.(t);
-    }
-  );
-
-  const volumeSub = ExpoSpeechRecognitionModule.addListener(
-    'volumechange',
-    (e: { value: number }) => {
-      const raw = typeof e.value === 'number' ? e.value : 0;
-      const norm = Math.max(0, Math.min(1, (raw + 2) / 12));
-      cb.onVolume?.(0.12 + norm * 0.88);
-    }
-  );
-
-  const errorSub = ExpoSpeechRecognitionModule.addListener(
-    'error',
-    (e: ExpoSpeechRecognitionErrorEvent) => {
-      cb.onError?.(e.error ?? 'unknown', e.message || 'Speech recognition error');
-    }
-  );
-
-  const startSub = ExpoSpeechRecognitionModule.addListener('start', () => {
-    cb.onStart?.();
-  });
-
-  const endSub = ExpoSpeechRecognitionModule.addListener('end', () => {
-    if (finished) return;
-    finished = true;
-    cb.onEnd?.();
-  });
+  const subs = [
+    ExpoSpeechRecognitionModule.addListener(
+      'result',
+      (e: ExpoSpeechRecognitionResultEvent) => {
+        const t = e.results?.[0]?.transcript ?? '';
+        if (!t) return;
+        latest = t;
+        if (e.isFinal) cb.onFinal?.(t);
+        else cb.onPartial?.(t);
+      },
+    ),
+    ExpoSpeechRecognitionModule.addListener(
+      'volumechange',
+      (e: { value: number }) => {
+        const raw = typeof e.value === 'number' ? e.value : 0;
+        cb.onVolume?.(normalizeVolume(raw));
+      },
+    ),
+    ExpoSpeechRecognitionModule.addListener(
+      'error',
+      (e: ExpoSpeechRecognitionErrorEvent) => {
+        cb.onError?.(e.error ?? 'unknown', e.message || 'Speech recognition error');
+      },
+    ),
+    ExpoSpeechRecognitionModule.addListener('start', () => cb.onStart?.()),
+    ExpoSpeechRecognitionModule.addListener('end', () => {
+      if (finished) return;
+      finished = true;
+      cb.onEnd?.();
+    }),
+  ];
 
   try {
     ExpoSpeechRecognitionModule.start({
@@ -105,13 +113,7 @@ export function startRecognition(cb: SpeechCallbacks): SpeechHandle {
     cb.onError?.('start-failed', String(e));
   }
 
-  const cleanup = () => {
-    resultSub.remove();
-    volumeSub.remove();
-    errorSub.remove();
-    startSub.remove();
-    endSub.remove();
-  };
+  const cleanup = () => subs.forEach((s) => s.remove());
 
   return {
     getTranscript: () => latest,
@@ -121,7 +123,7 @@ export function startRecognition(cb: SpeechCallbacks): SpeechHandle {
       } catch {}
       // Give the recognizer time to emit a final result before tearing
       // down listeners.
-      setTimeout(cleanup, 600);
+      setTimeout(cleanup, STOP_FINAL_DELAY_MS);
     },
     abort: () => {
       try {
@@ -132,27 +134,26 @@ export function startRecognition(cb: SpeechCallbacks): SpeechHandle {
   };
 }
 
+const SPEECH_ERROR_MESSAGES: Record<string, string> = {
+  'not-allowed':
+    'Microphone or speech recognition permission was denied. Enable both in Settings → Sympnote.',
+  'no-speech':
+    "We didn't hear anything. Hold the button and speak close to the mic.",
+  'audio-capture':
+    "We couldn't access the microphone. Another app may be using it.",
+  network:
+    'Speech recognition needs the internet on this device (the iOS Simulator always uses network mode). Check your connection.',
+  'service-not-allowed':
+    'Speech recognition is unavailable. On simulators, Siri must be enabled.',
+  'language-not-supported':
+    'This device does not support English (US) speech recognition.',
+  busy: 'Another recognition request is still running. Try again in a moment.',
+};
+
 /**
  * Human-readable explanation for a speech-recognition error code.
  * Use this in alerts so users know what to try next.
  */
 export function describeSpeechError(code: string): string {
-  switch (code) {
-    case 'not-allowed':
-      return 'Microphone or speech recognition permission was denied. Enable both in Settings → Sympnote.';
-    case 'no-speech':
-      return "We didn't hear anything. Hold the button and speak close to the mic.";
-    case 'audio-capture':
-      return 'We couldn\'t access the microphone. Another app may be using it.';
-    case 'network':
-      return 'Speech recognition needs the internet on this device (the iOS Simulator always uses network mode). Check your connection.';
-    case 'service-not-allowed':
-      return 'Speech recognition is unavailable. On simulators, Siri must be enabled.';
-    case 'language-not-supported':
-      return 'This device does not support English (US) speech recognition.';
-    case 'busy':
-      return 'Another recognition request is still running. Try again in a moment.';
-    default:
-      return `Speech recognition error (${code}).`;
-  }
+  return SPEECH_ERROR_MESSAGES[code] ?? `Speech recognition error (${code}).`;
 }

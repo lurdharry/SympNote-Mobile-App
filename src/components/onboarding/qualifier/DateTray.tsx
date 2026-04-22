@@ -12,15 +12,21 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
 import {
+  addDays as dfAddDays,
+  differenceInCalendarDays,
+  format,
+  startOfDay,
+} from 'date-fns';
+import {
   fontScale,
   makeStyles,
   moderateScale,
   scale,
   useTheme,
   verticalScale,
-} from '../../../theme';
-import { Option } from '../../../constants/onboarding';
-import { hapticLight } from '../../../services/haptics';
+} from '@/theme';
+import { Option } from '@/constants/onboarding';
+import { hapticLight } from '@/services/haptics';
 
 type Props = {
   onAnswer: (o: Option) => void;
@@ -36,37 +42,14 @@ const PRESETS: Preset[] = [
   { label: '1 month', addDays: 30 },
 ];
 
-function startOfDay(d: Date): Date {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
+const addDays = (base: Date, n: number): Date => dfAddDays(base, n);
 
-function addDays(base: Date, n: number): Date {
-  const d = new Date(base);
-  d.setDate(d.getDate() + n);
-  return d;
-}
+const daysBetween = (a: Date, b: Date): number =>
+  differenceInCalendarDays(startOfDay(b), startOfDay(a));
 
-function daysBetween(a: Date, b: Date): number {
-  return Math.round((startOfDay(b).getTime() - startOfDay(a).getTime()) / 86400000);
-}
+const formatHero = (d: Date): string => format(d, 'EEEE, MMMM d');
 
-function formatHero(d: Date): string {
-  return d.toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
-}
-
-function formatPersist(d: Date): string {
-  return d.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
+const formatPersist = (d: Date): string => format(d, 'MMM d, yyyy');
 
 /**
  * Answer UI for the appointment-date question. One unified card —
@@ -75,7 +58,7 @@ function formatPersist(d: Date): string {
  * confirms. "Not scheduled" is demoted to a text link so the primary
  * path reads as one clear decision.
  */
-export function DateTray({ onAnswer, disabled }: Props) {
+export const DateTray: React.FC<Props> = ({ onAnswer, disabled }) => {
   const { colors } = useTheme();
   const styles = useStyles();
 

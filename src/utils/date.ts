@@ -1,63 +1,50 @@
-export function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
+import {
+  differenceInCalendarDays,
+  differenceInHours,
+  differenceInMinutes,
+  format,
+  isSameDay as dfIsSameDay,
+  parseISO,
+} from 'date-fns';
 
-export function formatTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
+const toDate = (iso: string): Date => parseISO(iso);
 
-export function formatRelative(iso: string): string {
-  const now = Date.now();
-  const then = new Date(iso).getTime();
-  const diffMs = now - then;
-  const min = Math.floor(diffMs / 60000);
-  if (min < 1) return 'just now';
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  const day = Math.floor(hr / 24);
-  if (day < 7) return `${day}d ago`;
-  return formatDate(iso);
-}
+export const formatDate = (iso: string): string => format(toDate(iso), 'MMM d, yyyy');
 
-export function formatDuration(sec: number): string {
+export const formatTime = (iso: string): string => format(toDate(iso), 'h:mm a');
+
+export const formatDuration = (sec: number): string => {
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60);
   return `${m}:${s.toString().padStart(2, '0')}`;
-}
+};
 
-export function isSameDay(a: string, b: string): boolean {
-  const da = new Date(a);
-  const db = new Date(b);
-  return (
-    da.getFullYear() === db.getFullYear() &&
-    da.getMonth() === db.getMonth() &&
-    da.getDate() === db.getDate()
-  );
-}
+export const formatRelative = (iso: string): string => {
+  const then = toDate(iso);
+  const now = new Date();
+  const min = differenceInMinutes(now, then);
+  if (min < 1) return 'just now';
+  if (min < 60) return `${min}m ago`;
+  const hr = differenceInHours(now, then);
+  if (hr < 24) return `${hr}h ago`;
+  const day = differenceInCalendarDays(now, then);
+  if (day < 7) return `${day}d ago`;
+  return formatDate(iso);
+};
 
-export function daysUntil(iso: string): number {
-  const then = new Date(iso).getTime();
-  const now = Date.now();
-  return Math.ceil((then - now) / 86400000);
-}
+export const isSameDay = (a: string, b: string): boolean =>
+  dfIsSameDay(toDate(a), toDate(b));
+
+export const daysUntil = (iso: string): number =>
+  differenceInCalendarDays(toDate(iso), new Date());
 
 /**
  * Time-of-day greeting suitable for a serif display at the top of Home.
  * Morning 5–11, Afternoon 12–16, Evening otherwise.
  */
-export function timeGreeting(at: Date = new Date()): string {
+export const timeGreeting = (at: Date = new Date()): string => {
   const h = at.getHours();
   if (h >= 5 && h < 12) return 'Good morning.';
   if (h >= 12 && h < 17) return 'Good afternoon.';
   return 'Good evening.';
-}
+};

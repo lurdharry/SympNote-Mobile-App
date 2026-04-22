@@ -1,3 +1,5 @@
+import { format, parseISO, startOfDay } from 'date-fns';
+import { capitalize, orderBy, sortBy, take, truncate } from 'lodash';
 import { Appointment, Recording } from '../stores/types';
 
 export type DerivedConcern = {
@@ -25,6 +27,11 @@ export type DerivedBrief = {
   meds: DerivedMed[];
 };
 
+const TIMELINE_PREVIEW_CHARS = 160;
+const CONCERN_LIMIT = 3;
+
+const shortDate = (iso: string): string => format(parseISO(iso), 'MMM d');
+
 /**
  * Build a visit brief from the recordings attached (via
  * `appointment.relatedRecordingIds`) to the appointment.
@@ -43,14 +50,13 @@ export type DerivedBrief = {
  */
 export function deriveAppointmentBrief(
   appointment: Appointment,
-  allRecordings: Recording[]
+  allRecordings: Recording[],
 ): DerivedBrief {
   const ids = new Set(appointment.relatedRecordingIds);
-  const attached = allRecordings
-    .filter((r) => ids.has(r.id))
-    .sort(
-      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-    );
+  const attached = sortBy(
+    allRecordings.filter((r) => ids.has(r.id)),
+    (r) => parseISO(r.createdAt).getTime(),
+  );
 
   if (attached.length === 0) {
     return { concerns: [], timeline: '', severity: [], meds: [] };
@@ -64,46 +70,41 @@ export function deriveAppointmentBrief(
   };
 }
 
+interface ConcernAggregate {
+  name: string;
+  count: number;
+  peakSev: number;
+  lastDuration: string;
+  firstSeenAt: string;
+}
+
 function deriveConcerns(entries: Recording[]): DerivedConcern[] {
-  // Count symptoms across entries; keep peak severity + most recent
-  // duration string as the supporting detail.
-  type Agg = {
-    count: number;
-    peakSev: number;
-    lastDuration: string;
-    firstSeenAt: string;
-  };
-  const agg = new Map<string, Agg>();
+  const agg = new Map<string, ConcernAggregate>();
   entries.forEach((r) => {
     r.structured.symptoms.forEach((raw) => {
       const name = capitalize(raw.trim().toLowerCase());
       if (!name) return;
       const prev = agg.get(name);
-      const peakSev = Math.max(prev?.peakSev ?? 0, r.structured.severity);
-      const lastDuration = r.structured.duration || prev?.lastDuration || '';
-      const firstSeenAt = prev?.firstSeenAt ?? r.createdAt;
       agg.set(name, {
+        name,
         count: (prev?.count ?? 0) + 1,
-        peakSev,
-        lastDuration,
-        firstSeenAt,
+        peakSev: Math.max(prev?.peakSev ?? 0, r.structured.severity),
+        lastDuration: r.structured.duration || prev?.lastDuration || '',
+        firstSeenAt: prev?.firstSeenAt ?? r.createdAt,
       });
     });
   });
 
-  return Array.from(agg.entries())
-    .sort(([, a], [, b]) => b.count - a.count || b.peakSev - a.peakSev)
-    .slice(0, 3)
-    .map<DerivedConcern>(([name, data]) => {
-      const s = [data.lastDuration, countLabel(data.count)]
-        .filter(Boolean)
-        .join(' · ');
-      return {
-        t: name,
-        s: s || 'Logged once',
-        sev: data.peakSev,
-      };
-    });
+  const ranked = take(
+    orderBy(Array.from(agg.values()), ['count', 'peakSev'], ['desc', 'desc']),
+    CONCERN_LIMIT,
+  );
+
+  return ranked.map<DerivedConcern>((a) => ({
+    t: a.name,
+    s: [a.lastDuration, countLabel(a.count)].filter(Boolean).join(' · ') || 'Logged once',
+    sev: a.peakSev,
+  }));
 }
 
 function countLabel(n: number): string {
@@ -120,37 +121,24 @@ function deriveTimeline(entries: Recording[]): string {
   if (entries.length === 1) {
     return `${firstDate}: ${first.transcript.trim()}`;
   }
-  return `Started ${firstDate}. Most recent entry ${lastDate}: "${last.transcript
-    .trim()
-    .slice(0, 160)}${last.transcript.trim().length > 160 ? '…' : ''}".`;
+  const preview = truncate(last.transcript.trim(), {
+    length: TIMELINE_PREVIEW_CHARS,
+    omission: '…',
+  });
+  return `Started ${firstDate}. Most recent entry ${lastDate}: "${preview}".`;
 }
 
 function deriveSeverity(entries: Recording[]): DerivedSeverityPoint[] {
-  // One point per day — if multiple recordings happened on the same
-  // day, keep the peak severity.
-  const byDay = new Map<string, DerivedSeverityPoint>();
+  const byDay = new Map<number, DerivedSeverityPoint>();
   entries.forEach((r) => {
-    const d = new Date(r.createdAt);
-    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-    const label = d.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    });
+    const d = parseISO(r.createdAt);
+    const key = startOfDay(d).getTime();
     const prev = byDay.get(key);
     if (!prev || r.structured.severity > prev.v) {
-      byDay.set(key, { d: label, v: r.structured.severity });
+      byDay.set(key, { d: format(d, 'MMM d'), v: r.structured.severity });
     }
   });
-  // Insertion order isn't guaranteed chronological because we've been
-  // upserting; resort by original date.
-  const ordered = Array.from(byDay.entries()).sort(([a], [b]) => {
-    const [ya, ma, da] = a.split('-').map(Number);
-    const [yb, mb, db] = b.split('-').map(Number);
-    const ta = new Date(ya!, ma!, da!).getTime();
-    const tb = new Date(yb!, mb!, db!).getTime();
-    return ta - tb;
-  });
-  return ordered.map(([, p]) => p);
+  return sortBy(Array.from(byDay.entries()), ([key]) => key).map(([, p]) => p);
 }
 
 function deriveMeds(entries: Recording[]): DerivedMed[] {
@@ -160,7 +148,8 @@ function deriveMeds(entries: Recording[]): DerivedMed[] {
       const name = raw.trim();
       if (!name) return;
       const key = name.toLowerCase();
-      if (!seen.has(key)) {
+      const existing = seen.get(key);
+      if (!existing) {
         seen.set(key, {
           name,
           dose: '—',
@@ -168,23 +157,9 @@ function deriveMeds(entries: Recording[]): DerivedMed[] {
           last: shortDate(r.createdAt),
         });
       } else {
-        // Update last-seen date if more recent.
-        const prev = seen.get(key)!;
-        prev.last = shortDate(r.createdAt);
+        existing.last = shortDate(r.createdAt);
       }
     });
   });
   return Array.from(seen.values());
-}
-
-function capitalize(s: string): string {
-  if (!s) return s;
-  return s[0]!.toUpperCase() + s.slice(1);
-}
-
-function shortDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
 }
