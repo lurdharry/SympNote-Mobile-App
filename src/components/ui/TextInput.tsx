@@ -11,7 +11,7 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
 } from 'react-native-reanimated';
-import { makeStyles, useTheme } from '../../theme';
+import { makeStyles, moderateScale, useTheme } from '../../theme';
 
 type Props = TextInputProps & {
   label?: string;
@@ -56,7 +56,7 @@ const useStyles = makeStyles((theme) => ({
   label: {
     ...theme.typography.label,
     color: theme.colors.textSecondary,
-    marginBottom: 6,
+    marginBottom: moderateScale(6),
   },
   wrap: {
     borderWidth: StyleSheet.hairlineWidth,

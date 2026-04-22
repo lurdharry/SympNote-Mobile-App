@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useTheme } from '../../theme';
+import { fontScale, scale, useTheme, verticalScale } from '../../theme';
 
 /**
  * Inline `#tag` pill. Tinted at 15% alpha of the tag color; text uses
@@ -25,14 +25,14 @@ export function TagChip({ label, color }: Props) {
 
 const styles = StyleSheet.create({
   chip: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: scale(8),
+    paddingVertical: verticalScale(2),
     borderRadius: 9999,
     alignSelf: 'flex-start',
   },
   text: {
     fontFamily: 'Inter_500Medium',
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: fontScale(11),
+    lineHeight: fontScale(14),
   },
 });

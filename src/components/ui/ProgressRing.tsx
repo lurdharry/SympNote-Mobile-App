@@ -7,7 +7,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
-import { useTheme } from '../../theme';
+import { moderateScale, useTheme } from '../../theme';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -26,8 +26,8 @@ type Props = {
 
 export function ProgressRing({
   value,
-  size = 56,
-  stroke = 5,
+  size = moderateScale(56),
+  stroke = moderateScale(5),
   color,
   trackColor,
   children,

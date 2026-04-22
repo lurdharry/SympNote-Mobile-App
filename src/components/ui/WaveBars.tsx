@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { moderateScale, verticalScale } from '../../theme';
 
 /**
  * Decorative wave bars used on the recording screen while "listening".
@@ -29,7 +30,7 @@ type Props = {
 
 export function WaveBars({
   count = 28,
-  width = 3,
+  width = moderateScale(3),
   colors = ['#F5B873', '#C97A1E'],
 }: Props) {
   return (
@@ -68,7 +69,7 @@ function Bar({
     );
   }, [i, reduced, t]);
 
-  const h = 10 + (i * 7) % 28;
+  const h = verticalScale(10 + ((i * 7) % 28));
   const style = useAnimatedStyle(() => ({
     transform: [{ scaleY: t.value }],
   }));
@@ -97,7 +98,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    height: 40,
+    height: verticalScale(40),
   },
   barWrap: {
     justifyContent: 'flex-end',

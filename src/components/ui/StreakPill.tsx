@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Flame, Zap } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { fontScale, moderateScale, scale as scaleW, verticalScale } from '../../theme';
 
 /**
  * Gold flame + day count pill. `compact` is for top-chrome use
@@ -27,11 +28,11 @@ export function StreakPill({ days = 5, compact = false }: StreakProps) {
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-      <Flame size={compact ? 10 : 12} color="#B45309" fill="#B45309" />
+      <Flame size={moderateScale(compact ? 10 : 12)} color="#B45309" fill="#B45309" />
       <Text
         style={[
           styles.text,
-          { color: '#7C2D12', fontSize: compact ? 10 : 12 },
+          { color: '#7C2D12', fontSize: fontScale(compact ? 10 : 12) },
         ]}
       >
         {days}
@@ -48,8 +49,8 @@ type XPProps = { xp?: number };
 export function XPPill({ xp = 340 }: XPProps) {
   return (
     <View style={[styles.pill, { backgroundColor: '#2C6E6B' }]}>
-      <Zap size={10} color="#FFE6B0" fill="#FFE6B0" />
-      <Text style={[styles.text, { color: '#FFFFFF', fontSize: 12 }]}>
+      <Zap size={moderateScale(10)} color="#FFE6B0" fill="#FFE6B0" />
+      <Text style={[styles.text, { color: '#FFFFFF', fontSize: fontScale(12) }]}>
         {xp} XP
       </Text>
     </View>
@@ -60,16 +61,16 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    gap: moderateScale(4),
+    paddingHorizontal: scaleW(8),
+    paddingVertical: verticalScale(4),
     borderRadius: 9999,
     overflow: 'hidden',
   },
   compact: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    gap: 2,
+    paddingHorizontal: scaleW(6),
+    paddingVertical: verticalScale(2),
+    gap: moderateScale(2),
   },
   text: {
     fontFamily: 'Inter_700Bold',

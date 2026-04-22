@@ -10,7 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { useTheme, radius } from '../../theme';
+import { moderateScale, useTheme } from '../../theme';
 
 type Props = {
   total: number;
@@ -18,7 +18,7 @@ type Props = {
   height?: number;
 };
 
-export function ProgressBar({ total, current, height = 4 }: Props) {
+export function ProgressBar({ total, current, height = moderateScale(4) }: Props) {
   const reduced = useReducedMotion();
   const { colors } = useTheme();
   const progress = useSharedValue(0);

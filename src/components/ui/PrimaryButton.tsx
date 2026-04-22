@@ -14,7 +14,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { makeStyles, primaryGradient } from '../../theme';
+import { fontScale, makeStyles, primaryGradient, verticalScale } from '../../theme';
 import { hapticMedium } from '../../services/haptics';
 
 /**
@@ -99,7 +99,7 @@ export function PrimaryButton({
 
 const useStyles = makeStyles((theme) => ({
   shell: {
-    height: 56,
+    height: verticalScale(56),
     borderRadius: theme.radius.full,
     overflow: 'hidden',
     alignItems: 'center',
@@ -123,7 +123,7 @@ const useStyles = makeStyles((theme) => ({
   label: {
     color: '#FFFFFF',
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 17,
+    fontSize: fontScale(17),
     letterSpacing: -0.17,
   },
 }));

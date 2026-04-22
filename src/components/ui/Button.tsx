@@ -1,7 +1,7 @@
 import React from "react";
 import { ActivityIndicator, StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
 import { BreathingButton } from "../animated/BreathingButton";
-import { makeStyles, useTheme } from "../../theme";
+import { makeStyles, moderateScale, useTheme, verticalScale } from "../../theme";
 import { hapticLight, hapticMedium, hapticHeavy } from "../../services/haptics";
 
 type Variant = "primary" | "secondary" | "ghost" | "destructive";
@@ -66,7 +66,7 @@ export function Button({
           backgroundColor: bg,
           borderColor,
           borderWidth: variant === "secondary" ? StyleSheet.hairlineWidth : 0,
-          height: size === "lg" ? 56 : 48,
+          height: size === "lg" ? verticalScale(56) : verticalScale(48),
           opacity: disabled ? 0.55 : 1,
           alignSelf: fullWidth ? "stretch" : "flex-start",
         },
@@ -91,6 +91,13 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  row: { flexDirection: "row", alignItems: "center", gap: 6 },
-  label: { ...theme.typography.label, letterSpacing: 0.26 },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(6),
+  },
+  label: {
+    ...theme.typography.label,
+    letterSpacing: 0.26,
+  },
 }));

@@ -1,13 +1,9 @@
 import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
-import { useTheme } from '../../theme';
+import { moderateScale, scale, useTheme, verticalScale } from '../../theme';
 import { hapticLight } from '../../services/haptics';
 
-/**
- * 40×40 circular back button with ArrowLeft icon.
- * Transparent by default; pressed state shows bg-muted.
- */
 type Props = {
   onPress: () => void;
   color?: string;
@@ -29,16 +25,16 @@ export function BackButton({ onPress, color }: Props) {
         pressed && { backgroundColor: colors.bgMuted },
       ]}
     >
-      <ArrowLeft size={22} color={color ?? colors.textPrimary} strokeWidth={2} />
+      <ArrowLeft size={moderateScale(22)} color={color ?? colors.textPrimary} strokeWidth={2} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   btn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: scale(40),
+    height: verticalScale(40),
+    borderRadius: moderateScale(20),
     alignItems: 'center',
     justifyContent: 'center',
   },

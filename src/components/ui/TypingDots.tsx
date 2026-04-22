@@ -9,7 +9,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
-import { useTheme } from "../../theme";
+import { moderateScale, useTheme } from "../../theme";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 
 export function TypingDots() {
@@ -41,13 +41,17 @@ function Dot({ delay, color }: { delay: number; color: string }) {
     );
   }, [delay, reduced, t]);
   const style = useAnimatedStyle(() => ({
-    transform: [{ translateY: -4 * t.value }],
+    transform: [{ translateY: -moderateScale(4) * t.value }],
     opacity: 0.5 + t.value * 0.5,
   }));
   return <Animated.View style={[styles.dot, { backgroundColor: color }, style]} />;
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", gap: 6 },
-  dot: { width: 6, height: 6, borderRadius: 3 },
+  row: { flexDirection: "row", alignItems: "center", gap: moderateScale(6) },
+  dot: {
+    width: moderateScale(6),
+    height: moderateScale(6),
+    borderRadius: moderateScale(3),
+  },
 });

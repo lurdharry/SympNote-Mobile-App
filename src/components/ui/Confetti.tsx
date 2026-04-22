@@ -8,6 +8,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { moderateScale, scale } from '../../theme';
 
 /**
  * Confetti burst. Mount with `show=true` at the celebration moment;
@@ -39,12 +40,12 @@ export function Confetti({ show, count = 32 }: Props) {
     () =>
       Array.from({ length: count }, (_, i) => {
         const angle = Math.random() * Math.PI * 2;
-        const dist = 80 + Math.random() * 120;
+        const dist = scale(80) + Math.random() * scale(120);
         return {
           dx: Math.cos(angle) * dist,
           dy: Math.sin(angle) * dist,
           rot: Math.random() * 540 - 270,
-          size: 6 + Math.random() * 8,
+          size: moderateScale(6) + Math.random() * moderateScale(8),
           delay: Math.random() * 120,
           color: COLORS[i % COLORS.length]!,
           shape: ['circle', 'rounded', 'square'][i % 3] as Piece['shape'],

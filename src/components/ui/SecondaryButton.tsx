@@ -11,7 +11,7 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-import { useTheme } from '../../theme';
+import { fontScale, moderateScale, scale as scaleW, useTheme, verticalScale } from '../../theme';
 import { hapticLight } from '../../services/haptics';
 
 /**
@@ -74,16 +74,16 @@ export function SecondaryButton({
 
 const styles = StyleSheet.create({
   shell: {
-    height: 52,
+    height: verticalScale(52),
     borderRadius: 9999,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 20,
+    gap: moderateScale(8),
+    paddingHorizontal: scaleW(20),
   },
   label: {
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 15,
+    fontSize: fontScale(15),
   },
 });
