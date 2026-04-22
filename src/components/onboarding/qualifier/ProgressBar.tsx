@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { makeStyles, useTheme } from '../../../theme';
+import { makeStyles, moderateScale, useTheme, verticalScale } from '../../../theme';
 
 type Props = {
   step: number;
@@ -41,12 +41,12 @@ const useStyles = makeStyles(() => ({
   row: {
     flex: 1,
     flexDirection: 'row',
-    gap: 4,
+    gap: moderateScale(4),
   },
   segment: {
     flex: 1,
-    height: 4,
-    borderRadius: 2,
+    height: verticalScale(4),
+    borderRadius: moderateScale(2),
     overflow: 'hidden',
   },
 }));

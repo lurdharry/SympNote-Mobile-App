@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { makeStyles } from '../../../theme';
+import { makeStyles, moderateScale, scale, verticalScale } from '../../../theme';
 import { TypingDots } from '../../ui/TypingDots';
 import { AssistantAvatar } from './AssistantAvatar';
 
@@ -18,13 +18,17 @@ export function TypingBubble() {
 }
 
 const useStyles = makeStyles((theme) => ({
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: moderateScale(8),
+  },
   bubble: {
     maxWidth: '82%',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(12),
     borderRadius: theme.radius.lg,
-    borderTopLeftRadius: 6,
+    borderTopLeftRadius: moderateScale(6),
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
     backgroundColor: theme.colors.bgSurface,

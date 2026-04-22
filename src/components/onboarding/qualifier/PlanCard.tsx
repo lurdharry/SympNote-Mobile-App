@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Sparkles } from 'lucide-react-native';
-import { makeStyles, useTheme } from '../../../theme';
+import { makeStyles, moderateScale, scale, useTheme, verticalScale } from '../../../theme';
 import { PlanItem } from '../../../constants/onboarding';
 import { PlanRow } from './PlanRow';
 
@@ -32,7 +32,7 @@ export function PlanCard({ items, total }: Props) {
             end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFill}
           />
-          <Sparkles size={10} color={colors.gold} fill={colors.gold} />
+          <Sparkles size={moderateScale(10)} color={colors.gold} fill={colors.gold} />
         </View>
         <Text style={styles.heading}>YOUR SYMPNOTE PLAN</Text>
         <Text style={styles.counter}>
@@ -66,15 +66,15 @@ const useStyles = makeStyles((theme) => ({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 6,
+    gap: moderateScale(8),
+    paddingHorizontal: scale(14),
+    paddingTop: verticalScale(12),
+    paddingBottom: verticalScale(6),
   },
   headerTile: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
+    width: moderateScale(20),
+    height: moderateScale(20),
+    borderRadius: moderateScale(6),
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
@@ -93,10 +93,10 @@ const useStyles = makeStyles((theme) => ({
     fontVariant: ['tabular-nums'],
   },
   body: {
-    paddingHorizontal: 14,
-    paddingBottom: 12,
-    minHeight: 60,
-    gap: 6,
+    paddingHorizontal: scale(14),
+    paddingBottom: verticalScale(12),
+    minHeight: verticalScale(60),
+    gap: moderateScale(6),
   },
   emptyCopy: {
     ...theme.typography.caption,

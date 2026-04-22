@@ -8,7 +8,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { makeStyles } from '../../../theme';
+import { fontScale, makeStyles, moderateScale, scale, verticalScale } from '../../../theme';
 import { QUALIFIER_TIMINGS } from '../../../constants/onboarding';
 
 /** User message bubble — right-aligned, teal gradient. */
@@ -46,16 +46,16 @@ const useStyles = makeStyles((theme) => ({
   row: { flexDirection: 'row', justifyContent: 'flex-end' },
   bubble: {
     maxWidth: '75%',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(10),
     borderRadius: theme.radius.lg,
-    borderTopRightRadius: 6,
+    borderTopRightRadius: moderateScale(6),
     overflow: 'hidden',
   },
   text: {
     ...theme.typography.body,
     color: '#FFFFFF',
     fontFamily: 'Inter_500Medium',
-    lineHeight: 20,
+    lineHeight: fontScale(20),
   },
 }));

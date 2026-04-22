@@ -8,7 +8,14 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { makeStyles, useTheme } from '../../../theme';
+import {
+  fontScale,
+  makeStyles,
+  moderateScale,
+  scale,
+  useTheme,
+  verticalScale,
+} from '../../../theme';
 import { Option, QUALIFIER_TIMINGS } from '../../../constants/onboarding';
 
 type Props = {
@@ -123,7 +130,7 @@ function Chip({
               { backgroundColor: tint + '22' },
             ]}
           >
-            <Icon size={14} color={tint} strokeWidth={2.4} />
+            <Icon size={moderateScale(14)} color={tint} strokeWidth={2.4} />
           </View>
         )}
         <Text style={styles.label}>{option.t}</Text>
@@ -136,10 +143,9 @@ const useStyles = makeStyles((theme) => ({
   wrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: moderateScale(8),
   },
   outer: {
-    // Host for the press glow and the chip together.
     position: 'relative',
   },
   glow: {
@@ -149,25 +155,23 @@ const useStyles = makeStyles((theme) => ({
     top: -2,
     bottom: -2,
     borderRadius: theme.radius.full,
-    // Soft blurred halo simulated with a slightly larger tinted rect.
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingLeft: 10,
-    paddingRight: 16,
-    paddingVertical: 10,
+    gap: moderateScale(8),
+    paddingLeft: scale(10),
+    paddingRight: scale(16),
+    paddingVertical: verticalScale(10),
     borderRadius: theme.radius.full,
     borderWidth: StyleSheet.hairlineWidth,
     backgroundColor: theme.colors.bgSurface,
-    // Subtle resting shadow so chips read as cards, not labels.
     ...theme.shadows.card,
   },
   iconTile: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: moderateScale(24),
+    height: moderateScale(24),
+    borderRadius: moderateScale(12),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -175,6 +179,6 @@ const useStyles = makeStyles((theme) => ({
     ...theme.typography.label,
     color: theme.colors.textPrimary,
     fontFamily: 'Inter_600SemiBold',
-    fontSize: 14,
+    fontSize: fontScale(14),
   },
 }));

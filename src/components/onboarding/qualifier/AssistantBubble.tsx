@@ -7,7 +7,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { makeStyles } from '../../../theme';
+import { fontScale, makeStyles, moderateScale, scale, verticalScale } from '../../../theme';
 import { QUALIFIER_TIMINGS } from '../../../constants/onboarding';
 import { AssistantAvatar } from './AssistantAvatar';
 
@@ -41,14 +41,14 @@ const useStyles = makeStyles((theme) => ({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: moderateScale(8),
   },
   bubble: {
     maxWidth: '82%',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(10),
     borderRadius: theme.radius.lg,
-    borderTopLeftRadius: 6,
+    borderTopLeftRadius: moderateScale(6),
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
     backgroundColor: theme.colors.bgSurface,
@@ -58,6 +58,6 @@ const useStyles = makeStyles((theme) => ({
   text: {
     ...theme.typography.body,
     color: theme.colors.textPrimary,
-    lineHeight: 20,
+    lineHeight: fontScale(20),
   },
 }));

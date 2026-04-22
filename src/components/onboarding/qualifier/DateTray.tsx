@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Calendar } from 'lucide-react-native';
-import { makeStyles, spacing, useTheme } from '../../../theme';
+import { makeStyles, moderateScale, spacing, useTheme, verticalScale } from '../../../theme';
 import { Option } from '../../../constants/onboarding';
 
 type Props = {
@@ -31,7 +31,7 @@ export function DateTray({ onAnswer, disabled }: Props) {
     <View style={{ gap: spacing.s2 }}>
       <View style={styles.card}>
         <View style={styles.iconTile}>
-          <Calendar size={18} color={colors.accent} />
+          <Calendar size={moderateScale(18)} color={colors.accent} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.label}>Appointment date</Text>
@@ -82,8 +82,8 @@ const useStyles = makeStyles((theme) => ({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 12,
+    gap: moderateScale(12),
+    padding: moderateScale(12),
     borderRadius: theme.radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     backgroundColor: theme.colors.bgSurface,
@@ -91,9 +91,9 @@ const useStyles = makeStyles((theme) => ({
     ...theme.shadows.card,
   },
   iconTile: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: moderateScale(10),
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.accent + '1A',
@@ -102,17 +102,17 @@ const useStyles = makeStyles((theme) => ({
   dateValue: {
     ...theme.typography.h3,
     color: theme.colors.textPrimary,
-    marginTop: 2,
+    marginTop: moderateScale(2),
   },
   caption: { ...theme.typography.caption, color: theme.colors.textTertiary },
   countdown: {
     ...theme.typography.h3,
     color: theme.colors.accent,
-    marginTop: 2,
+    marginTop: moderateScale(2),
   },
   secondaryBtn: {
     flex: 1,
-    height: 44,
+    height: verticalScale(44),
     borderRadius: theme.radius.full,
     alignItems: 'center',
     justifyContent: 'center',
@@ -125,7 +125,7 @@ const useStyles = makeStyles((theme) => ({
   },
   primaryBtn: {
     flex: 2,
-    height: 44,
+    height: verticalScale(44),
     borderRadius: theme.radius.full,
     alignItems: 'center',
     justifyContent: 'center',

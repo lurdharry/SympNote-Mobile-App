@@ -9,7 +9,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Check } from 'lucide-react-native';
-import { makeStyles, useTheme } from '../../../theme';
+import { makeStyles, moderateScale, useTheme } from '../../../theme';
 import {
   PlanItem,
   QUALIFIER_TIMINGS,
@@ -48,13 +48,13 @@ export function PlanRow({ item, index }: Props) {
   return (
     <Animated.View style={[styles.row, animStyle]}>
       <View style={styles.iconSlot}>
-        <item.Icon size={14} color={colors.accent} strokeWidth={2} />
+        <item.Icon size={moderateScale(14)} color={colors.accent} strokeWidth={2} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.title}>{item.title}</Text>
         <Text style={styles.sub}>{item.sub}</Text>
       </View>
-      <Check size={12} color={colors.success} strokeWidth={3} />
+      <Check size={moderateScale(12)} color={colors.success} strokeWidth={3} />
     </Animated.View>
   );
 }
@@ -63,11 +63,11 @@ const useStyles = makeStyles((theme) => ({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
+    gap: moderateScale(8),
   },
   iconSlot: {
-    width: 20,
-    height: 20,
+    width: moderateScale(20),
+    height: moderateScale(20),
     marginTop: 1,
     alignItems: 'center',
     justifyContent: 'center',
