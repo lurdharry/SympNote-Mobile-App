@@ -30,7 +30,7 @@ import {
   TrendingUp,
   X as XIcon,
 } from 'lucide-react-native';
-import { useTheme, radius, spacing, typography, shadows } from '../../theme';
+import { makeStyles, shadows, spacing, typography, useTheme } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { useAppointmentsStore } from '../../stores/useAppointmentsStore';
 import { useRecordingsStore } from '../../stores/useRecordingsStore';
@@ -184,6 +184,7 @@ function renderBrief(row: PrepRow): string {
 
 export default function TabPrep() {
   const { colors } = useTheme();
+  const styles = useStyles();
   const router = useRouter();
   const storeAppts = useAppointmentsStore((s) => s.appointments);
   const storeRecordings = useRecordingsStore((s) => s.recordings);
@@ -322,6 +323,7 @@ function AppointmentCard({
   index: number;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   const [section, setSection] = useState<
     'summary' | 'chart' | 'questions' | 'meds'
   >('summary');
@@ -558,6 +560,7 @@ function SectionTabs({
   accent: string;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   const tabs = [
     { id: 'summary',   label: 'Summary' },
     { id: 'chart',     label: 'Severity' },
@@ -674,6 +677,7 @@ function ConcernRow({
   accent: string;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   const tone =
     concern.sev >= 7 ? '#E07A5F' : concern.sev >= 5 ? '#D97706' : accent;
   return (
@@ -737,6 +741,7 @@ function SeverityChart({
   accent: string;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   if (data.length === 0) {
     return (
       <Text
@@ -897,6 +902,7 @@ function QuestionsSection({
   appointmentId: string | null;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState('');
 
@@ -1054,6 +1060,7 @@ function MedsSection({
   accent: string;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   if (meds.length === 0) {
     return (
       <Text
@@ -1112,18 +1119,18 @@ function MedsSection({
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   header: {
-    paddingTop: spacing.s3,
-    paddingHorizontal: spacing.s6,
-    paddingBottom: spacing.s3,
+    paddingTop: theme.spacing.s3,
+    paddingHorizontal: theme.spacing.s6,
+    paddingBottom: theme.spacing.s3,
   },
   content: {
-    paddingHorizontal: spacing.s6,
+    paddingHorizontal: theme.spacing.s6,
     paddingBottom: 120,
   },
   apptCard: {
-    borderRadius: radius.lg,
+    borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
@@ -1136,7 +1143,7 @@ const styles = StyleSheet.create({
   apptIcon: {
     width: 48,
     height: 48,
-    borderRadius: radius.lg,
+    borderRadius: theme.radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1176,7 +1183,7 @@ const styles = StyleSheet.create({
   },
   concernRow: {
     padding: 12,
-    borderRadius: radius.md,
+    borderRadius: theme.radius.md,
   },
   concernTrack: {
     height: 6,
@@ -1243,7 +1250,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: radius.md,
+    borderRadius: theme.radius.md,
   },
   questionIdx: {
     width: 20,
@@ -1261,14 +1268,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderRadius: radius.md,
+    borderRadius: theme.radius.md,
   },
   medRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     padding: 12,
-    borderRadius: radius.md,
+    borderRadius: theme.radius.md,
   },
   medIcon: {
     width: 40,
@@ -1278,14 +1285,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   addDashed: {
-    marginTop: spacing.s2,
+    marginTop: theme.spacing.s2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 18,
-    borderRadius: radius.lg,
+    borderRadius: theme.radius.lg,
     borderWidth: 2,
     borderStyle: 'dashed',
   },
-});
+}));

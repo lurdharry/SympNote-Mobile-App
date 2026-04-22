@@ -4,18 +4,12 @@ import { Tabs } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { Clipboard, History, Home, LineChart } from 'lucide-react-native';
-import { useTheme, spacing, typography } from '../../theme';
+import { makeStyles, useTheme } from '../../theme';
 import { hapticSelect } from '../../services/haptics';
 
 /**
- * Bottom tab bar — per design handoff.
- *
- *  - 4 tabs: Home · Prep · Insights · History (Settings is a modal from
- *    the Home avatar, NOT a tab)
- *  - Lucide stroke icons, 22px
- *  - Active state: top-aligned accent rule (40×2, rounded) + accent icon
- *    + 600-weight label
- *  - Hairline top border on a blurred bg-surface surface (95% opacity)
+ * Bottom tab bar — 4 tabs (Home, Prep, Insights, History). Settings is
+ * a modal from the Home avatar, not a tab.
  */
 const TABS = [
   { name: 'home',     label: 'Home',     Icon: Home },
@@ -26,6 +20,7 @@ const TABS = [
 
 export default function TabsLayout() {
   const { colors, isDark } = useTheme();
+  const styles = useStyles();
 
   return (
     <Tabs
@@ -50,7 +45,7 @@ export default function TabsLayout() {
               ]}
             />
             <SafeAreaView edges={['bottom']}>
-              <View style={[styles.bar, { borderTopColor: colors.border }]}>
+              <View style={styles.bar}>
                 {state.routes.map((route, i) => {
                   const isActive = i === activeIndex;
                   const cfg = TABS.find((t) => t.name === route.name);
@@ -70,18 +65,11 @@ export default function TabsLayout() {
                       accessibilityState={{ selected: isActive }}
                       style={styles.tab}
                     >
-                      {isActive && (
-                        <View
-                          style={[
-                            styles.activeRule,
-                            { backgroundColor: colors.accent },
-                          ]}
-                        />
-                      )}
+                      {isActive && <View style={styles.activeRule} />}
                       <cfg.Icon size={22} color={tint} strokeWidth={2} />
                       <Text
                         style={[
-                          typography.caption,
+                          styles.label,
                           {
                             color: tint,
                             fontFamily: isActive
@@ -109,15 +97,14 @@ export default function TabsLayout() {
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: {
-    overflow: 'hidden',
-  },
+const useStyles = makeStyles((theme) => ({
+  wrap: { overflow: 'hidden' },
   bar: {
     flexDirection: 'row',
     height: 60,
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: spacing.s3,
+    borderTopColor: theme.colors.border,
+    paddingHorizontal: theme.spacing.s3,
   },
   tab: {
     flex: 1,
@@ -132,5 +119,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 2,
     borderRadius: 1,
+    backgroundColor: theme.colors.accent,
   },
-});
+  label: { ...theme.typography.caption },
+}));

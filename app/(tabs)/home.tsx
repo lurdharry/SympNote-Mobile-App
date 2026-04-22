@@ -27,7 +27,7 @@ import {
   TrendingDown,
   TrendingUp,
 } from 'lucide-react-native';
-import { useTheme, radius, spacing, typography, shadows } from '../../theme';
+import { makeStyles, shadows, spacing, typography, useTheme } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { TagChip } from '../../components/ui/TagChip';
 import { useAppointmentsStore } from '../../stores/useAppointmentsStore';
@@ -111,6 +111,7 @@ const DEMO_TODAY: DemoEntry[] = [
 export default function TabHome() {
   const router = useRouter();
   const { colors } = useTheme();
+  const styles = useStyles();
 
   const appointments = useAppointmentsStore((s) => s.appointments);
   const recordings = useRecordingsStore((s) => s.recordings);
@@ -411,6 +412,7 @@ function UpNextCard({
   onPress: () => void;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   const opacity = useSharedValue(0);
   useEffect(() => {
     opacity.value = withTiming(1, {
@@ -544,6 +546,7 @@ function TimelineRow({
   dotColor: string;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   return (
     <View
       style={[
@@ -622,6 +625,7 @@ function TimelineRow({
 /* -------------------- Record FAB -------------------- */
 
 function RecordFAB({ onPress }: { onPress: () => void }) {
+  const styles = useStyles();
   const reduced = useReducedMotion();
   const pulse1 = useSharedValue(0);
   const pulse2 = useSharedValue(0);
@@ -703,11 +707,11 @@ function SectionLabel({ label }: { label: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   header: {
-    paddingTop: spacing.s3,
-    paddingHorizontal: spacing.s6,
-    paddingBottom: spacing.s3,
+    paddingTop: theme.spacing.s3,
+    paddingHorizontal: theme.spacing.s6,
+    paddingBottom: theme.spacing.s3,
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
@@ -727,7 +731,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   upNextCard: {
-    borderRadius: radius.lg,
+    borderRadius: theme.radius.lg,
     padding: 20,
     overflow: 'hidden',
   },
@@ -735,7 +739,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    marginTop: spacing.s4,
+    marginTop: theme.spacing.s4,
     gap: 12,
   },
   prepReady: {
@@ -761,7 +765,7 @@ const styles = StyleSheet.create({
     padding: 12,
     alignItems: 'center',
     gap: 6,
-    borderRadius: radius.lg,
+    borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
   },
   quickIcon: {
@@ -772,7 +776,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   timelineCard: {
-    borderRadius: radius.lg,
+    borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
@@ -817,7 +821,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     padding: 14,
-    borderRadius: radius.lg,
+    borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
   },
   insightIcon: {
@@ -862,4 +866,4 @@ const styles = StyleSheet.create({
     shadowRadius: 28,
     elevation: 14,
   },
-});
+}));

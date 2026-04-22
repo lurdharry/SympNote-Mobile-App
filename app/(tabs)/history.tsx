@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Mic, Search, X as XIcon } from 'lucide-react-native';
-import { useTheme, radius, spacing, typography, shadows } from '../../theme';
+import { makeStyles, shadows, spacing, typography, useTheme } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { TagChip } from '../../components/ui/TagChip';
 import { useRecordingsStore } from '../../stores/useRecordingsStore';
@@ -82,6 +82,7 @@ const DEMO_ALL_TAGS = [
 
 export default function TabHistory() {
   const { colors } = useTheme();
+  const styles = useStyles();
   const [q, setQ] = useState('');
   const [active, setActive] = useState<string[]>([]);
 
@@ -435,18 +436,18 @@ export default function TabHistory() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   header: {
-    paddingTop: spacing.s3,
-    paddingHorizontal: spacing.s6,
-    paddingBottom: spacing.s3,
+    paddingTop: theme.spacing.s3,
+    paddingHorizontal: theme.spacing.s6,
+    paddingBottom: theme.spacing.s3,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   searchRow: {
     height: 44,
-    borderRadius: 9999,
+    borderRadius: theme.radius.full,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 16,
     flexDirection: 'row',
@@ -456,13 +457,13 @@ const styles = StyleSheet.create({
   pillRow: {
     flexDirection: 'row',
     gap: 6,
-    paddingHorizontal: spacing.s6,
+    paddingHorizontal: theme.spacing.s6,
     paddingVertical: 4,
   },
   filterPill: {
     height: 32,
     paddingHorizontal: 12,
-    borderRadius: 9999,
+    borderRadius: theme.radius.full,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
@@ -470,13 +471,13 @@ const styles = StyleSheet.create({
   clearPill: {
     height: 32,
     paddingHorizontal: 12,
-    borderRadius: 9999,
+    borderRadius: theme.radius.full,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
   groupHeader: {
-    paddingHorizontal: spacing.s6,
+    paddingHorizontal: theme.spacing.s6,
     paddingTop: 12,
     paddingBottom: 8,
     flexDirection: 'row',
@@ -484,8 +485,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   groupCard: {
-    marginHorizontal: spacing.s6,
-    borderRadius: radius.lg,
+    marginHorizontal: theme.spacing.s6,
+    borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
@@ -506,4 +507,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 12,
   },
-});
+}));

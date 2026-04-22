@@ -15,7 +15,7 @@ import {
   TrendingDown,
   TrendingUp,
 } from 'lucide-react-native';
-import { useTheme, radius, spacing, typography, shadows } from '../../theme';
+import { makeStyles, shadows, spacing, typography, useTheme } from '../../theme';
 import { SceneTransition } from '../../components/navigation/SceneTransition';
 import { hapticLight } from '../../services/haptics';
 import { useRecordingsStore } from '../../stores/useRecordingsStore';
@@ -80,6 +80,7 @@ const DEMO_HEATMAP: number[][] = (() => {
 
 export default function TabInsights() {
   const { colors } = useTheme();
+  const styles = useStyles();
   const [range, setRange] = useState<Range>('30d');
 
   const recordings = useRecordingsStore((s) => s.recordings);
@@ -388,6 +389,7 @@ function SymptomRowView({
   isFirst: boolean;
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   const Trend =
     row.trend === 'up' ? TrendingUp : row.trend === 'down' ? TrendingDown : Dot;
   const trendColor =
@@ -491,6 +493,7 @@ function CorrelationCard({
   };
 }) {
   const { colors } = useTheme();
+  const styles = useStyles();
   const severityColor = corr.severity === 'strong' ? '#E07A5F' : '#D97706';
   return (
     <View
@@ -576,6 +579,7 @@ function CorrelationCard({
 }
 
 function Heatmap({ grid }: { grid: number[][] }) {
+  const styles = useStyles();
   return (
     <View>
       <View style={styles.heatHeaderRow}>
@@ -612,11 +616,11 @@ function Heatmap({ grid }: { grid: number[][] }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   header: {
-    paddingTop: spacing.s3,
-    paddingHorizontal: spacing.s6,
-    paddingBottom: spacing.s3,
+    paddingTop: theme.spacing.s3,
+    paddingHorizontal: theme.spacing.s6,
+    paddingBottom: theme.spacing.s3,
   },
   rangeWrap: {
     flexDirection: 'row',
@@ -633,7 +637,7 @@ const styles = StyleSheet.create({
   },
   headlineCard: {
     padding: 16,
-    borderRadius: radius.lg,
+    borderRadius: theme.radius.lg,
     overflow: 'hidden',
   },
   headlineBlob: {
@@ -664,7 +668,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   listCard: {
-    borderRadius: radius.lg,
+    borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
@@ -686,7 +690,7 @@ const styles = StyleSheet.create({
   },
   corrCard: {
     padding: 16,
-    borderRadius: radius.lg,
+    borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
   },
   corrHead: {
@@ -707,7 +711,7 @@ const styles = StyleSheet.create({
   },
   heatCard: {
     padding: 16,
-    borderRadius: radius.lg,
+    borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
   },
   heatHeaderRow: {
@@ -735,4 +739,4 @@ const styles = StyleSheet.create({
     color: '#8A9290',
     textAlign: 'center',
   },
-});
+}));
