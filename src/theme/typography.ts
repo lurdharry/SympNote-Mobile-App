@@ -18,18 +18,7 @@ export const typography: Record<string, TypeToken> = {
     lineHeight: fontScale(48),
     letterSpacing: -0.4,
   },
-  displaySerif: {
-    fontFamily: "Fraunces_500Medium",
-    fontSize: fontScale(44),
-    lineHeight: fontScale(50),
-    letterSpacing: -0.8,
-  },
-  displaySerifLarge: {
-    fontFamily: "Fraunces_500Medium",
-    fontSize: fontScale(56),
-    lineHeight: fontScale(60),
-    letterSpacing: -1.2,
-  },
+
   serifHeadline: {
     fontFamily: "Fraunces_500Medium",
     fontSize: fontScale(28),
