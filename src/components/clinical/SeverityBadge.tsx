@@ -7,12 +7,30 @@ type Props = {
 };
 
 /**
- * Color-coded severity pill. Green for mild, amber for moderate, red for
- * severe.
+ * Color-coded severity pill. 0 reads "No symptom" (patient said they
+ * were fine); 1-3 mild; 4-6 moderate; 7-10 severe.
  */
 export const SeverityBadge: React.FC<Props> = ({ severity }) => {
   const { colors } = useTheme();
   const styles = useStyles();
+
+  if (severity === 0) {
+    return (
+      <View
+        style={[
+          styles.wrap,
+          {
+            backgroundColor: colors.success + '22',
+            borderColor: colors.success + '66',
+          },
+        ]}
+      >
+        <Text style={[styles.label, { color: colors.success }]}>
+          No symptom
+        </Text>
+      </View>
+    );
+  }
 
   let tone: 'mild' | 'moderate' | 'severe';
   if (severity <= 3) tone = 'mild';

@@ -4,7 +4,7 @@ export type StructuredEntry = {
   symptoms: string[];
   location: string;
   duration: string;
-  severity: number; // 1-10
+  severity: number; // 0-10 (0 = patient reports no symptom)
   triggers: string[];
   medications: string[];
   notes: string;
