@@ -243,7 +243,15 @@ const AppointmentDetail: React.FC = () => {
             Not medical advice. Review with your doctor.
           </Text>
 
-          <View style={{ marginTop: spacing.s8 }}>
+          <View style={{ marginTop: spacing.s8, gap: spacing.s3 }}>
+            <Button
+              label="Edit appointment"
+              variant="secondary"
+              onPress={() => {
+                hapticLight();
+                router.push(`/appointment-new?editId=${appt.id}`);
+              }}
+            />
             <Button label="Delete appointment" variant="destructive" onPress={del} />
           </View>
         </ScrollView>
