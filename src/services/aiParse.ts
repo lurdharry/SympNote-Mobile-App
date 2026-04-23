@@ -6,9 +6,9 @@ export type StructuredWithSources = StructuredEntry & {
 };
 
 const VALID_URGENCY: ReadonlyArray<string> = ['routine', 'follow-up', 'soon', 'urgent'];
-const SEVERITY_MIN = 1;
+const SEVERITY_MIN = 0;
 const SEVERITY_MAX = 10;
-const DEFAULT_SEVERITY = 5;
+const DEFAULT_SEVERITY = 0;
 
 const toStringArray = (v: unknown): string[] =>
   Array.isArray(v) ? v.map((x) => String(x)) : [];
@@ -16,6 +16,9 @@ const toStringArray = (v: unknown): string[] =>
 const toString = (v: unknown, fallback = ''): string =>
   typeof v === 'string' ? v : fallback;
 
+// Severity is 0-10 (0 = patient reports no symptom). When the model
+// returns something unparseable, default to 0 rather than 5 — a missing
+// value almost always means "no symptom extracted," not "medium."
 const toSeverity = (v: unknown): number => {
   const n = Number(v);
   if (!Number.isFinite(n)) return DEFAULT_SEVERITY;
