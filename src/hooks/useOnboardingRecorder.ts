@@ -1,55 +1,50 @@
 import { useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import {
+  Easing,
+  useSharedValue,
+  withTiming,
+  type SharedValue,
+} from 'react-native-reanimated';
+import {
   ensureSpeechPermission,
   startRecognition,
   describeSpeechError,
   SpeechHandle,
 } from '../services/speech';
-import { structureTranscript, GeminiQuotaError } from '../services/ai';
-import {
-  hapticHeavy,
-  hapticLight,
-  hapticMedium,
-  hapticSuccess,
-} from '../services/haptics';
-import { useRecordingsStore } from '../stores/useRecordingsStore';
-import { StructuredEntry } from '../stores/types';
-import { StructuredWithSources } from '../components/recording/types';
-import { uuid } from '../utils/uuid';
+import { hapticHeavy, hapticLight, hapticMedium } from '../services/haptics';
+import { usePendingRecordingStore } from '../stores/usePendingRecordingStore';
 import { RECORDING_PROMPTS } from '../constants/prompts';
-import { FIELD_META } from '../constants/fields';
 
-export type RecorderPhase =
-  | 'idle'
-  | 'recording'
-  | 'processing'
-  | 'structured'
-  | 'error';
+export type RecorderPhase = 'idle' | 'recording' | 'ready';
 
 /**
  * Drives the onboarding first-recording screen.
  *
- * Owns: phase state machine, real speech capture, Gemini structuring,
- * retry-backoff, field-reveal animation timing, and the final save to
- * the recordings store. The screen renders the resulting state.
+ * Owns: phase state machine + local speech capture. The structuring
+ * Gemini call has been deferred to the paywall — we only want to pay
+ * per conversion, not per install. When the user taps Continue we
+ * stash the raw transcript as a pending draft; the paywall picks it up
+ * after purchase, runs Gemini, and commits the real recording.
  */
 export function useOnboardingRecorder() {
   const [phase, setPhase] = useState<RecorderPhase>('idle');
   const [promptIdx, setPromptIdx] = useState(0);
   const [transcript, setTranscript] = useState('');
-  const [structured, setStructured] = useState<StructuredWithSources | null>(null);
-  const [fieldCount, setFieldCount] = useState(0);
-  const [burst, setBurst] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [retryInSec, setRetryInSec] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   const speechRef = useRef<SpeechHandle | null>(null);
   const promptRotationRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const capturedRef = useRef<string>('');
   const startedAtRef = useRef<number>(0);
-  const durationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const capturedAtRef = useRef<string>('');
+  const durationRef = useRef<number>(0);
   const savedRef = useRef<boolean>(false);
+
+  // Normalized mic amplitude (0..1) driven by the speech service's
+  // `volumechange` event. Off-JS-thread so the recording screen doesn't
+  // re-render on every meter tick.
+  const volume = useSharedValue(0);
 
   // Rotate example prompts while idle.
   useEffect(() => {
@@ -59,77 +54,22 @@ export function useOnboardingRecorder() {
     }
     promptRotationRef.current = setInterval(
       () => setPromptIdx((i) => (i + 1) % RECORDING_PROMPTS.length),
-      3000
+      3000,
     );
     return () => {
       if (promptRotationRef.current) clearInterval(promptRotationRef.current);
     };
   }, [phase]);
 
-  // Retry countdown for quota errors.
-  useEffect(() => {
-    if (retryInSec <= 0) return;
-    const id = setInterval(() => {
-      setRetryInSec((n) => (n <= 1 ? 0 : n - 1));
-    }, 1000);
-    return () => clearInterval(id);
-  }, [retryInSec]);
-
-  // Kick off structured field reveal + celebration when we hit 'structured'.
-  useEffect(() => {
-    if (phase !== 'structured') return;
-    setFieldCount(0);
-    setBurst(false);
-    let n = 0;
-    const id = setInterval(() => {
-      n += 1;
-      setFieldCount(n);
-      if (n >= FIELD_META.length) {
-        clearInterval(id);
-        setTimeout(() => {
-          setBurst(true);
-          hapticSuccess();
-        }, 200);
-      }
-    }, 220);
-    return () => clearInterval(id);
-  }, [phase]);
-
   useEffect(() => {
     return () => {
       speechRef.current?.abort();
-      if (durationTimerRef.current) clearInterval(durationTimerRef.current);
     };
   }, []);
 
-  const runGemini = async (text: string) => {
-    setErrorMessage(null);
-    setRetryInSec(0);
-    setPhase('processing');
-    try {
-      const s = await structureTranscript(text);
-      setStructured(s);
-      setPhase('structured');
-    } catch (e) {
-      if (e instanceof GeminiQuotaError) {
-        setErrorMessage(e.message);
-        setRetryInSec(e.retryAfterSec ?? 0);
-      } else {
-        setErrorMessage(
-          e instanceof Error ? e.message : 'Could not structure transcript.'
-        );
-      }
-      setPhase('error');
-    }
-  };
-
-  const stopAndProcess = async () => {
+  const stopAndReady = async () => {
     const speech = speechRef.current;
     speechRef.current = null;
-    if (durationTimerRef.current) {
-      clearInterval(durationTimerRef.current);
-      durationTimerRef.current = null;
-    }
     const duration = startedAtRef.current
       ? Math.round((Date.now() - startedAtRef.current) / 1000)
       : 0;
@@ -139,6 +79,7 @@ export function useOnboardingRecorder() {
     }
     hapticMedium();
     speech.stop();
+    volume.value = withTiming(0, { duration: 240, easing: Easing.out(Easing.quad) });
     await new Promise((r) => setTimeout(r, 500));
     const text = (speech.getTranscript() || capturedRef.current || '').trim();
     if (!text || duration < 1) {
@@ -147,37 +88,37 @@ export function useOnboardingRecorder() {
         'Nothing captured',
         duration < 1
           ? 'Tap the mic, speak a sentence, then tap again to finish.'
-          : "We didn't catch any words. Try speaking a bit louder and closer to the mic."
+          : "We didn't catch any words. Try speaking a bit louder and closer to the mic.",
       );
       return;
     }
     capturedRef.current = text;
+    durationRef.current = Math.max(1, duration);
+    setDuration(Math.max(1, duration));
     setTranscript(text);
-    await runGemini(text);
+    setPhase('ready');
   };
 
-  const onMic = async () => {
-    if (phase === 'recording') {
-      void stopAndProcess();
-      return;
-    }
-    if (phase !== 'idle') return;
+  const startFresh = async () => {
     hapticHeavy();
     const perm = await ensureSpeechPermission();
     if (!perm.granted) {
       Alert.alert(
         'Microphone access needed',
         perm.reason ??
-          'Enable microphone and speech recognition in Settings to log your first entry.'
+          'Enable microphone and speech recognition in Settings to log your first entry.',
       );
       return;
     }
     capturedRef.current = '';
+    durationRef.current = 0;
+    savedRef.current = false;
     setTranscript('');
-    setStructured(null);
-    setErrorMessage(null);
+    setDuration(0);
     startedAtRef.current = Date.now();
+    capturedAtRef.current = new Date().toISOString();
     setPhase('recording');
+    volume.value = 0;
     try {
       speechRef.current = startRecognition({
         onPartial: (t) => {
@@ -188,21 +129,20 @@ export function useOnboardingRecorder() {
           capturedRef.current = t;
           setTranscript(t);
         },
+        onVolume: (v) => {
+          volume.value = withTiming(v, {
+            duration: 180,
+            easing: Easing.out(Easing.quad),
+          });
+        },
         onError: (code) => {
           if (code === 'no-speech') return;
           speechRef.current?.abort();
           speechRef.current = null;
-          if (durationTimerRef.current) {
-            clearInterval(durationTimerRef.current);
-            durationTimerRef.current = null;
-          }
           setPhase('idle');
           Alert.alert('Speech recognition issue', describeSpeechError(code));
         },
       });
-      durationTimerRef.current = setInterval(() => {
-        // keep the tick so a future UI element can read startedAtRef.
-      }, 500);
     } catch (e) {
       speechRef.current = null;
       setPhase('idle');
@@ -210,54 +150,45 @@ export function useOnboardingRecorder() {
     }
   };
 
-  const retryStructuring = () => {
-    const text = (capturedRef.current || transcript).trim();
-    if (!text) {
-      setPhase('idle');
+  const onMic = async () => {
+    if (phase === 'recording') {
+      void stopAndReady();
       return;
     }
-    if (retryInSec > 0) return;
-    void runGemini(text);
+    // idle or ready → start a fresh capture
+    await startFresh();
   };
 
   const resetToIdle = () => {
     hapticLight();
     speechRef.current?.abort();
     speechRef.current = null;
-    if (durationTimerRef.current) {
-      clearInterval(durationTimerRef.current);
-      durationTimerRef.current = null;
-    }
     capturedRef.current = '';
-    setTranscript('');
-    setStructured(null);
-    setErrorMessage(null);
-    setRetryInSec(0);
-    setFieldCount(0);
-    setBurst(false);
+    durationRef.current = 0;
     savedRef.current = false;
+    volume.value = 0;
+    setTranscript('');
+    setDuration(0);
     setPhase('idle');
   };
 
   /**
-   * Persist the captured + structured recording once, idempotently.
-   * Returns true when the record was saved (first call with valid data),
-   * false when nothing needed saving.
+   * Stash the captured transcript as a draft on the pending store.
+   * The paywall promotes it to the real recordings store after Gemini
+   * structuring runs post-purchase. Idempotent: repeat calls after a
+   * successful stash return true without re-writing, so navigation on
+   * back-and-forth re-entries still proceeds.
    */
   const saveFirstRecording = (): boolean => {
-    if (!structured || savedRef.current) return false;
-    savedRef.current = true;
+    if (phase !== 'ready') return false;
+    if (savedRef.current) return true;
     const text = (capturedRef.current || transcript).trim();
-    const duration = startedAtRef.current
-      ? Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000))
-      : 1;
-    useRecordingsStore.getState().add({
-      id: uuid(),
-      createdAt: new Date().toISOString(),
-      durationSec: duration,
+    if (!text) return false;
+    savedRef.current = true;
+    usePendingRecordingStore.getState().setDraft({
       transcript: text,
-      structured: structured as StructuredEntry,
-      tags: structured.symptoms.filter(Boolean).slice(0, 2),
+      durationSec: durationRef.current || 1,
+      createdAt: capturedAtRef.current || new Date().toISOString(),
     });
     return true;
   };
@@ -266,13 +197,9 @@ export function useOnboardingRecorder() {
     phase,
     promptIdx,
     transcript,
-    structured,
-    fieldCount,
-    burst,
-    errorMessage,
-    retryInSec,
+    duration,
+    volume: volume as SharedValue<number>,
     onMic,
-    retryStructuring,
     resetToIdle,
     saveFirstRecording,
   };
