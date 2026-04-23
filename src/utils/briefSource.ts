@@ -1,8 +1,38 @@
-import { differenceInDays, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
 import type { Appointment, Recording } from '@/stores/types';
 
-/** How many days back we reach when the user hasn't attached recordings. */
+/** Fallback reach when there's no prior attended visit to anchor on. */
 const DEFAULT_WINDOW_DAYS = 30;
+const DAY_MS = 86_400_000;
+
+/**
+ * The earliest moment (ms epoch) a recording may have been created to
+ * be eligible for this appointment's brief. Anchored at the most recent
+ * attended visit with the same doctor — everything since that visit is
+ * "what's new to discuss". Falls back to 30 days before `now` when the
+ * patient has no prior attended visit with this clinician.
+ */
+const windowStart = (
+  appointment: Appointment,
+  allAppointments: Appointment[],
+  nowMs: number,
+): number => {
+  const doctor = appointment.doctorName.trim().toLowerCase();
+  const thisApptMs = parseISO(appointment.date).getTime();
+  const priorAttended = doctor
+    ? allAppointments
+        .filter(
+          (a) =>
+            a.id !== appointment.id &&
+            a.status === 'attended' &&
+            a.doctorName.trim().toLowerCase() === doctor,
+        )
+        .map((a) => parseISO(a.attendedAt ?? a.date).getTime())
+        .filter((t) => t < thisApptMs)
+        .sort((a, b) => b - a)[0]
+    : undefined;
+  return priorAttended ?? nowMs - DEFAULT_WINDOW_DAYS * DAY_MS;
+};
 
 /**
  * Pick which recordings feed the AI brief for a given appointment.
@@ -10,9 +40,10 @@ const DEFAULT_WINDOW_DAYS = 30;
  *  - If the user has explicitly attached recordings via
  *    `relatedRecordingIds`, respect that curation (highest priority).
  *  - Else if any recordings are tagged for this appointment's doctor
- *    (matched by case-insensitive clinicianName), use that set — this
- *    is the clinician-specific "since last visit with Dr. X" proxy.
- *  - Else fall back to the last 30 days of entries.
+ *    (matched by case-insensitive clinicianName), use that set,
+ *    filtered to entries after the last attended visit with the doctor.
+ *  - Else fall back to entries since the last attended visit (or 30d
+ *    if no prior visit).
  *
  * Returns recordings sorted oldest-first so the AI receives a
  * chronological view (earliest onset first, most recent last).
@@ -20,8 +51,10 @@ const DEFAULT_WINDOW_DAYS = 30;
 export const recordingsForAppointmentBrief = (
   appointment: Appointment,
   allRecordings: Recording[],
+  allAppointments: Appointment[] = [],
 ): Recording[] => {
   const now = Date.now();
+  const startMs = windowStart(appointment, allAppointments, now);
 
   let source: Recording[];
   if (appointment.relatedRecordingIds.length > 0) {
@@ -33,14 +66,15 @@ export const recordingsForAppointmentBrief = (
       ? allRecordings.filter(
           (r) =>
             r.clinicianName &&
-            r.clinicianName.trim().toLowerCase() === doctor,
+            r.clinicianName.trim().toLowerCase() === doctor &&
+            parseISO(r.createdAt).getTime() >= startMs,
         )
       : [];
     if (tagged.length > 0) {
       source = tagged;
     } else {
       source = allRecordings.filter(
-        (r) => differenceInDays(now, parseISO(r.createdAt).getTime()) <= DEFAULT_WINDOW_DAYS,
+        (r) => parseISO(r.createdAt).getTime() >= startMs,
       );
     }
   }

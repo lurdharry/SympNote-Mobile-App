@@ -74,6 +74,7 @@ const AppointmentDetail: React.FC = () => {
   const { colors } = useTheme();
   const styles = useStyles();
   const appt = useAppointmentsStore((s) => s.getById(id!));
+  const allAppointments = useAppointmentsStore((s) => s.appointments);
   const setBrief = useAppointmentsStore((s) => s.setBrief);
   const remove = useAppointmentsStore((s) => s.remove);
   const setRelatedRecordings = useAppointmentsStore((s) => s.setRelatedRecordings);
@@ -110,7 +111,11 @@ const AppointmentDetail: React.FC = () => {
     );
   }
 
-  const sourceRecordings = recordingsForAppointmentBrief(appt, allRecordings);
+  const sourceRecordings = recordingsForAppointmentBrief(
+    appt,
+    allRecordings,
+    allAppointments,
+  );
   const stale = isBriefStale(appt, allRecordings);
   const hasAttached = appt.relatedRecordingIds.length > 0;
   const brief = appt.brief;
