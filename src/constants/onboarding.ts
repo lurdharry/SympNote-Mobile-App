@@ -1,23 +1,17 @@
 import {
-  AlertTriangle,
-  Bell,
-  BookOpen,
+  Activity,
   Brain,
   Calendar,
-  CalendarCheck,
-  CalendarX,
-  Check,
-  Circle,
-  CircleAlert,
-  Hourglass,
-  MessageCircle,
-  NotebookPen,
-  PenLine,
-  Pin,
+  Cigarette,
+  Droplet,
+  Flame,
+  HeartPulse,
+  Pill,
+  Shield,
   Sparkles,
   Sprout,
-  Target,
-  Timer,
+  Wind,
+  Zap,
 } from 'lucide-react-native';
 
 type IconRef = typeof Calendar;
@@ -28,70 +22,82 @@ export const FULL_HEADLINE = "Your doctor's visit,\nfinally prepared.";
 
 /* -------------------- Qualifier (screen 02) -------------------- */
 
-export type Option = {
+export interface Option {
   t: string;
   v: string;
-  /** Lucide icon rendered in the chip's left-tile. Optional so date
-   *  trays and other free-form answer UIs don't need one. */
+  /** Lucide icon rendered in the chip's left-tile. Optional. */
   Icon?: IconRef;
-  /**
-   * Tint applied to the chip's icon tile. Defaults to accent if
-   *  omitted. Pick semantically: teal for positive, gold for neutral,
-   *  coral for concern.
-   */
+  /** Tint applied to the chip's icon tile. */
   tint?: string;
-};
+}
 
-export type Question = {
+export interface Question {
   id: string;
-  /**
-   * Key to persist the answer label under in `onboardingAnswers`.
-   * Downstream screens (analyzing, paywall progress) read by this key.
-   */
+  /** Key to persist the answer under in `onboardingAnswers`. */
   profileKey: string;
   ask: string;
   options?: Option[];
-  kind?: 'date';
-};
+  /**
+   * When true, the user can pick multiple options and the answer is
+   * stored as `string[]`. Defaults to single-select (stored as
+   * string). A "Done" button appears in the chip tray.
+   */
+  multi?: boolean;
+  /**
+   * When true, the chip tray shows a "Skip" affordance. Skipping
+   * advances the flow without persisting an answer; downstream
+   * derivation falls back to a sensible default.
+   */
+  skippable?: boolean;
+  /** Optional hint copy shown under the assistant bubble. */
+  hint?: string;
+}
 
+/**
+ * The two qualifier questions. Every answer gives the AI a hard
+ * clinical prior it cannot infer from voice transcripts alone:
+ *
+ *  Q1 — Age band. The single biggest axis for clinical reasoning.
+ *  Q2 — Known conditions. The baseline the AI should interpret new
+ *       entries against.
+ *
+ * Everything else (summary style, reminder cadence, time-of-day
+ * patterns) is either a preference that belongs in Settings or an
+ * observable signal the app derives from real logs.
+ */
 export const QUESTIONS: Question[] = [
   {
-    id: 'doctor',
-    profileKey: 'regularity',
-    ask: 'First — do you see a doctor regularly?',
+    id: 'age',
+    profileKey: 'ageBand',
+    ask: 'First, how old are you?',
+    hint: "Sympnote uses your age to read your entries against the right baseline. A 25 year old's fatigue reads very different from a 65 year old's. Required.",
     options: [
-      { t: 'Yes, often',  v: 'often',     Icon: CalendarCheck, tint: '#2C6E6B' },
-      { t: 'Sometimes',   v: 'sometimes', Icon: Calendar,      tint: '#6CA4A0' },
-      { t: 'Rarely',      v: 'rarely',    Icon: CalendarX,     tint: '#C88A4A' },
+      { t: '12 to 17', v: 'teen',    Icon: Sprout,   tint: '#5A8F6E' },
+      { t: '18 to 29', v: '18-29',   Icon: Zap,      tint: '#2C6E6B' },
+      { t: '30 to 49', v: '30-49',   Icon: Flame,    tint: '#C88A4A' },
+      { t: '50 to 64', v: '50-64',   Icon: Activity, tint: '#E07A5F' },
+      { t: '65 or older', v: '65-plus', Icon: Sparkles, tint: '#6CA4A0' },
     ],
   },
   {
-    id: 'pain',
-    profileKey: 'hardest',
-    ask: "What's hardest about doctor visits for you?",
+    id: 'conditions',
+    profileKey: 'knownConditions',
+    ask: 'Any known conditions or meds worth noting?',
+    hint: "Pick any that apply. This gives Sympnote the right baseline to read your entries against. If nothing fits, skip it.",
+    multi: true,
+    skippable: true,
     options: [
-      { t: 'Remembering symptoms', v: 'memory',  Icon: Brain,         tint: '#2C6E6B' },
-      { t: 'Explaining clearly',   v: 'clarity', Icon: MessageCircle, tint: '#6CA4A0' },
-      { t: 'Feeling rushed',       v: 'time',    Icon: Timer,         tint: '#C88A4A' },
-      { t: 'Taking notes',         v: 'notes',   Icon: PenLine,       tint: '#5A8F6E' },
+      { t: 'Asthma',               v: 'asthma',          Icon: Wind,       tint: '#6CA4A0' },
+      { t: 'Diabetes',             v: 'diabetes',        Icon: Droplet,    tint: '#C88A4A' },
+      { t: 'High blood pressure',  v: 'hypertension',    Icon: HeartPulse, tint: '#E07A5F' },
+      { t: 'Depression or anxiety', v: 'depression',     Icon: Brain,      tint: '#6CA4A0' },
+      { t: 'Migraines',            v: 'migraines',       Icon: Zap,        tint: '#C88A4A' },
+      { t: 'Autoimmune',           v: 'autoimmune',      Icon: Shield,     tint: '#5A8F6E' },
+      { t: 'Thyroid',              v: 'thyroid',         Icon: Activity,   tint: '#2C6E6B' },
+      { t: 'Heart condition',      v: 'heart',           Icon: HeartPulse, tint: '#E07A5F' },
+      { t: 'Regular medications',  v: 'on-meds',         Icon: Pill,       tint: '#C88A4A' },
+      { t: 'Smoker / recently quit', v: 'smoker',        Icon: Cigarette,  tint: '#8A6A4A' },
     ],
-  },
-  {
-    id: 'forget',
-    profileKey: 'forgetting',
-    ask: 'And honestly — how often do you forget something important?',
-    options: [
-      { t: 'Almost always', v: 'always',    Icon: AlertTriangle, tint: '#E07A5F' },
-      { t: 'Often',         v: 'often',     Icon: CircleAlert,   tint: '#C88A4A' },
-      { t: 'Sometimes',     v: 'sometimes', Icon: Circle,        tint: '#6CA4A0' },
-      { t: 'Rarely',        v: 'rarely',    Icon: Check,         tint: '#5A8F6E' },
-    ],
-  },
-  {
-    id: 'next',
-    profileKey: 'nextAppointment',
-    ask: "When's your next appointment? We'll count down and prep you.",
-    kind: 'date',
   },
 ];
 
@@ -107,9 +113,6 @@ export const QUALIFIER_TIMINGS = {
   advanceMs: 450,
   /** Extra pause on the final answer before routing forward. */
   completeMs: 600,
-  /** Stagger between consecutive plan-row reveals. */
-  planRowStaggerMs: 60,
-  planRowDurationMs: 320,
   /** Assistant bubble entrance. */
   bubbleDurationMs: 320,
   /** User bubble entrance. */
@@ -118,25 +121,6 @@ export const QUALIFIER_TIMINGS = {
   chipDurationMs: 280,
   chipStaggerMs: 40,
 } as const;
-
-export type PlanItem = { Icon: IconRef; title: string; sub: string };
-
-/** Plan card rows unlocked as the user answers each qualifier question. */
-export const PLAN_UNLOCKS: Record<string, PlanItem> = {
-  'doctor:often':     { Icon: Calendar,      title: 'Cross-visit timeline',  sub: 'We connect patterns between visits' },
-  'doctor:sometimes': { Icon: Calendar,      title: 'Visit-ready summaries', sub: 'Ready whenever you book next' },
-  'doctor:rarely':    { Icon: Sprout,        title: 'Grow-at-your-pace',     sub: 'Log when it matters, no pressure' },
-  'pain:memory':      { Icon: Brain,         title: 'Daily memory nudges',   sub: 'Gentle reminders to log small things' },
-  'pain:clarity':     { Icon: MessageCircle, title: 'Clear summaries',       sub: 'Your words, organized for your doctor' },
-  'pain:time':        { Icon: Timer,         title: 'One-page visit brief',  sub: 'Nothing important gets rushed past' },
-  'pain:notes':       { Icon: NotebookPen,   title: 'Automatic note-taking', sub: 'We capture, you focus on the doctor' },
-  'forget:always':    { Icon: Target,        title: 'Gentle recall prompts', sub: "We'll jog memory before each visit" },
-  'forget:often':     { Icon: Bell,          title: 'Pre-visit checklist',   sub: 'Key things to mention, ready to go' },
-  'forget:sometimes': { Icon: Sparkles,      title: 'Smart highlights',      sub: 'We surface what matters most' },
-  'forget:rarely':    { Icon: BookOpen,      title: 'Deep visit archive',    sub: 'Searchable history of every visit' },
-  'next:scheduled':   { Icon: Hourglass,     title: 'Appointment countdown', sub: 'Prep builds as your visit approaches' },
-  'next:none':        { Icon: Pin,           title: 'Ready when you book',   sub: "We'll prep the moment you schedule" },
-};
 
 /* -------------------- Care team palette -------------------- */
 

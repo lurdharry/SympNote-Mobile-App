@@ -1,28 +1,53 @@
-import React from "react";
+import React, { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { makeStyles, moderateScale, typography, useTheme, verticalScale } from "../../theme";
-import { SceneTransition } from "../../components/navigation/SceneTransition";
-import { BackButton } from "../../components/ui/BackButton";
-import { PrimaryButton } from "../../components/ui/PrimaryButton";
-import { FOCUS_OPTIONS } from "../../constants/focus";
-import { useProfileStore } from "../../stores/useProfileStore";
-import { hapticLight } from "../../services/haptics";
+import {
+  makeStyles,
+  moderateScale,
+  typography,
+  useTheme,
+  verticalScale,
+} from "@/theme";
+import { SceneTransition } from "@/components/navigation/SceneTransition";
+import { BackButton } from "@/components/ui/BackButton";
+import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { FOCUS_OPTIONS } from "@/constants/focus";
+import type { FocusArea } from "@/stores/types";
+import { useProfileStore } from "@/stores/useProfileStore";
+import { hapticLight } from "@/services/haptics";
 import { FocusCard } from "@/components/onboarding/focus/FocusCard";
 
-const ScreenFocus: React.FC = () => {
-  const [sel, setSel] = React.useState<string | null>(null);
+const ctaLabel = (count: number): string => {
+  if (count === 0) return "Pick at least one to continue";
+  if (count === 1) return "Continue";
+  return `Continue · ${count} selected`;
+};
 
+const ScreenFocus: React.FC = () => {
   const router = useRouter();
+  const { colors } = useTheme();
   const styles = useStyles();
   const setAnswer = useProfileStore((s) => s.setOnboardingAnswer);
 
-  const onSelect = (id: string) => {
+  const [selected, setSelected] = useState<Set<FocusArea>>(new Set());
+
+  const toggle = (id: FocusArea) => {
     hapticLight();
-    setSel(id);
-    setAnswer("focus", id);
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
+
+  const onContinue = () => {
+    setAnswer("focus", Array.from(selected));
+    router.push("/onboarding/care-team");
+  };
+
+  const count = selected.size;
 
   return (
     <SceneTransition mode="scale-fade">
@@ -34,11 +59,16 @@ const ScreenFocus: React.FC = () => {
             <View style={{ width: moderateScale(40) }} />
           </View>
 
-          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            <Text style={styles.eyebrow}>YOUR FOCUS</Text>
-            <Text style={styles.headline}>What are you tracking?</Text>
-            <Text style={styles.headlineSubTitle}>
-              We'll tailor prompts and summaries. You can change this anytime.
+          <ScrollView
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+          >
+            <Text style={styles.eyebrow}>YOUR GOAL</Text>
+            <Text style={[styles.headline, { color: colors.textPrimary }]}>
+              What's this tracking for?
+            </Text>
+            <Text style={[styles.headlineSubTitle, { color: colors.textSecondary }]}>
+              Pick any that apply. You can change these anytime.
             </Text>
 
             <View style={styles.list}>
@@ -46,9 +76,9 @@ const ScreenFocus: React.FC = () => {
                 <FocusCard
                   key={o.id}
                   option={o}
-                  selected={sel === o.id}
+                  selected={selected.has(o.id)}
                   index={i}
-                  onPress={() => onSelect(o.id)}
+                  onPress={() => toggle(o.id)}
                 />
               ))}
             </View>
@@ -56,16 +86,16 @@ const ScreenFocus: React.FC = () => {
 
           <View style={styles.cta}>
             <PrimaryButton
-              label={sel ? "Continue" : "Pick one to continue"}
-              disabled={!sel}
-              onPress={() => router.push("/onboarding/care-team")}
+              label={ctaLabel(count)}
+              disabled={count === 0}
+              onPress={onContinue}
             />
           </View>
         </SafeAreaView>
       </View>
     </SceneTransition>
   );
-}
+};
 
 export default ScreenFocus;
 
@@ -96,7 +126,6 @@ const useStyles = makeStyles((theme) => ({
   headline: {
     ...theme.typography.h1,
     marginTop: moderateScale(4),
-    color: theme.colors.textPrimary,
   },
   list: {
     marginTop: theme.spacing.s5,
@@ -112,7 +141,6 @@ const useStyles = makeStyles((theme) => ({
   },
   headlineSubTitle: {
     ...typography.body,
-    color: theme.colors.textSecondary,
     marginTop: moderateScale(6),
   },
 }));
