@@ -15,9 +15,11 @@ import {
 import { Fraunces_300Light, Fraunces_500Medium } from "@expo-google-fonts/fraunces";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StyleSheet, View } from "react-native";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { useTheme, lightColors, darkColors } from "../theme";
 import { TransitionProvider } from "../components/navigation/TransitionContext";
 import { RadialWipe } from "../components/navigation/RadialWipe";
+import { queryClient } from "../services/queryClient";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -53,55 +55,57 @@ const RootLayout: React.FC = () => {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      <SafeAreaProvider>
-        <TransitionProvider>
-          <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
-            <StatusBar style={isDark ? "light" : "dark"} />
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                animation: "fade",
-                animationDuration: 250,
-                contentStyle: { backgroundColor: colors.bgPrimary },
-              }}
-            >
-              <Stack.Screen name="index" />
-              <Stack.Screen name="onboarding" options={{ animation: "fade" }} />
-              <Stack.Screen name="(tabs)" options={{ animation: "fade" }} />
-              <Stack.Screen
-                name="recording/[id]"
-                options={{ animation: "fade", presentation: "transparentModal" }}
-              />
-              <Stack.Screen
-                name="appointment/[id]"
-                options={{ animation: "fade", presentation: "transparentModal" }}
-              />
-              <Stack.Screen
-                name="settings"
-                options={{
-                  animation: "slide_from_bottom",
-                  presentation: "modal",
+      <QueryClientProvider client={queryClient}>
+        <SafeAreaProvider>
+          <TransitionProvider>
+            <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
+              <StatusBar style={isDark ? "light" : "dark"} />
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  animation: "fade",
+                  animationDuration: 250,
+                  contentStyle: { backgroundColor: colors.bgPrimary },
                 }}
-              />
-              <Stack.Screen
-                name="record"
-                options={{
-                  animation: "slide_from_bottom",
-                  presentation: "modal",
-                }}
-              />
-              <Stack.Screen
-                name="appointment-new"
-                options={{
-                  animation: "slide_from_bottom",
-                  presentation: "modal",
-                }}
-              />
-            </Stack>
-            <RadialWipe />
-          </View>
-        </TransitionProvider>
-      </SafeAreaProvider>
+              >
+                <Stack.Screen name="index" />
+                <Stack.Screen name="onboarding" options={{ animation: "fade" }} />
+                <Stack.Screen name="(tabs)" options={{ animation: "fade" }} />
+                <Stack.Screen
+                  name="recording/[id]"
+                  options={{ animation: "fade", presentation: "transparentModal" }}
+                />
+                <Stack.Screen
+                  name="appointment/[id]"
+                  options={{ animation: "fade", presentation: "transparentModal" }}
+                />
+                <Stack.Screen
+                  name="settings"
+                  options={{
+                    animation: "slide_from_bottom",
+                    presentation: "modal",
+                  }}
+                />
+                <Stack.Screen
+                  name="record"
+                  options={{
+                    animation: "slide_from_bottom",
+                    presentation: "modal",
+                  }}
+                />
+                <Stack.Screen
+                  name="appointment-new"
+                  options={{
+                    animation: "slide_from_bottom",
+                    presentation: "modal",
+                  }}
+                />
+              </Stack>
+              <RadialWipe />
+            </View>
+          </TransitionProvider>
+        </SafeAreaProvider>
+      </QueryClientProvider>
     </GestureHandlerRootView>
   );
 }
