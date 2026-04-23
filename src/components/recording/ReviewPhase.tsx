@@ -26,45 +26,39 @@ export const ReviewPhase: React.FC<Props> = ({
   const { colors } = useTheme();
   const styles = useStyles();
   const blocked = retryInSec > 0;
-  const processLabel = blocked ? `Try again in ${retryInSec}s` : 'Process with AI';
+  const continueLabel = blocked ? `Try again in ${retryInSec}s` : 'Continue';
 
   return (
-    <View style={{ marginTop: spacing.s6 }}>
-      <Text style={styles.caption}>
-        Here's what we heard ({formatDuration(durationSec)})
-      </Text>
+    <View style={{ marginTop: spacing.s5 }}>
+      <Text style={styles.caption}>{formatDuration(durationSec)} captured · tap to edit</Text>
       <View style={styles.box}>
         <TextInput
           value={text}
           onChangeText={onChange}
           multiline
-          placeholder="Your transcript will appear here…"
+          placeholder="Your words will appear here…"
           placeholderTextColor={colors.textTertiary}
           style={styles.input}
         />
       </View>
-      <Text style={styles.hint}>
-        Edit anything that got misheard before we send it to the AI. The
-        transcript stays on your device unless you tap Process.
-      </Text>
 
       {error && (
         <View style={styles.errorBox}>
-          <Text style={styles.errorLabel}>AI unavailable</Text>
+          <Text style={styles.errorLabel}>Couldn't process that</Text>
           <Text style={styles.errorBody}>{error}</Text>
         </View>
       )}
 
       <View style={{ marginTop: spacing.s5 }}>
         <Button
-          label={processLabel}
+          label={continueLabel}
           onPress={onProcess}
           haptic="medium"
           disabled={blocked}
         />
         <View style={{ height: spacing.s3 }} />
         <Button
-          label="Discard & re-record"
+          label="Start over"
           variant="secondary"
           haptic="light"
           onPress={onDiscard}
@@ -92,11 +86,6 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing.s4,
     minHeight: verticalScale(120),
     textAlignVertical: 'top',
-  },
-  hint: {
-    ...theme.typography.caption,
-    color: theme.colors.textTertiary,
-    marginTop: theme.spacing.s3,
   },
   errorBox: {
     marginTop: theme.spacing.s4,
