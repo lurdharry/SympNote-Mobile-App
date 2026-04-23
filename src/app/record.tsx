@@ -1,25 +1,19 @@
-import React, { useEffect } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { X as XIcon } from 'lucide-react-native';
-import {
-  fontScale,
-  makeStyles,
-  moderateScale,
-  useTheme,
-  verticalScale,
-} from '../theme';
-import { IdlePhase } from '../components/recording/IdlePhase';
-import { RecordingPhase } from '../components/recording/RecordingPhase';
-import { ReviewPhase } from '../components/recording/ReviewPhase';
-import { ExtractingPhase } from '../components/recording/ExtractingPhase';
-import { ExtractedPhase } from '../components/recording/ExtractedPhase';
-import { useRecordingFlow } from '../components/recording/useRecordingFlow';
-import { useRecordingsStore } from '../stores/useRecordingsStore';
-import { uuid } from '../utils/uuid';
-import { hapticHeavy, hapticLight } from '../services/haptics';
-import { Phase } from '../components/recording/types';
+import React, { useEffect } from "react";
+import { Pressable, ScrollView, Text, View } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { X as XIcon } from "lucide-react-native";
+import { fontScale, makeStyles, moderateScale, useTheme, verticalScale } from "../theme";
+import { IdlePhase } from "../components/recording/IdlePhase";
+import { RecordingPhase } from "../components/recording/RecordingPhase";
+import { ReviewPhase } from "../components/recording/ReviewPhase";
+import { ExtractingPhase } from "../components/recording/ExtractingPhase";
+import { ExtractedPhase } from "../components/recording/ExtractedPhase";
+import { useRecordingFlow } from "../components/recording/useRecordingFlow";
+import { useRecordingsStore } from "../stores/useRecordingsStore";
+import { uuid } from "../utils/uuid";
+import { hapticHeavy, hapticLight } from "../services/haptics";
+import { Phase } from "../components/recording/types";
 
 /**
  * Full-screen capture surface — opens over everything so the recording
@@ -36,11 +30,11 @@ const RecordModal: React.FC = () => {
   const flow = useRecordingFlow();
   const insets = useSafeAreaInsets();
 
-  const presetTag = typeof kind === 'string' ? kindToTag(kind) : null;
+  const presetTag = typeof kind === "string" ? kindToTag(kind) : null;
 
   useEffect(() => {
     return () => {
-      if (__DEV__) console.log('[record] unmount');
+      if (__DEV__) console.log("[record] unmount");
     };
   }, []);
 
@@ -48,10 +42,9 @@ const RecordModal: React.FC = () => {
     if (!flow.structured || !flow.reviewText) return;
     const tags = Array.from(
       new Set(
-        [
-          ...(presetTag ? [presetTag] : []),
-          ...flow.structured.symptoms.slice(0, 2),
-        ].filter(Boolean),
+        [...(presetTag ? [presetTag] : []), ...flow.structured.symptoms.slice(0, 2)].filter(
+          Boolean,
+        ),
       ),
     );
     useRecordingsStore.getState().add({
@@ -73,8 +66,7 @@ const RecordModal: React.FC = () => {
 
   const kindLabel = kindToLabel(kind);
   const title = titleForPhase(flow.phase, kind);
-  const titleVisible =
-    flow.phase !== 'extracting' && flow.phase !== 'recording';
+  const titleVisible = flow.phase !== "extracting" && flow.phase !== "recording";
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
@@ -103,33 +95,24 @@ const RecordModal: React.FC = () => {
         {titleVisible && (
           <View style={styles.titleArea}>
             {kindLabel && (
-              <Text
-                style={[
-                  styles.kindEyebrow,
-                  { color: colors.accent },
-                ]}
-              >
-                {kindLabel}
-              </Text>
+              <Text style={[styles.kindEyebrow, { color: colors.accent }]}>{kindLabel}</Text>
             )}
-            <Text
-              style={[styles.title, { color: colors.textPrimary }]}
-              numberOfLines={2}
-            >
+            <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={2}>
               {title}
             </Text>
           </View>
         )}
 
-        <View style={styles.body}>
-          {flow.phase === 'idle' && (
-            <IdlePhase
-              onStart={flow.beginRecording}
-              onTypeInstead={flow.skipToTyping}
-            />
+        <ScrollView
+          contentContainerStyle={styles.bodyScroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {flow.phase === "idle" && (
+            <IdlePhase onStart={flow.beginRecording} onTypeInstead={flow.skipToTyping} />
           )}
 
-          {flow.phase === 'recording' && (
+          {flow.phase === "recording" && (
             <RecordingPhase
               meterSv={flow.meterSv}
               liveTranscript={flow.liveTranscript}
@@ -138,7 +121,7 @@ const RecordModal: React.FC = () => {
             />
           )}
 
-          {flow.phase === 'review' && (
+          {flow.phase === "review" && (
             <ReviewPhase
               text={flow.reviewText}
               onChange={flow.setReviewText}
@@ -150,7 +133,7 @@ const RecordModal: React.FC = () => {
             />
           )}
 
-          {flow.phase === 'extracting' && (
+          {flow.phase === "extracting" && (
             <ExtractingPhase
               structured={flow.structured}
               transcript={flow.reviewText}
@@ -158,10 +141,10 @@ const RecordModal: React.FC = () => {
             />
           )}
 
-          {flow.phase === 'extracted' && flow.structured && (
+          {flow.phase === "extracted" && flow.structured && (
             <ExtractedPhase structured={flow.structured} onSave={save} />
           )}
-        </View>
+        </ScrollView>
       </View>
     </View>
   );
@@ -173,10 +156,10 @@ const RecordModal: React.FC = () => {
 // the stepper because it's a consent gate, not a capture step.
 
 const STEP_ORDER: { label: string; phases: Phase[] }[] = [
-  { label: 'Capture', phases: ['idle', 'recording'] },
-  { label: 'Review', phases: ['review'] },
-  { label: 'Analyze', phases: ['extracting'] },
-  { label: 'Confirm', phases: ['extracted'] },
+  { label: "Capture", phases: ["idle", "recording"] },
+  { label: "Review", phases: ["review"] },
+  { label: "Analyze", phases: ["extracting"] },
+  { label: "Confirm", phases: ["extracted"] },
 ];
 
 const indexForPhase = (phase: Phase): number => {
@@ -202,7 +185,7 @@ const PhaseIndicator: React.FC<{ phase: Phase }> = ({ phase }) => {
                   backgroundColor: isActive
                     ? colors.accent
                     : isPast
-                      ? colors.accent + '66'
+                      ? colors.accent + "66"
                       : colors.border,
                   width: isActive ? moderateScale(18) : moderateScale(6),
                 },
@@ -219,20 +202,18 @@ const PhaseIndicator: React.FC<{ phase: Phase }> = ({ phase }) => {
 
 function kindToTag(raw: string): string | null {
   const k = raw.toLowerCase();
-  if (k === 'medication' || k === 'meds' || k === 'med') return 'meds';
-  if (k === 'symptom' || k === 'symptoms') return 'symptom';
-  if (k === 'side-effect' || k === 'sideeffect' || k === 'side_effect')
-    return 'side-effect';
+  if (k === "medication" || k === "meds" || k === "med") return "meds";
+  if (k === "symptom" || k === "symptoms") return "symptom";
+  if (k === "side-effect" || k === "sideeffect" || k === "side_effect") return "side-effect";
   return null;
 }
 
 function kindToLabel(raw?: string): string | null {
   if (!raw) return null;
   const k = raw.toLowerCase();
-  if (k === 'medication' || k === 'meds' || k === 'med') return 'Medication';
-  if (k === 'symptom' || k === 'symptoms') return 'Symptom';
-  if (k === 'side-effect' || k === 'sideeffect' || k === 'side_effect')
-    return 'Side effect';
+  if (k === "medication" || k === "meds" || k === "med") return "Medication";
+  if (k === "symptom" || k === "symptoms") return "Symptom";
+  if (k === "side-effect" || k === "sideeffect" || k === "side_effect") return "Side effect";
   return null;
 }
 
@@ -245,14 +226,14 @@ function kindToLabel(raw?: string): string | null {
 function titleForPhase(phase: Phase, rawKind?: string): string {
   const kind = kindToLabel(rawKind);
   switch (phase) {
-    case 'review':
-      return 'Check what we heard';
-    case 'extracted':
-      return 'Does this look right?';
-    case 'idle':
-    case 'recording':
-    case 'extracting':
-    case 'privacy':
+    case "review":
+      return "Check what we heard";
+    case "extracted":
+      return "Does this look right?";
+    case "idle":
+    case "recording":
+    case "extracting":
+    case "privacy":
     default:
       if (kind) return `Note your ${kind.toLowerCase()}`;
       return "What's going on?";
@@ -265,9 +246,9 @@ const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },
   safe: { flex: 1 },
   topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: theme.spacing.s6,
     paddingTop: theme.spacing.s4,
     paddingBottom: theme.spacing.s3,
@@ -275,13 +256,13 @@ const useStyles = makeStyles((theme) => ({
   },
   stepperRow: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: moderateScale(6),
   },
   stepperCell: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   stepDot: {
     height: moderateScale(6),
@@ -291,8 +272,8 @@ const useStyles = makeStyles((theme) => ({
     width: moderateScale(32),
     height: moderateScale(32),
     borderRadius: moderateScale(16),
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   titleArea: {
     paddingHorizontal: theme.spacing.s6,
@@ -301,10 +282,10 @@ const useStyles = makeStyles((theme) => ({
   },
   kindEyebrow: {
     ...theme.typography.label,
-    fontFamily: 'DMSans_700Bold',
+    fontFamily: "DMSans_700Bold",
     fontSize: fontScale(11),
     letterSpacing: 1.2,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     marginBottom: 4,
   },
   title: {
@@ -312,8 +293,9 @@ const useStyles = makeStyles((theme) => ({
     fontSize: fontScale(28),
     lineHeight: fontScale(34),
   },
-  body: {
-    flex: 1,
+  bodyScroll: {
+    flexGrow: 1,
     paddingHorizontal: theme.spacing.s6,
+    paddingBottom: theme.spacing.s6,
   },
 }));
