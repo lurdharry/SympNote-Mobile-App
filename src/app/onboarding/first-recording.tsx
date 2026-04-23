@@ -1,44 +1,31 @@
-import React from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Lock } from 'lucide-react-native';
-import {
-  makeStyles,
-  spacing,
-  typography,
-  useTheme,
-  verticalScale,
-} from '@/theme';
-import { SceneTransition } from '@/components/navigation/SceneTransition';
-import { BackButton } from '@/components/ui/BackButton';
-import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { WaveBars } from '@/components/ui/WaveBars';
-import { Confetti } from '@/components/ui/Confetti';
-import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { useOnboardingRecorder } from '@/hooks/useOnboardingRecorder';
-import { useProfileStore } from '@/stores/useProfileStore';
-import { RECORDING_PROMPTS } from '@/constants/prompts';
-import { MicOrb } from '@/components/first-recording/MicOrb';
-import { ShimmerLines } from '@/components/first-recording/ShimmerLines';
-import { TranscriptCard } from '@/components/first-recording/TranscriptCard';
-import { StructuredCard } from '@/components/first-recording/StructuredCard';
-import { ErrorCard } from '@/components/first-recording/ErrorCard';
+import React from "react";
+import { Dimensions, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Check } from "lucide-react-native";
+import { makeStyles, moderateScale, spacing, typography, useTheme, verticalScale } from "@/theme";
+import { SceneTransition } from "@/components/navigation/SceneTransition";
+import { BackButton } from "@/components/ui/BackButton";
+import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { WaveformCanvas } from "@/components/animated/WaveformCanvas";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { useOnboardingRecorder } from "@/hooks/useOnboardingRecorder";
+import { useProfileStore } from "@/stores/useProfileStore";
+import { RECORDING_PROMPTS } from "@/constants/prompts";
+import { MicOrb } from "@/components/first-recording/MicOrb";
+import { TranscriptCard } from "@/components/first-recording/TranscriptCard";
+import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
 
-type Phase = 'idle' | 'recording' | 'processing' | 'structured' | 'error';
+const WAVE_WIDTH = Math.min(Dimensions.get("window").width - 64, 320);
 
-const primaryLabel = (phase: Phase): string => {
+const primaryLabel = (phase: "idle" | "recording" | "ready"): string => {
   switch (phase) {
-    case 'structured':
-      return 'Continue';
-    case 'recording':
-      return 'Tap mic to finish';
-    case 'processing':
-      return 'Structuring…';
-    case 'error':
-      return 'Retry above';
+    case "ready":
+      return "Continue";
+    case "recording":
+      return "Tap when you're done";
     default:
-      return 'Tap mic to begin';
+      return "Tap mic to begin";
   }
 };
 
@@ -48,59 +35,31 @@ const ScreenFirstRecording: React.FC = () => {
   const styles = useStyles();
   const reduced = useReducedMotion();
   const personalization = useProfileStore((s) => s.personalization);
-  const micHeadline =
-    personalization?.firstRecordingPrompt ?? "Tell us what's going on";
+  const micHeadline = personalization?.firstRecordingPrompt ?? "What's been going on with you?";
 
-  const {
-    phase,
-    promptIdx,
-    transcript,
-    structured,
-    fieldCount,
-    burst,
-    errorMessage,
-    retryInSec,
-    onMic,
-    retryStructuring,
-    resetToIdle,
-    saveFirstRecording,
-  } = useOnboardingRecorder();
+  const { phase, promptIdx, transcript, duration, volume, onMic, saveFirstRecording } =
+    useOnboardingRecorder();
 
   const onContinue = () => {
-    if (!structured) return;
+    if (phase !== "ready") return;
     saveFirstRecording();
-    router.push('/onboarding/paywall');
+    router.push("/onboarding/summary");
   };
-
-  const hasTranscript =
-    !!transcript &&
-    (phase === 'recording' ||
-      phase === 'processing' ||
-      phase === 'structured' ||
-      phase === 'error');
 
   return (
     <SceneTransition mode="scale-fade">
       <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
-        <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
           <View style={styles.topBar}>
             <BackButton onPress={() => router.back()} />
-            <Text style={[typography.label, { color: colors.textTertiary }]}>
-              8 of 9
-            </Text>
             <View style={{ width: 40 }} />
           </View>
+          <View style={styles.progressSlot}>
+            <OnboardingProgress value={1} />
+          </View>
 
-          <ScrollView
-            contentContainerStyle={styles.content}
-            showsVerticalScrollIndicator={false}
-          >
-            <Text
-              style={[
-                typography.h1,
-                { color: colors.textPrimary, textAlign: 'center' },
-              ]}
-            >
+          <View style={styles.content}>
+            <Text style={[typography.h1, { color: colors.textPrimary, textAlign: "center" }]}>
               {micHeadline}
             </Text>
             <Text
@@ -108,88 +67,74 @@ const ScreenFirstRecording: React.FC = () => {
                 typography.body,
                 {
                   color: colors.textSecondary,
-                  textAlign: 'center',
+                  textAlign: "center",
                   marginTop: 8,
                 },
               ]}
             >
-              Talk in your own words. Sympnote turns it into a clinical summary.
+              Speak in your own words. Sympnote keeps your transcript safe on your device.
             </Text>
 
             <View style={styles.micArea}>
-              <Confetti show={burst} />
               <MicOrb phase={phase} onPress={onMic} reduced={reduced} />
 
               <View style={styles.subSlot}>
-                {phase === 'idle' && (
+                {phase === "idle" && (
                   <Text
                     key={promptIdx}
                     style={[
                       typography.body,
                       {
                         color: colors.textTertiary,
-                        textAlign: 'center',
-                        fontStyle: 'italic',
+                        textAlign: "center",
+                        fontStyle: "italic",
                       },
                     ]}
                   >
                     {RECORDING_PROMPTS[promptIdx]}
                   </Text>
                 )}
-                {phase === 'recording' && <WaveBars />}
-                {phase === 'processing' && <ShimmerLines />}
-              </View>
-
-              <View style={styles.encryptedRow}>
-                <Lock size={12} color={colors.textTertiary} />
-                <Text
-                  style={[
-                    typography.caption,
-                    { color: colors.textTertiary, marginLeft: 6 },
-                  ]}
-                >
-                  End-to-end encrypted
-                </Text>
+                {phase === "recording" && (
+                  <WaveformCanvas
+                    level={volume}
+                    width={WAVE_WIDTH}
+                    height={verticalScale(48)}
+                    barCount={32}
+                    colors={["#C45C3F", "rgba(196,92,63,0.08)"]}
+                  />
+                )}
+                {phase === "ready" && (
+                  <View style={styles.capturedRow}>
+                    <View style={[styles.capturedDot, { backgroundColor: colors.success }]}>
+                      <Check size={moderateScale(12)} color="#FFFFFF" strokeWidth={3} />
+                    </View>
+                    <Text
+                      style={[
+                        typography.body,
+                        {
+                          color: colors.textSecondary,
+                          fontFamily: "DMSans_500Medium",
+                        },
+                      ]}
+                    >
+                      Got it. {duration}s captured.
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
 
-            {hasTranscript && <TranscriptCard text={transcript} typing={false} />}
-
-            {phase === 'structured' && structured && (
-              <StructuredCard
-                structured={structured}
-                fieldCount={fieldCount}
-                burst={burst}
-              />
+            {phase === "recording" && !!transcript && (
+              <View style={styles.transcriptSlot}>
+                <TranscriptCard text={transcript} autoScrollToEnd />
+              </View>
             )}
-
-            {phase === 'error' && (
-              <ErrorCard
-                message={errorMessage ?? 'Something went wrong.'}
-                retryInSec={retryInSec}
-                onRetry={retryStructuring}
-                onStartOver={resetToIdle}
-              />
-            )}
-          </ScrollView>
+          </View>
 
           <View style={styles.ctaArea}>
-            {phase === 'structured' && (
-              <Pressable
-                onPress={resetToIdle}
-                hitSlop={8}
-                style={styles.recordAgain}
-              >
-                <Text
-                  style={[typography.caption, { color: colors.textTertiary }]}
-                >
-                  Record again
-                </Text>
-              </Pressable>
-            )}
             <PrimaryButton
               label={primaryLabel(phase)}
-              disabled={phase !== 'structured'}
+              disabled={phase !== "ready"}
               onPress={onContinue}
             />
           </View>
@@ -207,40 +152,52 @@ const useStyles = makeStyles((theme) => ({
   topBar: {
     paddingTop: theme.spacing.s3,
     paddingHorizontal: theme.spacing.s6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  progressSlot: {
+    paddingHorizontal: theme.spacing.s6,
+    paddingTop: theme.spacing.s2,
   },
   content: {
+    flex: 1,
     paddingHorizontal: theme.spacing.s6,
     paddingTop: theme.spacing.s4,
-    paddingBottom: theme.spacing.s6,
   },
   micArea: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: theme.spacing.s6,
   },
   subSlot: {
     height: verticalScale(60),
     marginTop: theme.spacing.s5,
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: theme.spacing.s4,
   },
-  encryptedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: theme.spacing.s3,
+  capturedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(10),
+  },
+  capturedDot: {
+    width: moderateScale(22),
+    height: moderateScale(22),
+    borderRadius: moderateScale(11),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  transcriptSlot: {
+    flex: 1,
+    minHeight: verticalScale(110),
+    marginTop: theme.spacing.s4,
   },
   ctaArea: {
     paddingHorizontal: spacing.s6,
     paddingTop: 8,
-    gap: 8,
-  },
-  recordAgain: {
-    alignSelf: 'center',
-    paddingVertical: 4,
+    paddingBottom: spacing.s4,
   },
 }));

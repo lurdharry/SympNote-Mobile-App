@@ -11,7 +11,18 @@ const OnboardingLayout: React.FC = () => {
         animationDuration: 350,
         contentStyle: { backgroundColor: colors.bgPrimary },
       }}
-    />
+    >
+      <Stack.Screen
+        name="paywall"
+        options={{
+          presentation: 'modal',
+          animation: 'slide_from_bottom',
+          animationDuration: 300,
+          gestureEnabled: true,
+        }}
+      />
+    </Stack>
   );
-}
+};
+
 export default OnboardingLayout;
