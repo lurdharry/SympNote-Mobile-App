@@ -80,8 +80,9 @@ const AppointmentNew: React.FC = () => {
       specialty: specialty.trim() || 'General',
       date: when.toISOString(),
       relatedRecordingIds: [],
-      summary: null,
-      generatedAt: null,
+      brief: null,
+      briefGeneratedAt: null,
+      briefSourceRecordingIds: [],
     });
     hapticSuccess();
     router.back();

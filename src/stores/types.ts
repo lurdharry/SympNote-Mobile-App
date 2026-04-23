@@ -47,8 +47,26 @@ export type Recording = {
  * bring up with the doctor; they persist even if the summary is
  * regenerated.
  */
+/**
+ * Synthesized visit brief — what the user walks into their appointment
+ * with. Built by the AI from the recordings in `briefSourceRecordingIds`.
+ *
+ *  - `summary`: one-paragraph framing for the doctor to read first.
+ *  - `topConcerns`: ranked 3-5 concerns with a one-line detail each.
+ *  - `timeline`: chronological bullets drawn from recent entries.
+ *  - `patterns`: triggers / worsens / improves observations.
+ *  - `medications`: meds mentioned across entries.
+ *  - `questions`: questions to ask the doctor (AI-seeded, user-editable).
+ *  - `flags`: concerning observations (high severity, worsening, etc.).
+ */
 export type AppointmentBrief = {
+  summary: string;
+  topConcerns: Array<{ label: string; detail: string }>;
+  timeline: Array<{ date: string; line: string }>;
+  patterns: string[];
+  medications: string[];
   questions: string[];
+  flags: string[];
 };
 
 export type Appointment = {
@@ -57,15 +75,22 @@ export type Appointment = {
   doctorName: string;
   specialty: string;
   date: string;
-  relatedRecordingIds: string[];
-  summary: string | null;
-  generatedAt: string | null;
   /**
-   * Optional for forward compatibility with existing MMKV-persisted
-   * records written before the field was added. Treat `undefined` as
-   * an empty brief.
+   * Recordings the user explicitly attached to this appointment.
+   * Optional — the default brief generator uses "last 30 days" unless
+   * the user has curated a specific set.
    */
-  brief?: AppointmentBrief;
+  relatedRecordingIds: string[];
+  /** The generated structured brief. Null until generated. */
+  brief: AppointmentBrief | null;
+  /** When the current brief was generated. Null when none. */
+  briefGeneratedAt: string | null;
+  /**
+   * Which recordings fed the last generation. Used to detect staleness:
+   * if recordings added since `briefGeneratedAt` aren't in this set, the
+   * brief is stale and can be regenerated.
+   */
+  briefSourceRecordingIds: string[];
 };
 
 export type SubscriptionStatus = 'trial' | 'active' | 'expired' | 'none';

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -7,11 +8,13 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import {
+  ArrowRight,
   Calendar,
   ChevronDown,
   Clipboard,
   Download,
   Share as ShareIcon,
+  Sparkles,
 } from 'lucide-react-native';
 import {
   makeStyles,
@@ -69,7 +72,20 @@ const exportRowPdf = async (row: PrepRow): Promise<void> => {
 export const AppointmentCard: React.FC<AppointmentCardProps> = ({ row, open, onToggle }) => {
   const { colors } = useTheme();
   const styles = useStyles();
+  const router = useRouter();
   const [section, setSection] = useState<PrepSectionId>('summary');
+
+  const openFullBrief = () => {
+    hapticLight();
+    router.push(`/appointment/${row.id}`);
+  };
+
+  const briefChip =
+    row.briefState === 'none'
+      ? { label: 'Draft visit brief', tint: colors.accent, bg: colors.accent + '1A' }
+      : row.briefState === 'stale'
+        ? { label: 'New entries · Refresh brief', tint: colors.gold, bg: colors.gold + '1A' }
+        : { label: 'View full brief', tint: colors.accent, bg: colors.accent + '1A' };
 
   const rotate = useSharedValue(0);
   useEffect(() => {
@@ -143,6 +159,23 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({ row, open, onT
 
         {open && (
           <View style={[styles.body, { borderTopColor: colors.border }]}>
+            <Pressable
+              onPress={openFullBrief}
+              style={[styles.briefChip, { backgroundColor: briefChip.bg }]}
+            >
+              <Sparkles size={14} color={briefChip.tint} strokeWidth={2.2} />
+              <Text
+                style={[
+                  typography.label,
+                  styles.briefChipText,
+                  { color: briefChip.tint },
+                ]}
+              >
+                {briefChip.label}
+              </Text>
+              <ArrowRight size={14} color={briefChip.tint} strokeWidth={2.2} />
+            </Pressable>
+
             <View style={{ padding: 16 }}>
               <SectionTabs value={section} onChange={setSection} accent={row.color} />
             </View>
@@ -251,6 +284,20 @@ const useStyles = makeStyles((theme) => ({
   body: {
     borderTopWidth: StyleSheet.hairlineWidth,
     backgroundColor: 'rgba(251,248,242,0.4)',
+  },
+  briefChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(8),
+    marginHorizontal: moderateScale(16),
+    marginTop: moderateScale(12),
+    paddingHorizontal: moderateScale(14),
+    paddingVertical: verticalScale(10),
+    borderRadius: theme.radius.full,
+  },
+  briefChipText: {
+    flex: 1,
+    fontFamily: 'DMSans_600SemiBold',
   },
   actions: {
     flexDirection: 'row',

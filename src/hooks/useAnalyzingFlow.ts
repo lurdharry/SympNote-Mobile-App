@@ -78,8 +78,9 @@ const seedPendingAppointment = (
     specialty: lead?.role ?? 'General',
     date: iso,
     relatedRecordingIds: [],
-    summary: null,
-    generatedAt: null,
+    brief: null,
+    briefGeneratedAt: null,
+    briefSourceRecordingIds: [],
   });
 };
 

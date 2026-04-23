@@ -3,9 +3,22 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { parseISO, subDays } from 'date-fns';
 import { sortBy, uniq } from 'lodash';
 import { mmkvStorage } from './mmkv';
-import { Appointment } from './types';
+import { Appointment, AppointmentBrief } from './types';
 
 const byDateAsc = (a: Appointment): number => parseISO(a.date).getTime();
+
+/** An AppointmentBrief shell — used when the user edits questions
+ *  before the full AI brief has been generated. The AI generation step
+ *  later overwrites all fields except `questions`, which it merges. */
+const emptyBrief = (): AppointmentBrief => ({
+  summary: '',
+  topConcerns: [],
+  timeline: [],
+  patterns: [],
+  medications: [],
+  questions: [],
+  flags: [],
+});
 
 /** Apply `patch` to the appointment with the given id, leaving others alone. */
 const patchOne = (
@@ -19,7 +32,9 @@ const patchQuestions = (
   next: (questions: string[]) => string[],
 ): Appointment => ({
   ...a,
-  brief: { questions: next(a.brief?.questions ?? []) },
+  brief: a.brief
+    ? { ...a.brief, questions: next(a.brief.questions) }
+    : { ...emptyBrief(), questions: next([]) },
 });
 
 interface State {
@@ -42,6 +57,18 @@ interface Actions {
   removeQuestion: (appointmentId: string, index: number) => void;
   /** Replace an existing question in place. */
   updateQuestion: (appointmentId: string, index: number, next: string) => void;
+  /**
+   * Commit a freshly generated AI brief. Preserves user-edited questions
+   * by merging them in on top of whatever the AI returned, so manual
+   * edits survive regeneration.
+   */
+  setBrief: (
+    appointmentId: string,
+    brief: AppointmentBrief,
+    sourceRecordingIds: string[],
+  ) => void;
+  /** Forget the brief (lets the user regenerate from scratch). */
+  clearBrief: (appointmentId: string) => void;
 }
 
 export const useAppointmentsStore = create<State & Actions>()(
@@ -123,6 +150,37 @@ export const useAppointmentsStore = create<State & Actions>()(
           ),
         }));
       },
+
+      setBrief: (appointmentId, brief, sourceRecordingIds) =>
+        set((s) => ({
+          appointments: patchOne(s.appointments, appointmentId, (a) => {
+            // Preserve user-authored questions by prepending them to
+            // whatever the AI returned (dedup by lowercase match).
+            const userQs = a.brief?.questions ?? [];
+            const aiQs = brief.questions;
+            const seen = new Set(userQs.map((q) => q.trim().toLowerCase()));
+            const merged = [
+              ...userQs,
+              ...aiQs.filter((q) => !seen.has(q.trim().toLowerCase())),
+            ];
+            return {
+              ...a,
+              brief: { ...brief, questions: merged },
+              briefGeneratedAt: new Date().toISOString(),
+              briefSourceRecordingIds: sourceRecordingIds,
+            };
+          }),
+        })),
+
+      clearBrief: (appointmentId) =>
+        set((s) => ({
+          appointments: patchOne(s.appointments, appointmentId, (a) => ({
+            ...a,
+            brief: null,
+            briefGeneratedAt: null,
+            briefSourceRecordingIds: [],
+          })),
+        })),
     }),
     {
       name: 'appointments',

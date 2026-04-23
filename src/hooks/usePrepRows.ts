@@ -2,8 +2,18 @@ import { useMemo } from 'react';
 import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { useRecordingsStore } from '@/stores/useRecordingsStore';
 import { deriveAppointmentBrief } from '@/utils/prep';
+import { isBriefStale } from '@/utils/briefSource';
 import { daysUntil, formatDate, formatTime } from '@/utils/date';
 import type { PrepContent } from '@/constants/demo/prep';
+
+/**
+ * Brief generation state the Prep card surfaces so the user knows
+ * whether to draft, revisit, or just view the AI brief.
+ *  - `none`: never generated. Card shows "Draft brief →".
+ *  - `ready`: brief exists and matches current entries.
+ *  - `stale`: brief exists but entries have changed since generation.
+ */
+export type PrepBriefState = 'none' | 'ready' | 'stale';
 
 export interface PrepRow {
   id: string;
@@ -14,6 +24,7 @@ export interface PrepRow {
   inDays: number;
   color: string;
   content: PrepContent;
+  briefState: PrepBriefState;
 }
 
 const ACCENTS = ['#2C6E6B', '#E07A5F', '#D97706', '#5A8F6E', '#F6C06A'];
@@ -32,6 +43,11 @@ export const usePrepRows = (): PrepRow[] => {
     () =>
       storeAppts.map((a, i) => {
         const derived = deriveAppointmentBrief(a, storeRecordings);
+        const briefState: PrepBriefState = !a.brief?.summary
+          ? 'none'
+          : isBriefStale(a, storeRecordings)
+            ? 'stale'
+            : 'ready';
         return {
           id: a.id,
           doc: a.doctorName,
@@ -47,6 +63,7 @@ export const usePrepRows = (): PrepRow[] => {
             meds: derived.meds,
             questions: a.brief?.questions ?? [],
           },
+          briefState,
         };
       }),
     [storeAppts, storeRecordings],

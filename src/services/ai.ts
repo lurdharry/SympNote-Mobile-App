@@ -1,7 +1,13 @@
 import { format, parseISO } from 'date-fns';
 import { sortBy } from 'lodash';
-import type { PersonalizationProfile, Recording } from '@/stores/types';
+import type {
+  Appointment,
+  AppointmentBrief,
+  PersonalizationProfile,
+  Recording,
+} from '@/stores/types';
 import {
+  BRIEF_SYSTEM_PROMPT,
   STRUCTURE_SYSTEM_PROMPT,
   SUMMARY_SYSTEM_PROMPT,
   buildPatientContext,
@@ -134,6 +140,116 @@ export async function generateAppointmentSummary(
     ],
     generationConfig: { temperature: 0.4, maxOutputTokens: 1200 },
   });
+}
+
+const EMPTY_BRIEF: AppointmentBrief = {
+  summary: '',
+  topConcerns: [],
+  timeline: [],
+  patterns: [],
+  medications: [],
+  questions: [],
+  flags: [],
+};
+
+const asStringArray = (v: unknown): string[] =>
+  Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x.trim().length > 0) : [];
+
+const asLabeledArray = (
+  v: unknown,
+): AppointmentBrief['topConcerns'] => {
+  if (!Array.isArray(v)) return [];
+  return v
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      const label = (item as { label?: unknown }).label;
+      const detail = (item as { detail?: unknown }).detail;
+      if (typeof label !== 'string' || !label.trim()) return null;
+      return {
+        label: label.trim(),
+        detail: typeof detail === 'string' ? detail.trim() : '',
+      };
+    })
+    .filter((x): x is { label: string; detail: string } => x !== null);
+};
+
+const asTimelineArray = (
+  v: unknown,
+): AppointmentBrief['timeline'] => {
+  if (!Array.isArray(v)) return [];
+  return v
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      const date = (item as { date?: unknown }).date;
+      const line = (item as { line?: unknown }).line;
+      if (typeof date !== 'string' || typeof line !== 'string') return null;
+      if (!date.trim() || !line.trim()) return null;
+      return { date: date.trim(), line: line.trim() };
+    })
+    .filter((x): x is { date: string; line: string } => x !== null);
+};
+
+const stripJsonFence = (text: string): string => {
+  const trimmed = text.trim();
+  if (trimmed.startsWith('```')) {
+    return trimmed.replace(/^```[a-z]*\s*/i, '').replace(/```\s*$/, '').trim();
+  }
+  return trimmed;
+};
+
+const parseBrief = (text: string): AppointmentBrief => {
+  const raw = JSON.parse(stripJsonFence(text)) as Record<string, unknown>;
+  return {
+    summary: typeof raw.summary === 'string' ? raw.summary.trim() : '',
+    topConcerns: asLabeledArray(raw.topConcerns),
+    timeline: asTimelineArray(raw.timeline),
+    patterns: asStringArray(raw.patterns),
+    medications: asStringArray(raw.medications),
+    questions: asStringArray(raw.questions),
+    flags: asStringArray(raw.flags),
+  };
+};
+
+const formatAppointmentHeader = (appt: Appointment): string =>
+  `Upcoming appointment: ${appt.doctorName} (${appt.specialty}) on ${format(parseISO(appt.date), 'PPPP')}.`;
+
+/**
+ * Generate a structured visit brief from a list of recordings for a
+ * specific appointment. Uses the appointment's doctor + specialty +
+ * date to tailor tone and question selection. Falls back to an empty
+ * brief shell if JSON parsing fails (caller can retry).
+ */
+export async function generateAppointmentBrief(
+  appointment: Appointment,
+  recordings: Recording[],
+  profile?: PersonalizationProfile | null,
+): Promise<AppointmentBrief> {
+  if (recordings.length === 0) {
+    return EMPTY_BRIEF;
+  }
+  const logs = sortBy(recordings, (r) => parseISO(r.createdAt).getTime())
+    .map(formatLog)
+    .join('\n\n');
+
+  const body = `${formatAppointmentHeader(appointment)}\n\nEntries the patient has logged since starting to track:\n\n${logs}`;
+
+  const text = await callGemini(SUMMARY_MODEL, {
+    systemInstruction: { parts: [{ text: BRIEF_SYSTEM_PROMPT }] },
+    contents: [{ parts: [{ text: withContext(body, profile) }] }],
+    generationConfig: {
+      temperature: 0.3,
+      responseMimeType: 'application/json',
+      maxOutputTokens: 2048,
+    },
+  });
+
+  try {
+    return parseBrief(text);
+  } catch {
+    // Fall back to a shell brief carrying the raw prose. Caller can
+    // retry; in the meantime the user still sees something useful.
+    return { ...EMPTY_BRIEF, summary: text.slice(0, 800) };
+  }
 }
 
 export { GeminiQuotaError };
