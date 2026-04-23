@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
+  Keyboard,
   Platform,
   Pressable,
   ScrollView,
@@ -14,30 +15,43 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
 import { addDays, format, setHours, setMinutes, setSeconds } from 'date-fns';
-import { Calendar, Clock, X as XIcon } from 'lucide-react-native';
+import { Check } from 'lucide-react-native';
 import {
+  fontScale,
   makeStyles,
   moderateScale,
   scale,
-  shadows,
   spacing,
   typography,
   useTheme,
   verticalScale,
 } from '@/theme';
-import { SceneTransition } from '@/components/navigation/SceneTransition';
+import { BackButton } from '@/components/ui/BackButton';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { useProfileStore } from '@/stores/useProfileStore';
 import { hapticLight, hapticSuccess } from '@/services/haptics';
 import { uuid } from '@/utils/uuid';
+import type { Clinician } from '@/stores/types';
 
 const DEFAULT_TIME = { hours: 9, minutes: 0 };
 
 const defaultDate = (): Date => {
   const d = addDays(new Date(), 1);
-  return setSeconds(setMinutes(setHours(d, DEFAULT_TIME.hours), DEFAULT_TIME.minutes), 0);
+  return setSeconds(
+    setMinutes(setHours(d, DEFAULT_TIME.hours), DEFAULT_TIME.minutes),
+    0,
+  );
 };
+
+const initialsFor = (name: string): string =>
+  name
+    .replace(/^(dr\.?|prof\.?)\s*/i, '')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join('') || '?';
 
 const AppointmentNew: React.FC = () => {
   const router = useRouter();
@@ -66,21 +80,27 @@ const AppointmentNew: React.FC = () => {
   const [when, setWhen] = useState<Date>(initial.when);
   const [pickerMode, setPickerMode] = useState<'date' | 'time' | null>(null);
 
-  const canSave = doctorName.trim().length > 0;
+  const trimmedDoctor = doctorName.trim();
+  const canSave = trimmedDoctor.length > 0;
 
-  const pickClinician = (name: string, role: string) => {
+  const selectedFromTeam = careTeam.find(
+    (c) => c.name.toLowerCase() === trimmedDoctor.toLowerCase(),
+  );
+
+  const pickClinician = (c: Clinician) => {
     hapticLight();
-    setDoctorName(name);
-    setSpecialty(role);
+    Keyboard.dismiss();
+    setDoctorName(c.name);
+    setSpecialty(c.role);
   };
 
   const openPicker = (mode: 'date' | 'time') => {
     hapticLight();
-    setPickerMode(mode);
+    Keyboard.dismiss();
+    setPickerMode((prev) => (prev === mode ? null : mode));
   };
 
   const onPickerChange = (event: DateTimePickerEvent, selected?: Date) => {
-    // Android closes the picker after every interaction; iOS keeps it open.
     if (Platform.OS === 'android') setPickerMode(null);
     if (event.type === 'dismissed') return;
     if (selected) setWhen(selected);
@@ -88,13 +108,12 @@ const AppointmentNew: React.FC = () => {
 
   const save = () => {
     if (!canSave) return;
-    const trimmedDoc = doctorName.trim();
     const trimmedSpec = specialty.trim() || 'General';
-    const title = `${trimmedSpec} with ${trimmedDoc}`;
+    const title = `${trimmedSpec} with ${trimmedDoctor}`;
     if (isEdit && existing) {
       useAppointmentsStore.getState().update(existing.id, {
         title,
-        doctorName: trimmedDoc,
+        doctorName: trimmedDoctor,
         specialty: trimmedSpec,
         date: when.toISOString(),
       });
@@ -102,7 +121,7 @@ const AppointmentNew: React.FC = () => {
       useAppointmentsStore.getState().add({
         id: uuid(),
         title,
-        doctorName: trimmedDoc,
+        doctorName: trimmedDoctor,
         specialty: trimmedSpec,
         date: when.toISOString(),
         status: 'upcoming',
@@ -117,150 +136,179 @@ const AppointmentNew: React.FC = () => {
     router.back();
   };
 
+  const dateLabel = format(when, 'EEE, MMM d');
+  const timeLabel = format(when, 'h:mm a');
+
   return (
-    <SceneTransition mode="sheet-up">
-      <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
-        <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-          <View style={styles.header}>
-            <View style={{ flex: 1 }}>
-              <Text
-                style={[
-                  typography.label,
-                  {
-                    color: colors.accent,
-                    fontFamily: 'DMSans_600SemiBold',
-                    letterSpacing: 0.4,
-                  },
-                ]}
-              >
-                {isEdit ? 'EDIT APPOINTMENT' : 'NEW APPOINTMENT'}
-              </Text>
-              <Text style={[typography.h2, { color: colors.textPrimary, marginTop: 2 }]}>
-                {isEdit ? 'Edit visit' : 'Add a visit'}
-              </Text>
-            </View>
-            <Pressable
-              onPress={() => router.back()}
-              hitSlop={8}
-              style={[styles.closeBtn, { backgroundColor: colors.bgMuted }]}
-              accessibilityRole="button"
-              accessibilityLabel="Close"
-            >
-              <XIcon size={18} color={colors.textPrimary} strokeWidth={2} />
-            </Pressable>
-          </View>
+    <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={styles.header}>
+          <BackButton onPress={() => router.back()} />
+          <Text style={[typography.h2, { color: colors.textPrimary }]}>
+            {isEdit ? 'Edit visit' : 'New visit'}
+          </Text>
+          <View style={styles.headerSpacer} />
+        </View>
 
           <ScrollView
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
             {careTeam.length > 0 && (
-              <View style={{ marginTop: spacing.s3 }}>
-                <Text style={[styles.fieldLabel, { color: colors.textTertiary }]}>
-                  FROM YOUR CARE TEAM
+              <View>
+                <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+                  Your care team
                 </Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.chipRow}
-                >
+                <View style={styles.teamGrid}>
                   {careTeam.map((c) => {
-                    const active = c.name === doctorName;
+                    const active = selectedFromTeam?.name === c.name;
                     return (
                       <Pressable
                         key={`${c.name}-${c.role}`}
-                        onPress={() => pickClinician(c.name, c.role)}
+                        onPress={() => pickClinician(c)}
                         style={[
-                          styles.clinicianChip,
+                          styles.teamCard,
                           {
                             backgroundColor: active
-                              ? colors.accent
+                              ? colors.accent + '14'
                               : colors.bgSurface,
                             borderColor: active ? colors.accent : colors.border,
                           },
                         ]}
                       >
-                        <Text
+                        <View
                           style={[
-                            typography.label,
+                            styles.avatar,
                             {
-                              color: active ? '#FFFFFF' : colors.textPrimary,
-                              fontFamily: 'DMSans_600SemiBold',
+                              backgroundColor: active
+                                ? colors.accent
+                                : colors.bgMuted,
                             },
                           ]}
                         >
-                          {c.name}
-                        </Text>
-                        <Text
-                          style={[
-                            typography.caption,
-                            {
-                              color: active
-                                ? 'rgba(255,255,255,0.85)'
-                                : colors.textTertiary,
-                            },
-                          ]}
-                        >
-                          {c.role}
-                        </Text>
+                          <Text
+                            style={[
+                              styles.avatarText,
+                              {
+                                color: active ? '#FFFFFF' : colors.textPrimary,
+                              },
+                            ]}
+                          >
+                            {initialsFor(c.name)}
+                          </Text>
+                        </View>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text
+                            style={[
+                              typography.body,
+                              {
+                                color: colors.textPrimary,
+                                fontFamily: 'DMSans_600SemiBold',
+                              },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {c.name}
+                          </Text>
+                          <Text
+                            style={[
+                              typography.caption,
+                              { color: colors.textTertiary, marginTop: 1 },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {c.role}
+                          </Text>
+                        </View>
+                        {active && (
+                          <Check
+                            size={moderateScale(16)}
+                            color={colors.accent}
+                            strokeWidth={2.5}
+                          />
+                        )}
                       </Pressable>
                     );
                   })}
-                </ScrollView>
+                </View>
               </View>
             )}
 
-            <TextField
-              label="Doctor"
-              placeholder="e.g. Dr. Chen"
-              value={doctorName}
-              onChangeText={setDoctorName}
-            />
-            <TextField
-              label="Specialty"
-              placeholder="e.g. Rheumatology"
-              value={specialty}
-              onChangeText={setSpecialty}
-            />
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+              {careTeam.length > 0 ? 'Or add someone new' : 'Clinician'}
+            </Text>
+            <View style={styles.manualGroup}>
+              <FieldRow
+                placeholder="Doctor's name"
+                value={doctorName}
+                onChangeText={setDoctorName}
+                autoFocus={careTeam.length === 0 && !isEdit}
+              />
+              <View style={[styles.fieldDivider, { backgroundColor: colors.border }]} />
+              <FieldRow
+                placeholder="Specialty (optional)"
+                value={specialty}
+                onChangeText={setSpecialty}
+              />
+            </View>
 
-            <Text style={[styles.fieldLabel, { color: colors.textTertiary }]}>WHEN</Text>
-            <View style={styles.whenRow}>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+              When
+            </Text>
+            <View
+              style={[
+                styles.whenCard,
+                { backgroundColor: colors.bgSurface, borderColor: colors.border },
+              ]}
+            >
               <Pressable
                 onPress={() => openPicker('date')}
                 style={[
-                  styles.whenTile,
-                  { backgroundColor: colors.bgSurface, borderColor: colors.border },
-                  shadows.card,
+                  styles.whenSegment,
+                  pickerMode === 'date' && {
+                    backgroundColor: colors.accent + '10',
+                  },
                 ]}
               >
-                <Calendar size={moderateScale(14)} color={colors.accent} strokeWidth={2} />
-                <Text style={[typography.caption, { color: colors.textTertiary }]}>
-                  DATE
+                <Text style={[styles.whenHint, { color: colors.textTertiary }]}>
+                  Date
                 </Text>
                 <Text style={[styles.whenValue, { color: colors.textPrimary }]}>
-                  {format(when, 'EEE, MMM d')}
+                  {dateLabel}
                 </Text>
               </Pressable>
+              <View
+                style={[styles.whenDivider, { backgroundColor: colors.border }]}
+              />
               <Pressable
                 onPress={() => openPicker('time')}
                 style={[
-                  styles.whenTile,
-                  { backgroundColor: colors.bgSurface, borderColor: colors.border },
-                  shadows.card,
+                  styles.whenSegment,
+                  pickerMode === 'time' && {
+                    backgroundColor: colors.accent + '10',
+                  },
                 ]}
               >
-                <Clock size={moderateScale(14)} color={colors.accent} strokeWidth={2} />
-                <Text style={[typography.caption, { color: colors.textTertiary }]}>
-                  TIME
+                <Text style={[styles.whenHint, { color: colors.textTertiary }]}>
+                  Time
                 </Text>
                 <Text style={[styles.whenValue, { color: colors.textPrimary }]}>
-                  {format(when, 'h:mm a')}
+                  {timeLabel}
                 </Text>
               </Pressable>
             </View>
 
             {pickerMode && (
-              <View style={{ marginTop: spacing.s3 }}>
+              <View
+                style={[
+                  styles.pickerWrap,
+                  {
+                    backgroundColor: colors.bgSurface,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
                 <DateTimePicker
                   value={when}
                   mode={pickerMode}
@@ -272,11 +320,15 @@ const AppointmentNew: React.FC = () => {
                   <Pressable
                     onPress={() => setPickerMode(null)}
                     style={styles.doneRow}
+                    hitSlop={8}
                   >
                     <Text
                       style={[
                         typography.label,
-                        { color: colors.accent, fontFamily: 'DMSans_600SemiBold' },
+                        {
+                          color: colors.accent,
+                          fontFamily: 'DMSans_700Bold',
+                        },
                       ]}
                     >
                       Done
@@ -292,7 +344,7 @@ const AppointmentNew: React.FC = () => {
                   typography.caption,
                   {
                     color: colors.textTertiary,
-                    marginTop: spacing.s4,
+                    marginTop: spacing.s5,
                     textAlign: 'center',
                   },
                 ]}
@@ -303,55 +355,60 @@ const AppointmentNew: React.FC = () => {
           </ScrollView>
 
           <View style={styles.ctaSlot}>
+            {!canSave && (
+              <Text
+                style={[
+                  typography.caption,
+                  {
+                    color: colors.textTertiary,
+                    textAlign: 'center',
+                    marginBottom: spacing.s2,
+                  },
+                ]}
+              >
+                Add a clinician name to continue
+              </Text>
+            )}
             <PrimaryButton
               label={isEdit ? 'Save changes' : 'Add appointment'}
               onPress={save}
               disabled={!canSave}
             />
-          </View>
-        </SafeAreaView>
-      </View>
-    </SceneTransition>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 };
 
-interface TextFieldProps {
-  label: string;
+interface FieldRowProps {
   value: string;
   onChangeText: (v: string) => void;
   placeholder?: string;
+  autoFocus?: boolean;
 }
 
-const TextField: React.FC<TextFieldProps> = ({
-  label,
+const FieldRow: React.FC<FieldRowProps> = ({
   value,
   onChangeText,
   placeholder,
+  autoFocus,
 }) => {
   const { colors } = useTheme();
   const styles = useStyles();
   return (
-    <View style={{ marginTop: spacing.s5 }}>
-      <Text style={[styles.fieldLabel, { color: colors.textTertiary }]}>
-        {label.toUpperCase()}
-      </Text>
-      <View
-        style={[
-          styles.input,
-          { backgroundColor: colors.bgSurface, borderColor: colors.border },
-          shadows.card,
-        ]}
-      >
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          placeholderTextColor={colors.textTertiary}
-          autoCapitalize="words"
-          style={[typography.bodyLarge, { color: colors.textPrimary }]}
-        />
-      </View>
-    </View>
+    <TextInput
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      placeholderTextColor={colors.textTertiary}
+      autoCapitalize="words"
+      autoFocus={autoFocus}
+      style={[
+        typography.bodyLarge,
+        styles.fieldInput,
+        { color: colors.textPrimary },
+      ]}
+    />
   );
 };
 
@@ -362,74 +419,103 @@ const useStyles = makeStyles((theme) => ({
   safe: { flex: 1 },
   header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.s6,
     paddingTop: theme.spacing.s4,
-    paddingBottom: theme.spacing.s3,
-    gap: moderateScale(12),
+    paddingBottom: theme.spacing.s2,
   },
-  closeBtn: {
-    width: moderateScale(40),
-    height: moderateScale(40),
-    borderRadius: moderateScale(20),
-    alignItems: 'center',
-    justifyContent: 'center',
+  headerSpacer: {
+    width: moderateScale(36),
   },
   content: {
     paddingHorizontal: theme.spacing.s6,
     paddingTop: theme.spacing.s3,
     paddingBottom: theme.spacing.s6,
   },
-  fieldLabel: {
-    ...theme.typography.label,
+  sectionLabel: {
+    ...theme.typography.caption,
     fontFamily: 'DMSans_600SemiBold',
-    letterSpacing: 0.3,
     marginTop: theme.spacing.s5,
-    marginBottom: 6,
+    marginBottom: theme.spacing.s2,
   },
-  input: {
-    borderRadius: theme.radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
+  teamGrid: {
+    gap: moderateScale(8),
+  },
+  teamCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(12),
     paddingHorizontal: scale(14),
     paddingVertical: verticalScale(12),
-  },
-  whenRow: {
-    flexDirection: 'row',
-    gap: moderateScale(10),
-  },
-  whenTile: {
-    flex: 1,
-    paddingHorizontal: scale(14),
-    paddingVertical: verticalScale(14),
     borderRadius: theme.radius.md,
     borderWidth: StyleSheet.hairlineWidth,
-    gap: moderateScale(6),
+  },
+  avatar: {
+    width: moderateScale(36),
+    height: moderateScale(36),
+    borderRadius: moderateScale(18),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontFamily: 'DMSans_700Bold',
+    fontSize: fontScale(13),
+    letterSpacing: 0.2,
+  },
+  manualGroup: {
+    borderRadius: theme.radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.bgSurface,
+    overflow: 'hidden',
+  },
+  fieldInput: {
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(14),
+  },
+  fieldDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: scale(14),
+  },
+  whenCard: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    borderRadius: theme.radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+  },
+  whenSegment: {
+    flex: 1,
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(12),
+    gap: 2,
+  },
+  whenDivider: {
+    width: StyleSheet.hairlineWidth,
+    marginVertical: verticalScale(8),
+  },
+  whenHint: {
+    ...theme.typography.caption,
   },
   whenValue: {
     ...theme.typography.bodyLarge,
     fontFamily: 'DMSans_600SemiBold',
-    marginTop: 2,
+  },
+  pickerWrap: {
+    marginTop: theme.spacing.s3,
+    borderRadius: theme.radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: spacing.s3,
   },
   doneRow: {
     alignItems: 'flex-end',
     paddingVertical: verticalScale(6),
+    paddingHorizontal: scale(6),
   },
   ctaSlot: {
     paddingHorizontal: spacing.s6,
     paddingBottom: spacing.s6,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    gap: moderateScale(8),
-    paddingVertical: verticalScale(2),
-    paddingRight: scale(4),
-  },
-  clinicianChip: {
-    paddingHorizontal: scale(14),
-    paddingVertical: verticalScale(10),
-    borderRadius: theme.radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    gap: moderateScale(2),
+    paddingTop: spacing.s2,
   },
 }));
