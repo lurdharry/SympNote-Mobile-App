@@ -20,8 +20,10 @@ import { TimelineCard } from '@/components/home/TimelineCard';
 import { TodayEmpty } from '@/components/home/TodayEmpty';
 import { InsightNudge } from '@/components/home/InsightNudge';
 import { FirstEntryHero } from '@/components/home/FirstEntryHero';
+import { PostVisitPrompt } from '@/components/home/PostVisitPrompt';
 import { RecordFAB } from '@/components/home/RecordFAB';
 import { SectionLabel } from '@/components/ui/SectionLabel';
+import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { useProfileStore } from '@/stores/useProfileStore';
 
 const TabHome: React.FC = () => {
@@ -37,7 +39,12 @@ const TabHome: React.FC = () => {
     greeting,
     recordingsCount,
     firstRecording,
+    unresolvedVisit,
   } = useHomeDashboard();
+
+  const markAttended = useAppointmentsStore((s) => s.markAttended);
+  const markMissed = useAppointmentsStore((s) => s.markMissed);
+  const markCancelled = useAppointmentsStore((s) => s.markCancelled);
 
   const firstEntryHeroDismissed = useProfileStore(
     (s) => s.firstEntryHeroDismissed,
@@ -89,6 +96,17 @@ const TabHome: React.FC = () => {
             contentContainerStyle={styles.scroll}
             showsVerticalScrollIndicator={false}
           >
+            {unresolvedVisit && (
+              <View style={{ marginBottom: spacing.s4 }}>
+                <PostVisitPrompt
+                  appointment={unresolvedVisit}
+                  onAttended={() => markAttended(unresolvedVisit.id)}
+                  onMissed={() => markMissed(unresolvedVisit.id)}
+                  onCancelled={() => markCancelled(unresolvedVisit.id)}
+                />
+              </View>
+            )}
+
             {showFirstEntryHero && firstRecording && (
               <View style={{ marginBottom: spacing.s4 }}>
                 <FirstEntryHero
