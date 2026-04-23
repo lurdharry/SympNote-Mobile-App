@@ -7,7 +7,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Sparkles } from 'lucide-react-native';
+import { CalendarPlus, Sparkles } from 'lucide-react-native';
 import {
   makeStyles,
   moderateScale,
@@ -24,34 +24,12 @@ import { daysUntil, formatDate, formatTime } from '@/utils/date';
 interface UpNextCardProps {
   appointment: Appointment | undefined;
   onPress: () => void;
+  /** Fires when the empty-state card is tapped so the user can add an appointment. */
+  onAdd?: () => void;
 }
 
-interface UpNextDisplay {
-  doctor: string;
-  specialty: string;
-  when: string;
-  timeLabel: string;
-}
-
-const displayFor = (appointment: Appointment | undefined): UpNextDisplay => {
-  if (!appointment) {
-    return {
-      doctor: 'Dr. Chen',
-      specialty: 'Rheumatology',
-      when: 'Fri Nov 28',
-      timeLabel: '2:00 PM · in 7d',
-    };
-  }
-  return {
-    doctor: appointment.doctorName,
-    specialty: appointment.specialty,
-    when: formatDate(appointment.date),
-    timeLabel: `${formatTime(appointment.date)} · in ${Math.max(0, daysUntil(appointment.date))}d`,
-  };
-};
-
-export const UpNextCard: React.FC<UpNextCardProps> = ({ appointment, onPress }) => {
-  useTheme();
+export const UpNextCard: React.FC<UpNextCardProps> = ({ appointment, onPress, onAdd }) => {
+  const { colors } = useTheme();
   const styles = useStyles();
   const opacity = useSharedValue(0);
   useEffect(() => {
@@ -65,7 +43,43 @@ export const UpNextCard: React.FC<UpNextCardProps> = ({ appointment, onPress }) 
     transform: [{ translateY: (1 - opacity.value) * 12 }],
   }));
 
-  const { doctor, specialty, when, timeLabel } = displayFor(appointment);
+  if (!appointment) {
+    return (
+      <Animated.View style={[{ marginTop: spacing.s3 }, style]}>
+        <Pressable
+          onPress={onAdd ?? onPress}
+          accessibilityRole="button"
+          accessibilityLabel="Add appointment"
+          style={[
+            styles.emptyCard,
+            { backgroundColor: colors.bgSurface, borderColor: colors.border },
+            shadows.card,
+          ]}
+        >
+          <View style={[styles.emptyIcon, { backgroundColor: colors.accent + '1A' }]}>
+            <CalendarPlus size={moderateScale(22)} color={colors.accent} strokeWidth={2} />
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.emptyEyebrow}>NEXT VISIT</Text>
+            <Text style={[typography.h3, { color: colors.textPrimary, marginTop: 2 }]}>
+              No appointment scheduled
+            </Text>
+            <Text
+              style={[
+                typography.caption,
+                { color: colors.textTertiary, marginTop: 4 },
+              ]}
+            >
+              Add one and Sympnote will prepare a visit brief for you.
+            </Text>
+          </View>
+        </Pressable>
+      </Animated.View>
+    );
+  }
+
+  const when = formatDate(appointment.date);
+  const timeLabel = `${formatTime(appointment.date)} · in ${Math.max(0, daysUntil(appointment.date))}d`;
 
   return (
     <Animated.View style={[{ marginTop: spacing.s3 }, style]}>
@@ -81,7 +95,7 @@ export const UpNextCard: React.FC<UpNextCardProps> = ({ appointment, onPress }) 
 
           <Text style={styles.eyebrow}>NEXT VISIT</Text>
           <Text style={[typography.h1, { color: '#FFFFFF', marginTop: 4 }]}>
-            {doctor}
+            {appointment.doctorName}
           </Text>
           <Text
             style={[
@@ -89,7 +103,7 @@ export const UpNextCard: React.FC<UpNextCardProps> = ({ appointment, onPress }) 
               { color: 'rgba(255,255,255,0.75)', marginTop: 2 },
             ]}
           >
-            {specialty}
+            {appointment.specialty}
           </Text>
 
           <View style={styles.foot}>
@@ -169,5 +183,26 @@ const useStyles = makeStyles((theme) => ({
     paddingVertical: verticalScale(6),
     borderRadius: theme.radius.full,
     backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  emptyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(12),
+    padding: moderateScale(16),
+    borderRadius: theme.radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  emptyIcon: {
+    width: moderateScale(48),
+    height: moderateScale(48),
+    borderRadius: moderateScale(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyEyebrow: {
+    ...typography.caption,
+    color: theme.colors.accent,
+    letterSpacing: 1.2,
+    fontFamily: 'DMSans_600SemiBold',
   },
 }));

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,54 +10,75 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X as XIcon } from 'lucide-react-native';
-import { makeStyles, moderateScale, scale, shadows, spacing, typography, useTheme, verticalScale } from '../theme';
-import { SceneTransition } from '../components/navigation/SceneTransition';
-import { PrimaryButton } from '../components/ui/PrimaryButton';
-import { useAppointmentsStore } from '../stores/useAppointmentsStore';
-import { hapticSuccess } from '../services/haptics';
-import { uuid } from '../utils/uuid';
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
+import { addDays, format, setHours, setMinutes, setSeconds } from 'date-fns';
+import { Calendar, Clock, X as XIcon } from 'lucide-react-native';
+import {
+  makeStyles,
+  moderateScale,
+  scale,
+  shadows,
+  spacing,
+  typography,
+  useTheme,
+  verticalScale,
+} from '@/theme';
+import { SceneTransition } from '@/components/navigation/SceneTransition';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
+import { useProfileStore } from '@/stores/useProfileStore';
+import { hapticLight, hapticSuccess } from '@/services/haptics';
+import { uuid } from '@/utils/uuid';
 
-/**
- * Minimal appointment creation modal — doctor, specialty, date, time.
- *
- * Date + time take free-text input for now; real date/time pickers can
- * replace these without changing the surrounding shell. Parsing is
- * forgiving: we try Date.parse of "doctorName [spec] YYYY-MM-DD HH:mm"
- * and fall back to a composed ISO string.
- */
+const DEFAULT_TIME = { hours: 9, minutes: 0 };
+
+const defaultDate = (): Date => {
+  const d = addDays(new Date(), 1);
+  return setSeconds(setMinutes(setHours(d, DEFAULT_TIME.hours), DEFAULT_TIME.minutes), 0);
+};
+
 const AppointmentNew: React.FC = () => {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useStyles();
+  const careTeam = useProfileStore((s) => s.personalization?.careTeam ?? []);
 
   const [doctorName, setDoctorName] = useState('');
   const [specialty, setSpecialty] = useState('');
-  const [date, setDate] = useState(''); // YYYY-MM-DD
-  const [time, setTime] = useState(''); // HH:mm (24h)
+  const [when, setWhen] = useState<Date>(defaultDate);
+  const [pickerMode, setPickerMode] = useState<'date' | 'time' | null>(null);
 
-  const canSave = doctorName.trim().length > 0 && date.trim().length > 0;
+  const canSave = doctorName.trim().length > 0;
+
+  const pickClinician = (name: string, role: string) => {
+    hapticLight();
+    setDoctorName(name);
+    setSpecialty(role);
+  };
+
+  const openPicker = (mode: 'date' | 'time') => {
+    hapticLight();
+    setPickerMode(mode);
+  };
+
+  const onPickerChange = (event: DateTimePickerEvent, selected?: Date) => {
+    // Android closes the picker after every interaction; iOS keeps it open.
+    if (Platform.OS === 'android') setPickerMode(null);
+    if (event.type === 'dismissed') return;
+    if (selected) setWhen(selected);
+  };
 
   const save = () => {
     if (!canSave) return;
-    // Compose ISO. If time is missing, default to 09:00.
-    const t = time.trim() || '09:00';
-    const iso = `${date.trim()}T${t}:00`;
-    const parsed = new Date(iso);
-    if (Number.isNaN(parsed.getTime())) {
-      Alert.alert(
-        'Invalid date',
-        'Use YYYY-MM-DD for date and HH:mm (24-hour) for time.'
-      );
-      return;
-    }
     const id = uuid();
     useAppointmentsStore.getState().add({
       id,
       title: `${specialty.trim() || 'Visit'} with ${doctorName.trim()}`,
       doctorName: doctorName.trim(),
       specialty: specialty.trim() || 'General',
-      date: parsed.toISOString(),
+      date: when.toISOString(),
       relatedRecordingIds: [],
       summary: null,
       generatedAt: null,
@@ -84,12 +105,7 @@ const AppointmentNew: React.FC = () => {
               >
                 NEW APPOINTMENT
               </Text>
-              <Text
-                style={[
-                  typography.h2,
-                  { color: colors.textPrimary, marginTop: 2 },
-                ]}
-              >
+              <Text style={[typography.h2, { color: colors.textPrimary, marginTop: 2 }]}>
                 Add a visit
               </Text>
             </View>
@@ -108,34 +124,138 @@ const AppointmentNew: React.FC = () => {
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
           >
-            <Field
+            {careTeam.length > 0 && (
+              <View style={{ marginTop: spacing.s3 }}>
+                <Text style={[styles.fieldLabel, { color: colors.textTertiary }]}>
+                  FROM YOUR CARE TEAM
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.chipRow}
+                >
+                  {careTeam.map((c) => {
+                    const active = c.name === doctorName;
+                    return (
+                      <Pressable
+                        key={`${c.name}-${c.role}`}
+                        onPress={() => pickClinician(c.name, c.role)}
+                        style={[
+                          styles.clinicianChip,
+                          {
+                            backgroundColor: active
+                              ? colors.accent
+                              : colors.bgSurface,
+                            borderColor: active ? colors.accent : colors.border,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            typography.label,
+                            {
+                              color: active ? '#FFFFFF' : colors.textPrimary,
+                              fontFamily: 'DMSans_600SemiBold',
+                            },
+                          ]}
+                        >
+                          {c.name}
+                        </Text>
+                        <Text
+                          style={[
+                            typography.caption,
+                            {
+                              color: active
+                                ? 'rgba(255,255,255,0.85)'
+                                : colors.textTertiary,
+                            },
+                          ]}
+                        >
+                          {c.role}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+
+            <TextField
               label="Doctor"
-              placeholder="Dr. Chen"
+              placeholder="e.g. Dr. Chen"
               value={doctorName}
               onChangeText={setDoctorName}
             />
-            <Field
+            <TextField
               label="Specialty"
-              placeholder="Rheumatology"
+              placeholder="e.g. Rheumatology"
               value={specialty}
               onChangeText={setSpecialty}
             />
-            <Field
-              label="Date"
-              placeholder="2026-04-28"
-              value={date}
-              onChangeText={setDate}
-              autoCapitalize="none"
-              helper="YYYY-MM-DD"
-            />
-            <Field
-              label="Time"
-              placeholder="14:00"
-              value={time}
-              onChangeText={setTime}
-              autoCapitalize="none"
-              helper="24-hour (HH:mm). Defaults to 09:00 if left blank."
-            />
+
+            <Text style={[styles.fieldLabel, { color: colors.textTertiary }]}>WHEN</Text>
+            <View style={styles.whenRow}>
+              <Pressable
+                onPress={() => openPicker('date')}
+                style={[
+                  styles.whenTile,
+                  { backgroundColor: colors.bgSurface, borderColor: colors.border },
+                  shadows.card,
+                ]}
+              >
+                <Calendar size={moderateScale(14)} color={colors.accent} strokeWidth={2} />
+                <Text style={[typography.caption, { color: colors.textTertiary }]}>
+                  DATE
+                </Text>
+                <Text style={[styles.whenValue, { color: colors.textPrimary }]}>
+                  {format(when, 'EEE, MMM d')}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => openPicker('time')}
+                style={[
+                  styles.whenTile,
+                  { backgroundColor: colors.bgSurface, borderColor: colors.border },
+                  shadows.card,
+                ]}
+              >
+                <Clock size={moderateScale(14)} color={colors.accent} strokeWidth={2} />
+                <Text style={[typography.caption, { color: colors.textTertiary }]}>
+                  TIME
+                </Text>
+                <Text style={[styles.whenValue, { color: colors.textPrimary }]}>
+                  {format(when, 'h:mm a')}
+                </Text>
+              </Pressable>
+            </View>
+
+            {pickerMode && (
+              <View style={{ marginTop: spacing.s3 }}>
+                <DateTimePicker
+                  value={when}
+                  mode={pickerMode}
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  minimumDate={pickerMode === 'date' ? new Date() : undefined}
+                  onChange={onPickerChange}
+                />
+                {Platform.OS === 'ios' && (
+                  <Pressable
+                    onPress={() => setPickerMode(null)}
+                    style={styles.doneRow}
+                  >
+                    <Text
+                      style={[
+                        typography.label,
+                        { color: colors.accent, fontFamily: 'DMSans_600SemiBold' },
+                      ]}
+                    >
+                      Done
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
+
             <Text
               style={[
                 typography.caption,
@@ -150,7 +270,7 @@ const AppointmentNew: React.FC = () => {
             </Text>
           </ScrollView>
 
-          <View style={{ paddingHorizontal: spacing.s6, paddingBottom: spacing.s6 }}>
+          <View style={styles.ctaSlot}>
             <PrimaryButton
               label="Add appointment"
               onPress={save}
@@ -161,47 +281,32 @@ const AppointmentNew: React.FC = () => {
       </View>
     </SceneTransition>
   );
-}
+};
 
-interface FieldProps {
+interface TextFieldProps {
   label: string;
   value: string;
   onChangeText: (v: string) => void;
   placeholder?: string;
-  autoCapitalize?: 'none' | 'sentences' | 'words';
-  helper?: string;
 }
 
-const Field: React.FC<FieldProps> = ({ label,
+const TextField: React.FC<TextFieldProps> = ({
+  label,
   value,
   onChangeText,
   placeholder,
-  autoCapitalize = 'sentences',
-  helper }) => {
+}) => {
   const { colors } = useTheme();
   const styles = useStyles();
   return (
     <View style={{ marginTop: spacing.s5 }}>
-      <Text
-        style={[
-          typography.label,
-          {
-            color: colors.textTertiary,
-            fontFamily: 'DMSans_600SemiBold',
-            letterSpacing: 0.3,
-            marginBottom: 6,
-          },
-        ]}
-      >
+      <Text style={[styles.fieldLabel, { color: colors.textTertiary }]}>
         {label.toUpperCase()}
       </Text>
       <View
         style={[
           styles.input,
-          {
-            backgroundColor: colors.bgSurface,
-            borderColor: colors.border,
-          },
+          { backgroundColor: colors.bgSurface, borderColor: colors.border },
           shadows.card,
         ]}
       >
@@ -210,26 +315,13 @@ const Field: React.FC<FieldProps> = ({ label,
           onChangeText={onChangeText}
           placeholder={placeholder}
           placeholderTextColor={colors.textTertiary}
-          autoCapitalize={autoCapitalize}
-          style={[
-            typography.bodyLarge,
-            { color: colors.textPrimary },
-          ]}
+          autoCapitalize="words"
+          style={[typography.bodyLarge, { color: colors.textPrimary }]}
         />
       </View>
-      {helper && (
-        <Text
-          style={[
-            typography.caption,
-            { color: colors.textTertiary, marginTop: 4 },
-          ]}
-        >
-          {helper}
-        </Text>
-      )}
     </View>
   );
-}
+};
 
 export default AppointmentNew;
 
@@ -257,10 +349,55 @@ const useStyles = makeStyles((theme) => ({
     paddingTop: theme.spacing.s3,
     paddingBottom: theme.spacing.s6,
   },
+  fieldLabel: {
+    ...theme.typography.label,
+    fontFamily: 'DMSans_600SemiBold',
+    letterSpacing: 0.3,
+    marginTop: theme.spacing.s5,
+    marginBottom: 6,
+  },
   input: {
     borderRadius: theme.radius.md,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: scale(14),
     paddingVertical: verticalScale(12),
+  },
+  whenRow: {
+    flexDirection: 'row',
+    gap: moderateScale(10),
+  },
+  whenTile: {
+    flex: 1,
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(14),
+    borderRadius: theme.radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: moderateScale(6),
+  },
+  whenValue: {
+    ...theme.typography.bodyLarge,
+    fontFamily: 'DMSans_600SemiBold',
+    marginTop: 2,
+  },
+  doneRow: {
+    alignItems: 'flex-end',
+    paddingVertical: verticalScale(6),
+  },
+  ctaSlot: {
+    paddingHorizontal: spacing.s6,
+    paddingBottom: spacing.s6,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    gap: moderateScale(8),
+    paddingVertical: verticalScale(2),
+    paddingRight: scale(4),
+  },
+  clinicianChip: {
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(10),
+    borderRadius: theme.radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: moderateScale(2),
   },
 }));

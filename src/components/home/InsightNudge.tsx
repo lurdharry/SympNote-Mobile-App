@@ -23,8 +23,8 @@ interface InsightNudgeProps {
 }
 
 const trendSuffix = (trend: NudgeData['trend']): string => {
-  if (trend === 'up') return '— trending up';
-  if (trend === 'down') return '— easing off';
+  if (trend === 'up') return 'trending up';
+  if (trend === 'down') return 'easing off';
   return 'this month';
 };
 

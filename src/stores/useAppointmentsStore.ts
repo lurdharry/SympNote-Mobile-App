@@ -34,6 +34,8 @@ interface Actions {
   upcoming: () => Appointment[];
   next: () => Appointment | undefined;
   attachRecording: (appointmentId: string, recordingId: string) => void;
+  /** Replace the full set of related recordings for an appointment. */
+  setRelatedRecordings: (appointmentId: string, recordingIds: string[]) => void;
   /** Push a question onto the appointment's brief. */
   addQuestion: (appointmentId: string, question: string) => void;
   /** Remove a question by its index in `brief.questions`. */
@@ -85,6 +87,14 @@ export const useAppointmentsStore = create<State & Actions>()(
           appointments: patchOne(s.appointments, appointmentId, (a) => ({
             ...a,
             relatedRecordingIds: uniq([...a.relatedRecordingIds, recordingId]),
+          })),
+        })),
+
+      setRelatedRecordings: (appointmentId, recordingIds) =>
+        set((s) => ({
+          appointments: patchOne(s.appointments, appointmentId, (a) => ({
+            ...a,
+            relatedRecordingIds: uniq(recordingIds),
           })),
         })),
 

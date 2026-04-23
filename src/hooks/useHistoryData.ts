@@ -4,11 +4,7 @@ import { countBy, groupBy, orderBy, toPairs } from 'lodash';
 import { useRecordingsStore } from '@/stores/useRecordingsStore';
 import { formatDuration } from '@/utils/date';
 import { colorForTag } from '@/utils/tagColor';
-import {
-  DEMO_ALL_TAGS,
-  DEMO_HISTORY_ITEMS,
-  HistoryItem,
-} from '@/constants/demo/history';
+import type { HistoryItem } from '@/constants/demo/history';
 
 export interface TagOption {
   t: string;
@@ -25,6 +21,8 @@ export interface UseHistoryDataResult {
   filtered: HistoryItem[];
   allTags: TagOption[];
   groups: HistoryGroup[];
+  /** True when the user has zero recordings — render the empty state. */
+  isEmpty: boolean;
 }
 
 const MAX_TAGS_PER_ROW = 3;
@@ -47,14 +45,15 @@ const matchesTags = (item: HistoryItem, active: string[]): boolean =>
 /**
  * Owns the History tab's derived data: normalizes store recordings into
  * display items, applies the search + tag filter, groups by date, and
- * builds the live tag-filter strip. Demo fallbacks kick in when the
- * store is empty so the layout always has something to render.
+ * builds the live tag-filter strip. Returns `isEmpty: true` when the
+ * store is empty so callers can render the first-run empty state.
  */
 export const useHistoryData = (query: string, active: string[]): UseHistoryDataResult => {
   const storeRecordings = useRecordingsStore((s) => s.recordings);
+  const isEmpty = storeRecordings.length === 0;
 
   const items = useMemo<HistoryItem[]>(() => {
-    if (storeRecordings.length === 0) return DEMO_HISTORY_ITEMS;
+    if (isEmpty) return [];
     const today = new Date();
     return storeRecordings.map((r) => {
       const d = parseISO(r.createdAt);
@@ -67,7 +66,7 @@ export const useHistoryData = (query: string, active: string[]): UseHistoryDataR
         tags: r.tags.slice(0, MAX_TAGS_PER_ROW).map((t) => ({ t, c: colorForTag(t) })),
       };
     });
-  }, [storeRecordings]);
+  }, [storeRecordings, isEmpty]);
 
   const filtered = useMemo(
     () => items.filter((it) => matchesQuery(it, query) && matchesTags(it, active)),
@@ -75,7 +74,7 @@ export const useHistoryData = (query: string, active: string[]): UseHistoryDataR
   );
 
   const allTags = useMemo<TagOption[]>(() => {
-    if (storeRecordings.length === 0) return DEMO_ALL_TAGS;
+    if (isEmpty) return [];
     const counts = countBy(
       storeRecordings.flatMap((r) => r.tags.map((t) => t.trim().toLowerCase())),
       (t) => t,
@@ -83,11 +82,10 @@ export const useHistoryData = (query: string, active: string[]): UseHistoryDataR
     return orderBy(toPairs(counts).filter(([t]) => t.length > 0), [1], ['desc']).map(
       ([t]) => ({ t, c: colorForTag(t) }),
     );
-  }, [storeRecordings]);
+  }, [storeRecordings, isEmpty]);
 
   const groups = useMemo<HistoryGroup[]>(() => {
     const byDate = groupBy(filtered, (it) => it.date);
-    // Preserve the order in which date labels first appeared in `filtered`.
     const orderedDates: string[] = [];
     filtered.forEach((it) => {
       if (!orderedDates.includes(it.date)) orderedDates.push(it.date);
@@ -95,5 +93,5 @@ export const useHistoryData = (query: string, active: string[]): UseHistoryDataR
     return orderedDates.map((date) => ({ date, entries: byDate[date]! }));
   }, [filtered]);
 
-  return { items, filtered, allTags, groups };
+  return { items, filtered, allTags, groups, isEmpty };
 };

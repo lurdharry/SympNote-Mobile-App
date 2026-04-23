@@ -161,7 +161,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({ row, open, onT
                 <QuestionsSection
                   questions={row.content.questions}
                   accent={row.color}
-                  appointmentId={row.isDemo ? null : row.id}
+                  appointmentId={row.id}
                 />
               )}
               {section === 'meds' && (

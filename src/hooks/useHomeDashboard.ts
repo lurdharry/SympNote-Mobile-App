@@ -5,10 +5,7 @@ import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { useRecordingsStore } from '@/stores/useRecordingsStore';
 import { topTrendingSymptom } from '@/utils/insights';
 import { timeGreeting } from '@/utils/date';
-import {
-  DEMO_TODAY_ENTRIES,
-  DemoEntry,
-} from '@/constants/demo/home';
+import type { DemoEntry } from '@/constants/demo/home';
 import type { Appointment } from '@/stores/types';
 import type { Recording } from '@/stores/types';
 
@@ -57,10 +54,9 @@ export const useHomeDashboard = (): HomeDashboard => {
   }, [appointments]);
 
   const todayEntries = useMemo<DemoEntry[]>(() => {
-    if (recordings.length === 0) return DEMO_TODAY_ENTRIES;
+    if (recordings.length === 0) return [];
     const now = new Date();
     const todays = recordings.filter((r) => isSameDay(parseISO(r.createdAt), now));
-    if (todays.length === 0) return DEMO_TODAY_ENTRIES;
     return todays.slice(0, TODAYS_ENTRY_LIMIT).map(toDemoEntry);
   }, [recordings]);
 
