@@ -1,9 +1,15 @@
 import React, { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X as XIcon } from 'lucide-react-native';
-import { fontScale, makeStyles, moderateScale, useTheme } from '../theme';
+import {
+  fontScale,
+  makeStyles,
+  moderateScale,
+  useTheme,
+  verticalScale,
+} from '../theme';
 import { IdlePhase } from '../components/recording/IdlePhase';
 import { RecordingPhase } from '../components/recording/RecordingPhase';
 import { ReviewPhase } from '../components/recording/ReviewPhase';
@@ -28,6 +34,7 @@ const RecordModal: React.FC = () => {
   const styles = useStyles();
   const { kind } = useLocalSearchParams<{ kind?: string }>();
   const flow = useRecordingFlow();
+  const insets = useSafeAreaInsets();
 
   const presetTag = typeof kind === 'string' ? kindToTag(kind) : null;
 
@@ -68,7 +75,15 @@ const RecordModal: React.FC = () => {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <View
+        style={[
+          styles.safe,
+          {
+            paddingTop: insets.top + verticalScale(6),
+            paddingBottom: insets.bottom,
+          },
+        ]}
+      >
         <View style={styles.topBar}>
           <PhaseIndicator phase={flow.phase} />
           <Pressable
@@ -132,7 +147,7 @@ const RecordModal: React.FC = () => {
             <ExtractedPhase structured={flow.structured} onSave={save} />
           )}
         </View>
-      </SafeAreaView>
+      </View>
     </View>
   );
 };
