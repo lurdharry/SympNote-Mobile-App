@@ -16,6 +16,9 @@ interface HomeDashboard {
   dateEyebrow: string;
   greeting: string;
   recordingsCount: number;
+  /** The user's one-and-only recording when count === 1; used by the
+   *  first-entry celebration hero on home. Null otherwise. */
+  firstRecording: Recording | null;
 }
 
 const TODAYS_ENTRY_LIMIT = 5;
@@ -68,6 +71,8 @@ export const useHomeDashboard = (): HomeDashboard => {
   const dateEyebrow = format(new Date(), 'EEEE, MMM d');
   const greeting = timeGreeting().replace('.', '');
 
+  const firstRecording = recordings.length === 1 ? recordings[0]! : null;
+
   return {
     nextAppointment,
     todayEntries,
@@ -75,5 +80,6 @@ export const useHomeDashboard = (): HomeDashboard => {
     dateEyebrow,
     greeting,
     recordingsCount: recordings.length,
+    firstRecording,
   };
 };
