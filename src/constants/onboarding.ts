@@ -70,7 +70,7 @@ export const QUESTIONS: Question[] = [
     id: 'age',
     profileKey: 'ageBand',
     ask: 'First, how old are you?',
-    hint: "Sympnote uses your age to read your entries against the right baseline. A 25 year old's fatigue reads very different from a 65 year old's. Required.",
+    hint: "Your age tells Sympnote what normal looks like for you. A 25 year old's fatigue reads different from a 65 year old's.",
     options: [
       { t: '12 to 17', v: 'teen',    Icon: Sprout,   tint: '#5A8F6E' },
       { t: '18 to 29', v: '18-29',   Icon: Zap,      tint: '#2C6E6B' },
@@ -83,7 +83,7 @@ export const QUESTIONS: Question[] = [
     id: 'conditions',
     profileKey: 'knownConditions',
     ask: 'Any known conditions or meds worth noting?',
-    hint: "Pick any that apply. This gives Sympnote the right baseline to read your entries against. If nothing fits, skip it.",
+    hint: "So you don't have to re-explain your conditions at every visit. Pick any that apply, or skip if nothing fits.",
     multi: true,
     skippable: true,
     options: [

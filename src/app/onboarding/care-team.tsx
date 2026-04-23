@@ -3,7 +3,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { addDays, setHours, setMinutes, setSeconds } from "date-fns";
-import { Lock, Plus } from "lucide-react-native";
+import { Lock } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
@@ -24,7 +24,10 @@ import { AddClinicianSheet } from "@/components/onboarding/care-team/AddClinicia
 import { CareTeamEmpty } from "@/components/onboarding/care-team/CareTeamEmpty";
 import { AppointmentBlock } from "@/components/onboarding/care-team/AppointmentBlock";
 import { Specialty } from "@/constants/specialties";
+import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
 import { useProfileStore } from "@/stores/useProfileStore";
+import { useAppointmentsStore } from "@/stores/useAppointmentsStore";
+import { buildPersonalizationProfile } from "@/utils/personalization";
 import { hapticLight } from "@/services/haptics";
 import { uuid } from "@/utils/uuid";
 
@@ -37,9 +40,7 @@ const continueLabel = (clinicianCount: number, hasAppointment: boolean): string 
   if (clinicianCount === 0 && !hasAppointment) return "Skip for now";
   const parts: string[] = [];
   if (clinicianCount > 0) {
-    parts.push(
-      `${clinicianCount} ${clinicianCount === 1 ? "clinician" : "clinicians"}`,
-    );
+    parts.push(`${clinicianCount} ${clinicianCount === 1 ? "clinician" : "clinicians"}`);
   }
   if (hasAppointment) parts.push("1 appointment");
   return `Continue · ${parts.join(" and ")}`;
@@ -70,19 +71,46 @@ const ScreenCareTeam: React.FC = () => {
   };
 
   const handleRemove = (id: string) => {
-    setMembers((m) => m.filter((x) => x.id !== id));
+    setMembers((m) => {
+      const next = m.filter((x) => x.id !== id);
+      // If the last clinician is gone, an appointment no longer has
+      // anyone to be "with" — auto-reset so the two stay in sync.
+      if (next.length === 0) {
+        setHasAppointment(false);
+        setPickerMode(null);
+      }
+      return next;
+    });
   };
 
   const onContinue = () => {
-    setAnswer(
-      "careTeam",
-      members.map(({ name, role }) => ({ name, role })),
-    );
-    setAnswer(
-      "nextAppointment",
-      hasAppointment ? nextWhen.toISOString() : "none",
-    );
-    router.push("/onboarding/analyzing");
+    const careTeamPlain = members.map(({ name, role }) => ({ name, role }));
+    setAnswer("careTeam", careTeamPlain);
+    setAnswer("nextAppointment", hasAppointment ? nextWhen.toISOString() : "none");
+
+    // The old analyzing screen was Noom-style theater sitting between
+    // setup and capture — it didn't build tension toward commerce, so
+    // we skip it and run its (trivial) real work inline here.
+    const answers = useProfileStore.getState().onboardingAnswers;
+    const profile = buildPersonalizationProfile(answers, answers.focus, careTeamPlain);
+    useProfileStore.getState().setPersonalization(profile);
+
+    if (hasAppointment) {
+      const lead = careTeamPlain[0];
+      useAppointmentsStore.getState().add({
+        id: uuid(),
+        title: lead ? `Visit with ${lead.name}` : "Upcoming visit",
+        doctorName: lead?.name ?? "Your clinician",
+        specialty: lead?.role ?? "General",
+        date: nextWhen.toISOString(),
+        relatedRecordingIds: [],
+        brief: null,
+        briefGeneratedAt: null,
+        briefSourceRecordingIds: [],
+      });
+    }
+
+    router.push("/onboarding/first-recording");
   };
 
   const hasMembers = members.length > 0;
@@ -93,11 +121,6 @@ const ScreenCareTeam: React.FC = () => {
         <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
           <View style={styles.topBar}>
             <BackButton onPress={() => router.back()} />
-            <View style={[styles.stagePill, { backgroundColor: colors.bgMuted }]}>
-              <Text style={[typography.label, { color: colors.textTertiary }]}>
-                7 of 9
-              </Text>
-            </View>
             <Pressable onPress={onContinue} hitSlop={8}>
               <Text
                 style={[
@@ -109,6 +132,9 @@ const ScreenCareTeam: React.FC = () => {
               </Text>
             </Pressable>
           </View>
+          <View style={styles.progressSlot}>
+            <OnboardingProgress value={0.75} />
+          </View>
 
           <ScrollView
             contentContainerStyle={styles.content}
@@ -116,15 +142,13 @@ const ScreenCareTeam: React.FC = () => {
             keyboardShouldPersistTaps="handled"
           >
             {/* Hero */}
-            <Text style={[styles.eyebrow, { color: colors.accent }]}>
-              YOUR CARE TEAM
-            </Text>
+            <Text style={[styles.eyebrow, { color: colors.accent }]}>YOUR CARE TEAM</Text>
             <Text style={[styles.headline, { color: colors.textPrimary }]}>
               Who takes care{"\n"}of you?
             </Text>
             <Text style={[styles.sub, { color: colors.textSecondary }]}>
-              Add the doctors and specialists you see. Sympnote organizes your
-              entries by clinician so each visit prep stays relevant.
+              Add the doctors and specialists you see. Sympnote organizes your entries by clinician
+              so each visit prep stays relevant.
             </Text>
 
             {/* Body */}
@@ -133,89 +157,53 @@ const ScreenCareTeam: React.FC = () => {
                 <>
                   <StaggeredList stagger={80}>
                     {members.map((m) => (
-                      <ClinicianCard
-                        key={m.id}
-                        clinician={m}
-                        onRemove={handleRemove}
-                      />
+                      <ClinicianCard key={m.id} clinician={m} onRemove={handleRemove} />
                     ))}
                   </StaggeredList>
-                  <Pressable
-                    onPress={() => openSheet()}
-                    style={styles.addAnother}
-                    accessibilityRole="button"
-                    accessibilityLabel="Add another clinician"
+                  <Text
+                    style={[
+                      typography.caption,
+                      styles.moreLaterHint,
+                      { color: colors.textTertiary },
+                    ]}
                   >
-                    <View
-                      style={[
-                        styles.addAnotherIcon,
-                        { backgroundColor: colors.accent + "1A" },
-                      ]}
-                    >
-                      <Plus
-                        size={moderateScale(14)}
-                        color={colors.accent}
-                        strokeWidth={2.2}
-                      />
-                    </View>
-                    <Text
-                      style={[
-                        typography.label,
-                        {
-                          color: colors.accent,
-                          fontFamily: "DMSans_600SemiBold",
-                        },
-                      ]}
-                    >
-                      Add another
-                    </Text>
-                  </Pressable>
+                    You can add more clinicians later in Sympnote.
+                  </Text>
                 </>
               ) : (
                 <CareTeamEmpty onPickSpecialty={openSheet} />
               )}
             </View>
 
-            {/* Appointment module — visually secondary */}
-            <View style={styles.appointmentSlot}>
-              <AppointmentBlock
-                enabled={hasAppointment}
-                onToggle={(v) => {
-                  setHasAppointment(v);
-                  if (!v) setPickerMode(null);
-                }}
-                when={nextWhen}
-                onChange={setNextWhen}
-                pickerMode={pickerMode}
-                onOpenPicker={setPickerMode}
-                onClosePicker={() => setPickerMode(null)}
-              />
-            </View>
+            {/* Appointment module — only meaningful once there's a clinician. */}
+            {hasMembers && (
+              <View style={styles.appointmentSlot}>
+                <AppointmentBlock
+                  enabled={hasAppointment}
+                  onToggle={(v) => {
+                    setHasAppointment(v);
+                    if (!v) setPickerMode(null);
+                  }}
+                  when={nextWhen}
+                  onChange={setNextWhen}
+                  pickerMode={pickerMode}
+                  onOpenPicker={setPickerMode}
+                  onClosePicker={() => setPickerMode(null)}
+                />
+              </View>
+            )}
 
             {/* Privacy footer */}
-            <View
-              style={[
-                styles.privacyRow,
-                { backgroundColor: colors.bgMuted },
-              ]}
-            >
+            <View style={[styles.privacyRow, { backgroundColor: colors.bgMuted }]}>
               <Lock size={moderateScale(12)} color={colors.textTertiary} strokeWidth={2.2} />
-              <Text
-                style={[
-                  typography.caption,
-                  { color: colors.textTertiary, flex: 1 },
-                ]}
-              >
+              <Text style={[typography.caption, { color: colors.textTertiary, flex: 1 }]}>
                 Private to you. Sympnote never contacts your clinicians.
               </Text>
             </View>
           </ScrollView>
 
           <View style={styles.ctaSlot}>
-            <PrimaryButton
-              label={continueLabel(members.length, hasAppointment)}
-              onPress={onContinue}
-            />
+            <PrimaryButton label={"Continue"} onPress={onContinue} />
           </View>
         </SafeAreaView>
 
@@ -242,10 +230,9 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  stagePill: {
-    paddingHorizontal: scale(12),
-    paddingVertical: verticalScale(4),
-    borderRadius: theme.radius.full,
+  progressSlot: {
+    paddingHorizontal: theme.spacing.s6,
+    paddingTop: theme.spacing.s2,
   },
   content: {
     paddingHorizontal: theme.spacing.s6,
@@ -273,21 +260,10 @@ const useStyles = makeStyles((theme) => ({
     marginTop: spacing.s6,
     gap: moderateScale(10),
   },
-  addAnother: {
-    flexDirection: "row",
-    alignItems: "center",
+  moreLaterHint: {
     alignSelf: "flex-start",
-    gap: moderateScale(8),
-    paddingHorizontal: scale(12),
-    paddingVertical: verticalScale(8),
-    marginTop: moderateScale(4),
-  },
-  addAnotherIcon: {
-    width: moderateScale(24),
-    height: moderateScale(24),
-    borderRadius: moderateScale(12),
-    alignItems: "center",
-    justifyContent: "center",
+    marginTop: moderateScale(6),
+    fontStyle: "italic",
   },
   appointmentSlot: {
     marginTop: spacing.s6,
