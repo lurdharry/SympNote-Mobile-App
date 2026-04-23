@@ -14,10 +14,10 @@ import { BackButton } from "@/components/ui/BackButton";
 import {
   AssistantBubble,
   ChipTray,
-  ProgressBar,
   TypingBubble,
   UserBubble,
 } from "@/components/onboarding/qualifier";
+import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
 import { useQualifierFlow, type QualifierAnswer } from "@/hooks/useQualifierFlow";
 
 const labelFor = (answer: QualifierAnswer): string => {
@@ -51,10 +51,10 @@ const ScreenQualifier: React.FC = () => {
         <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
           <View style={styles.topBar}>
             <BackButton onPress={onBack} />
-            <ProgressBar step={step} total={questions.length} />
-            <Text style={[typography.label, styles.counter, { color: colors.textTertiary }]}>
-              {Math.min(step + 1, questions.length)}/{questions.length}
-            </Text>
+            <View style={{ width: 40 }} />
+          </View>
+          <View style={styles.progressSlot}>
+            <OnboardingProgress value={0.25} />
           </View>
 
           <ScrollView
@@ -117,9 +117,12 @@ const useStyles = makeStyles((theme) => ({
     paddingHorizontal: theme.spacing.s5,
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing.s3,
+    justifyContent: "space-between",
   },
-  counter: { fontVariant: ["tabular-nums"] },
+  progressSlot: {
+    paddingHorizontal: theme.spacing.s5,
+    paddingTop: theme.spacing.s2,
+  },
   feed: {
     paddingHorizontal: spacing.s5,
     paddingTop: spacing.s5,
