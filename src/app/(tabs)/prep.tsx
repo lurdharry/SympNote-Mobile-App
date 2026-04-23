@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus } from 'lucide-react-native';
+import { CalendarPlus, ChevronRight } from 'lucide-react-native';
 import {
   makeStyles,
   moderateScale,
+  scale,
+  shadows,
   spacing,
   typography,
   useTheme,
@@ -60,17 +62,51 @@ const TabPrep: React.FC = () => {
                 hapticLight();
                 router.push('/appointment-new');
               }}
-              style={[styles.addDashed, { borderColor: colors.border }]}
+              style={[
+                styles.addCard,
+                { backgroundColor: colors.bgSurface, borderColor: colors.border },
+                shadows.card,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Add appointment"
             >
-              <Plus size={16} color={colors.textSecondary} strokeWidth={2} />
-              <Text
-                style={[
-                  typography.body,
-                  { color: colors.textSecondary, fontFamily: 'DMSans_600SemiBold' },
-                ]}
+              <View
+                style={[styles.addIcon, { backgroundColor: colors.accent + '1A' }]}
               >
-                Add appointment
-              </Text>
+                <CalendarPlus
+                  size={moderateScale(18)}
+                  color={colors.accent}
+                  strokeWidth={2.2}
+                />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text
+                  style={[
+                    typography.h3,
+                    {
+                      color: colors.textPrimary,
+                      fontFamily: 'DMSans_600SemiBold',
+                    },
+                  ]}
+                  numberOfLines={1}
+                >
+                  Add appointment
+                </Text>
+                <Text
+                  style={[
+                    typography.caption,
+                    { color: colors.textTertiary, marginTop: 1 },
+                  ]}
+                  numberOfLines={1}
+                >
+                  We'll prep a brief for your next visit.
+                </Text>
+              </View>
+              <ChevronRight
+                size={moderateScale(16)}
+                color={colors.textTertiary}
+                strokeWidth={2}
+              />
             </Pressable>
 
             {past.length > 0 && (
@@ -118,16 +154,22 @@ const useStyles = makeStyles((theme) => ({
     paddingHorizontal: theme.spacing.s6,
     paddingBottom: verticalScale(120),
   },
-  addDashed: {
-    marginTop: theme.spacing.s2,
+  addCard: {
+    marginTop: theme.spacing.s4,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: moderateScale(8),
-    paddingVertical: verticalScale(18),
+    gap: moderateScale(12),
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(14),
     borderRadius: theme.radius.lg,
-    borderWidth: 2,
-    borderStyle: 'dashed',
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  addIcon: {
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: moderateScale(12),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   pastSection: {
     marginTop: theme.spacing.s6,
