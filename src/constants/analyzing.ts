@@ -48,6 +48,13 @@ export const STEP_TINTS: readonly StepTint[] = [
   },
 ] as const;
 
-/** Milliseconds from mount at which each step lands, followed by ready. */
-export const STEP_TIMELINE = [1100, 2300, 3500] as const;
-export const READY_AT_MS = 4000;
+/**
+ * Minimum time each step's indicator stays visible before completing.
+ * The real work (deriving the profile, seeding an appointment, picking
+ * a prompt) finishes faster than the animation reads, so we floor each
+ * step to make it feel intentional without dragging it out.
+ */
+export const STEP_MIN_MS = [900, 1100, 900] as const;
+
+/** Brief settle delay after all steps complete before switching to "ready". */
+export const READY_SETTLE_MS = 450;

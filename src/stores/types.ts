@@ -70,9 +70,61 @@ export type Appointment = {
 
 export type SubscriptionStatus = 'trial' | 'active' | 'expired' | 'none';
 
+/**
+ * Age band — the single biggest clinical prior for AI reasoning.
+ * Finer granularity at the young end so adolescents (12–17) are
+ * carved out from the adult bands; finer split at 50 reflects where
+ * cardiovascular/metabolic risk curves shift.
+ */
+export type AgeBand =
+  | 'teen'
+  | '18-29'
+  | '30-49'
+  | '50-64'
+  | '65-plus';
+
+export type FocusArea =
+  | 'investigate'
+  | 'upcoming-visit'
+  | 'patterns'
+  | 'recovery-track'
+  | 'mental-health'
+  | 'general';
+
+export interface Clinician {
+  name: string;
+  role: string;
+}
+
+/**
+ * Derived from the raw onboarding answers once the analyzing screen
+ * runs. Downstream code (AI prompts, first-recording copy, settings
+ * display) reads this — not the raw answers.
+ *
+ * Shape is deliberately tight: only fields that drive real AI output
+ * or real UI behavior. Anything the app can observe from real logs
+ * (e.g. time-of-day patterns) is computed, not asked.
+ */
+export interface PersonalizationProfile {
+  /** Broad age bucket — biggest single clinical prior for the AI. */
+  ageBand: AgeBand;
+  /**
+   * User-selected conditions (e.g. "Asthma", "Migraines") plus any
+   * free-text additions. Used in AI context as baseline calibration.
+   */
+  knownConditions: string[];
+  /** Goals for this tracking — multi-select on the Focus screen. */
+  focus: FocusArea[];
+  careTeam: Clinician[];
+  /** First-recording mic-area copy, tailored to dominant focus. */
+  firstRecordingPrompt: string;
+}
+
 export type UserProfile = {
   onboardingComplete: boolean;
   onboardingAnswers: Record<string, unknown>;
   subscriptionStatus: SubscriptionStatus;
   trialEndsAt: string | null;
+  /** Derived profile — set once the analyzing screen runs. Null before. */
+  personalization: PersonalizationProfile | null;
 };

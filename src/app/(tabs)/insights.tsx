@@ -13,18 +13,28 @@ import {
 import { SceneTransition } from '@/components/navigation/SceneTransition';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { useInsightsData } from '@/hooks/useInsightsData';
-import { DEMO_CORRELATIONS, DEMO_HEATMAP } from '@/constants/demo/insights';
 import { HeadlineCard } from '@/components/insights/HeadlineCard';
 import { RangeSelector } from '@/components/insights/RangeSelector';
 import { SymptomFrequencyList } from '@/components/insights/SymptomFrequencyList';
-import { CorrelationCard } from '@/components/insights/CorrelationCard';
 import { Heatmap } from '@/components/insights/Heatmap';
+import { InsightsEmpty } from '@/components/insights/InsightsEmpty';
+
+const INSIGHTS_THRESHOLD = 3;
 
 const TabInsights: React.FC = () => {
   const { colors } = useTheme();
   const styles = useStyles();
-  const { range, setRange, summary, symptoms, heatmap, peakLabel, isReal } =
-    useInsightsData();
+  const {
+    range,
+    setRange,
+    summary,
+    symptoms,
+    heatmap,
+    peakLabel,
+    hasEnoughData,
+    inRangeCount,
+    totalRecordings,
+  } = useInsightsData();
 
   return (
     <SceneTransition mode="crossfade-parallax-up">
@@ -52,88 +62,79 @@ const TabInsights: React.FC = () => {
             contentContainerStyle={styles.scroll}
             showsVerticalScrollIndicator={false}
           >
-            <HeadlineCard range={range} summary={summary} isReal={isReal} />
+            {!hasEnoughData || !summary || !heatmap ? (
+              <InsightsEmpty
+                inRangeCount={inRangeCount}
+                threshold={INSIGHTS_THRESHOLD}
+                totalEmpty={totalRecordings === 0}
+              />
+            ) : (
+              <>
+                <HeadlineCard range={range} summary={summary} />
 
-            <View>
-              <SectionLabel label="Symptom frequency" />
-              <SymptomFrequencyList symptoms={symptoms} />
-            </View>
+                <View>
+                  <SectionLabel label="Symptom frequency" />
+                  <SymptomFrequencyList symptoms={symptoms} />
+                </View>
 
-            <View>
-              <View style={styles.labelRow}>
-                <SectionLabel label="Patterns detected" />
-                <Text
-                  style={[
-                    typography.label,
-                    {
-                      color: colors.accent,
-                      fontFamily: 'DMSans_600SemiBold',
-                    },
-                  ]}
-                >
-                  {DEMO_CORRELATIONS.length}
-                </Text>
-              </View>
-              <View style={{ gap: 8 }}>
-                {DEMO_CORRELATIONS.map((c, i) => (
-                  <CorrelationCard key={i} corr={c} />
-                ))}
-              </View>
-            </View>
+                <View>
+                  <SectionLabel label="When symptoms strike" />
+                  <View
+                    style={[
+                      styles.heatCard,
+                      {
+                        backgroundColor: colors.bgSurface,
+                        borderColor: colors.border,
+                      },
+                      shadows.card,
+                    ]}
+                  >
+                    <Heatmap grid={heatmap} />
+                    <Text
+                      style={[
+                        typography.caption,
+                        {
+                          color: colors.textTertiary,
+                          marginTop: 10,
+                          lineHeight: fontScale(16),
+                        },
+                      ]}
+                    >
+                      {peakLabel ? (
+                        <>
+                          Your entries cluster in the{' '}
+                          <Text
+                            style={{
+                              color: colors.textPrimary,
+                              fontFamily: 'DMSans_600SemiBold',
+                            }}
+                          >
+                            {peakLabel}
+                          </Text>
+                          .
+                        </>
+                      ) : (
+                        'Log more entries to see when symptoms strike.'
+                      )}
+                    </Text>
+                  </View>
+                </View>
 
-            <View>
-              <SectionLabel label="When symptoms strike" />
-              <View
-                style={[
-                  styles.heatCard,
-                  { backgroundColor: colors.bgSurface, borderColor: colors.border },
-                  shadows.card,
-                ]}
-              >
-                <Heatmap grid={heatmap ?? DEMO_HEATMAP} />
                 <Text
                   style={[
                     typography.caption,
                     {
                       color: colors.textTertiary,
-                      marginTop: 10,
-                      lineHeight: fontScale(16),
+                      textAlign: 'center',
+                      paddingHorizontal: spacing.s4,
+                      paddingBottom: spacing.s2,
                     },
                   ]}
                 >
-                  {peakLabel ? (
-                    <>
-                      Your entries cluster in the{' '}
-                      <Text
-                        style={{
-                          color: colors.textPrimary,
-                          fontFamily: 'DMSans_600SemiBold',
-                        }}
-                      >
-                        {peakLabel}
-                      </Text>
-                      .
-                    </>
-                  ) : (
-                    'Log more entries to see when symptoms strike.'
-                  )}
+                  Patterns are observational, based on your notes. Not a diagnosis.
                 </Text>
-              </View>
-            </View>
-
-            <Text
-              style={[
-                typography.caption,
-                {
-                  color: colors.textTertiary,
-                  textAlign: 'center',
-                  paddingHorizontal: spacing.s4,
-                  paddingBottom: spacing.s2,
-                },
-              ]}
-            >
-              Patterns are observational, based on your notes. Not a diagnosis.
-            </Text>
+              </>
+            )}
           </ScrollView>
         </SafeAreaView>
       </View>
@@ -157,11 +158,6 @@ const useStyles = makeStyles((theme) => ({
     paddingHorizontal: spacing.s6,
     paddingBottom: 120,
     gap: spacing.s5,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
   },
   heatCard: {
     padding: moderateScale(16),

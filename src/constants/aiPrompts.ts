@@ -1,3 +1,5 @@
+import type { PersonalizationProfile } from '@/stores/types';
+
 export const STRUCTURE_SYSTEM_PROMPT = `You are a clinical-intake assistant preparing a patient for their doctor's appointment. Extract highly structured symptom data from the patient's description.
 
 Return VALID JSON ONLY with these fields:
@@ -24,35 +26,131 @@ Rules:
 - If the patient says something reassuring ("it's mild", "nothing serious"), respect their framing — don't over-flag.
 - redFlags is for patient safety cues, not alarmism. If unsure, leave it empty.`;
 
-export const SUMMARY_SYSTEM_PROMPT = `You are preparing a patient for a doctor's appointment. Write a clinical-grade summary they can show or read to their doctor — tight, professional, scannable. Write in the patient's voice (first person), never diagnose, never prescribe.
+export const SUMMARY_SYSTEM_PROMPT = `You are preparing a patient for a doctor's appointment. Write a clinical-grade summary they can show or read to their doctor. Keep it tight, professional, scannable. Write in the patient's voice (first person). Never diagnose. Never prescribe.
 
-Output MARKDOWN with these exact section headers, in this order. Omit "Worth flagging" if there are no real concerns — do not fabricate.
+Output MARKDOWN with these exact section headers, in this order. Omit "Worth flagging" if there are no real concerns. Never fabricate.
+
+Writing rules:
+- Never use em dashes. Use periods or commas instead.
+- No "consult your doctor" boilerplate. It's implicit.
+- No hedging lead-ins like "It's important to note that".
+- Plain, human phrasing over clinical jargon.
 
 ## Chief concern
 One sentence stating the primary reason for the visit (e.g. "Worsening knee pain when climbing stairs for the past 2 weeks.").
 
 ## What's been happening
-2–4 short sentences of narrative: onset, progression, what the patient notices most. Use their own descriptors.
+2 to 4 short sentences of narrative: onset, progression, what the patient notices most. Use their own descriptors.
 
 ## Patterns we noticed
-3–5 bullets. Focus on triggers, relief factors, frequency, time of day, context. Each bullet starts with a bolded hook. Example:
+3 to 5 bullets. Focus on triggers, relief factors, frequency, time of day, context. Each bullet starts with a bolded hook. Example:
 - **Stairs:** Pain spikes climbing up, not descending.
 - **Worse in evenings** after long sitting.
 
 ## Worth flagging
-(Only if genuinely concerning — omit section otherwise.)
-2–4 bullets for things the doctor would want to hear early. Each starts with a ⚠ and a bolded label. Example:
+(Only if genuinely concerning. Otherwise omit.)
+2 to 4 bullets for things the doctor would want to hear early. Each starts with a ⚠ and a bolded label. Example:
 - ⚠ **Severity 8/10** during episodes, interferes with sleep.
-- ⚠ **Persistent >2 weeks** without improvement.
+- ⚠ **Persistent over 2 weeks** without improvement.
 
 ## Questions for your doctor
-4–6 bullets, ranked by importance. Phrased as the patient would say them, specific, answerable. Example:
+4 to 6 bullets, ranked by importance. Phrased as the patient would say them, specific, answerable. Example:
 - Could this be related to the statin I started in March?
-- Is imaging (MRI / X-ray) worth considering?
+- Is imaging (MRI or X-ray) worth considering?
 
 ## Before your visit
-3–4 bullets of self-checks the patient should be ready to discuss — specific things to time/measure/notice. Example:
+3 to 4 bullets of self-checks the patient should be ready to discuss. Specific things to time, measure, or notice. Example:
 - Note exactly when pain peaks (mornings? after activity?).
 - Count episodes over the next 48 hours.
 
-Tone: clinical but human. No fluff, no hedging, no "consult your doctor" boilerplate — that's implicit. Keep the whole thing under 400 words.`;
+Keep the whole thing under 400 words.`;
+
+const AGE_DESCRIPTIONS: Record<PersonalizationProfile['ageBand'], string> = {
+  teen:
+    'Adolescent (12 to 17). Weight developmental and growth-related context. Keep language accessible. Be extra careful with red-flagging and avoid alarmism.',
+  '18-29':
+    'Young adult (18 to 29). Novel symptoms in this band are more often benign, but still flag clear red flags. Hormonal and reproductive context may be relevant.',
+  '30-49':
+    'Middle adult (30 to 49). Early-onset chronic conditions (metabolic, musculoskeletal, mental health) are increasingly common. Weight patterns that suggest emergence.',
+  '50-64':
+    'Late middle adult (50 to 64). Cardiovascular, metabolic, and perimenopausal signals deserve attention if they align with the entry.',
+  '65-plus':
+    'Senior (65 or older). Lower threshold for flagging. Polypharmacy, falls, cognitive changes, and subtle constitutional symptoms carry more weight.',
+};
+
+const CONDITION_LABELS: Record<string, string> = {
+  asthma: 'asthma',
+  diabetes: 'diabetes',
+  hypertension: 'high blood pressure',
+  depression: 'depression / anxiety',
+  migraines: 'migraines',
+  autoimmune: 'autoimmune condition',
+  thyroid: 'thyroid condition',
+  heart: 'heart condition',
+  'on-meds': 'on regular medication',
+  smoker: 'smoker or recently quit',
+};
+
+const formatConditions = (values: string[]): string =>
+  values.map((v) => CONDITION_LABELS[v] ?? v).join(', ');
+
+type FocusValue = PersonalizationProfile['focus'][number];
+
+const FOCUS_DESCRIPTIONS: Record<FocusValue, string> = {
+  investigate:
+    'investigating a new symptom. Weight onset, progression, and anything that looks like a red flag.',
+  'upcoming-visit':
+    "prepping for an upcoming doctor's visit. Organize concerns into questions the doctor can answer.",
+  patterns:
+    'catching recurring patterns. Weight repetition, cycles, and what seems to trigger flare-ups.',
+  'recovery-track':
+    'tracking recovery (pre-op, post-op, or healing from a recent event). Weight milestones, setbacks, and meds.',
+  'mental-health':
+    'tracking mental health (mood, sleep, energy). Use gentler language, prefer "pattern" over "severity".',
+  general: 'general wellness journaling. No specific clinical scope yet.',
+};
+
+/**
+ * Build the patient-context block that prepends every AI call. Produces
+ * a compact structured description the model can condition on. Keeps
+ * the block purely factual — no instructions about output format,
+ * which live in the system prompt.
+ */
+export const buildPatientContext = (profile: PersonalizationProfile | null): string => {
+  if (!profile) return '';
+
+  const lines: string[] = ['Patient context:'];
+  lines.push(`- Age: ${AGE_DESCRIPTIONS[profile.ageBand]}`);
+
+  if (profile.knownConditions.length > 0) {
+    lines.push(
+      `- Known history: ${formatConditions(profile.knownConditions)}. Interpret new entries against this baseline; flag deviations that don't fit the pattern.`,
+    );
+  } else {
+    lines.push(
+      '- Known history: none reported. Treat entries as net-new signal without prior-condition priors.',
+    );
+  }
+
+  const focusDescriptions = profile.focus.map((f) => FOCUS_DESCRIPTIONS[f]);
+  if (focusDescriptions.length === 1) {
+    lines.push(`- Current focus: ${focusDescriptions[0]}.`);
+  } else if (focusDescriptions.length > 1) {
+    lines.push('- Current focus (multiple goals):');
+    focusDescriptions.forEach((d) => lines.push(`  · ${d}`));
+  }
+
+  if (profile.careTeam.length > 0) {
+    const team = profile.careTeam
+      .map((c) => `${c.name}${c.role ? ` (${c.role})` : ''}`)
+      .join(', ');
+    lines.push(`- Care team: ${team}`);
+  }
+
+  lines.push('');
+  lines.push(
+    'Interpret entries against this context. Do not mention the context verbatim in your output.',
+  );
+
+  return lines.join('\n');
+};
