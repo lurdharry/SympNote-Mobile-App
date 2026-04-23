@@ -9,22 +9,29 @@ import {
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import {
   AlertTriangle,
   CalendarDays,
   ChevronRight,
+  Copy as CopyIcon,
+  Download,
   MessageCircleQuestion,
+  MoreVertical,
   Paperclip,
+  Pencil,
   Pill,
+  RefreshCw,
   Sparkles,
   Target,
+  Trash2,
 } from 'lucide-react-native';
 import {
   fontScale,
   makeStyles,
   moderateScale,
+  scale,
   shadows,
   spacing,
   typography,
@@ -33,6 +40,7 @@ import {
 } from '@/theme';
 import { SharedElementScene } from '@/components/navigation/SharedElementScene';
 import { StaggeredList } from '@/components/animated/StaggeredList';
+import { BackButton } from '@/components/ui/BackButton';
 import { Button } from '@/components/ui/Button';
 import { RecordingPicker } from '@/components/appointment/RecordingPicker';
 import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
@@ -52,7 +60,13 @@ import {
   hapticSuccess,
 } from '@/services/haptics';
 import { useTransition } from '@/components/navigation/TransitionContext';
-import type { AppointmentBrief } from '@/stores/types';
+import type { AppointmentBrief, AppointmentStatus } from '@/stores/types';
+import { daysUntil } from '@/utils/date';
+import {
+  CalendarCheck,
+  CalendarX,
+  RotateCcw,
+} from 'lucide-react-native';
 
 const AppointmentDetail: React.FC = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -63,12 +77,18 @@ const AppointmentDetail: React.FC = () => {
   const setBrief = useAppointmentsStore((s) => s.setBrief);
   const remove = useAppointmentsStore((s) => s.remove);
   const setRelatedRecordings = useAppointmentsStore((s) => s.setRelatedRecordings);
+  const markAttended = useAppointmentsStore((s) => s.markAttended);
+  const markMissed = useAppointmentsStore((s) => s.markMissed);
+  const markCancelled = useAppointmentsStore((s) => s.markCancelled);
+  const reopenAppointment = useAppointmentsStore((s) => s.reopenAppointment);
   const allRecordings = useRecordingsStore((s) => s.recordings);
   const personalization = useProfileStore((s) => s.personalization);
   const { closeScene } = useTransition();
+  const insets = useSafeAreaInsets();
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const goBack = async () => {
     hapticLight();
@@ -94,6 +114,27 @@ const AppointmentDetail: React.FC = () => {
   const stale = isBriefStale(appt, allRecordings);
   const hasAttached = appt.relatedRecordingIds.length > 0;
   const brief = appt.brief;
+  const days = daysUntil(appt.date);
+
+  // When the appointment is in a terminal status, the badge reflects
+  // that state instead of a relative-time countdown. Countdown only
+  // applies to 'upcoming' visits.
+  const pill = (() => {
+    if (appt.status === 'attended') {
+      return { label: 'Attended', tint: colors.success };
+    }
+    if (appt.status === 'missed') {
+      return { label: `Didn't go`, tint: colors.textTertiary };
+    }
+    if (appt.status === 'cancelled') {
+      return { label: 'Cancelled', tint: colors.textTertiary };
+    }
+    const label =
+      days > 0 ? `in ${days}d` : days === 0 ? 'today' : `${Math.abs(days)}d ago`;
+    const tint =
+      days < 0 ? colors.coral : days <= 3 ? colors.coral : colors.accent;
+    return { label, tint };
+  })();
 
   const generate = async () => {
     if (sourceRecordings.length === 0) {
@@ -162,31 +203,141 @@ const AppointmentDetail: React.FC = () => {
     ]);
   };
 
+  const editAppointment = () => {
+    hapticLight();
+    router.push(`/appointment-new?editId=${appt.id}`);
+  };
+
+  const attend = () => {
+    markAttended(appt.id);
+    hapticSuccess();
+  };
+
+  const missed = () => {
+    Alert.alert(
+      `Mark "Didn't go"?`,
+      'This moves the appointment out of your upcoming list. You can reopen it if this was a mistake.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: `Didn't go`,
+          onPress: () => {
+            markMissed(appt.id);
+            hapticLight();
+          },
+        },
+      ],
+    );
+  };
+
+  const cancelled = () => {
+    Alert.alert(
+      'Mark cancelled?',
+      'The appointment stays in your past visits but no longer counts as an upcoming one.',
+      [
+        { text: 'Back', style: 'cancel' },
+        {
+          text: 'Cancelled',
+          onPress: () => {
+            markCancelled(appt.id);
+            hapticLight();
+          },
+        },
+      ],
+    );
+  };
+
+  const reopen = () => {
+    reopenAppointment(appt.id);
+    hapticLight();
+  };
+
   const attachedCount = appt.relatedRecordingIds.length;
   const sourceCaption = hasAttached
-    ? `Using ${attachedCount} attached ${attachedCount === 1 ? 'recording' : 'recordings'}.`
-    : `Using your last ${sourceRecordings.length} ${sourceRecordings.length === 1 ? 'entry' : 'entries'}.`;
+    ? `${attachedCount} ${attachedCount === 1 ? 'recording' : 'recordings'}`
+    : `Last ${sourceRecordings.length} ${sourceRecordings.length === 1 ? 'entry' : 'entries'}`;
 
   return (
     <SharedElementScene style={{ backgroundColor: colors.bgPrimary }}>
-      <SafeAreaView style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.content}>
-          <Pressable onPress={goBack}>
-            <Text style={[typography.label, { color: colors.accent }]}>← Back</Text>
-          </Pressable>
-
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+        {/* Sticky top bar — always tappable, never scrolls away.
+            Explicit paddingTop from insets so the bar clears the status
+            bar even when SharedElementScene's positioning confuses the
+            nested SafeAreaView during the expand transition. */}
+        <View style={[styles.topBar, { paddingTop: insets.top + verticalScale(6) }]}>
+          <BackButton onPress={goBack} />
           <Text
             style={[
-              typography.h1,
-              { color: colors.textPrimary, marginTop: spacing.s4 },
+              typography.label,
+              {
+                color: colors.textTertiary,
+                letterSpacing: 1,
+                fontFamily: 'DMSans_700Bold',
+                fontSize: fontScale(11),
+              },
             ]}
           >
-            {appt.doctorName}
+            VISIT BRIEF
           </Text>
-          <Text style={[typography.body, { color: colors.textSecondary, marginTop: 2 }]}>
-            {appt.specialty} · {formatDate(appt.date)}
-          </Text>
+          <Pressable
+            onPress={() => {
+              hapticLight();
+              setMenuOpen(true);
+            }}
+            hitSlop={10}
+            style={[styles.menuBtn, { backgroundColor: colors.bgMuted }]}
+            accessibilityRole="button"
+            accessibilityLabel="More actions"
+          >
+            <MoreVertical size={moderateScale(18)} color={colors.textPrimary} strokeWidth={2} />
+          </Pressable>
+        </View>
 
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Hero */}
+          <View style={styles.hero}>
+            <View style={styles.heroHeader}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={[styles.heroName, { color: colors.textPrimary }]}>
+                  {appt.doctorName}
+                </Text>
+                <Text
+                  style={[typography.body, { color: colors.textSecondary, marginTop: 2 }]}
+                >
+                  {appt.specialty}
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.countdown,
+                  { backgroundColor: pill.tint + '1A', borderColor: pill.tint + '55' },
+                ]}
+              >
+                <Text
+                  style={[
+                    typography.label,
+                    {
+                      color: pill.tint,
+                      fontFamily: 'DMSans_700Bold',
+                    },
+                  ]}
+                >
+                  {pill.label}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.heroMeta}>
+              <CalendarDays size={moderateScale(12)} color={colors.textTertiary} strokeWidth={2} />
+              <Text style={[typography.caption, { color: colors.textTertiary }]}>
+                {formatDate(appt.date)} · {formatTime(appt.date)}
+              </Text>
+            </View>
+          </View>
+
+          {/* Attach row — smaller, less prominent */}
           <Pressable
             onPress={() => {
               hapticLight();
@@ -195,37 +346,23 @@ const AppointmentDetail: React.FC = () => {
             style={[
               styles.attachRow,
               { backgroundColor: colors.bgSurface, borderColor: colors.border },
-              shadows.card,
             ]}
           >
-            <View style={[styles.attachIcon, { backgroundColor: colors.accent + '1A' }]}>
-              <Paperclip size={moderateScale(16)} color={colors.accent} strokeWidth={2} />
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text
-                style={[
-                  typography.body,
-                  { color: colors.textPrimary, fontFamily: 'DMSans_600SemiBold' },
-                ]}
-              >
-                {hasAttached
-                  ? `${attachedCount} ${attachedCount === 1 ? 'recording' : 'recordings'} attached`
-                  : 'Using last 30 days'}
-              </Text>
-              <Text style={[typography.caption, { color: colors.textTertiary, marginTop: 2 }]}>
-                {hasAttached
-                  ? 'Tap to change selection.'
-                  : 'Tap to pick specific entries instead.'}
-              </Text>
-            </View>
-            <ChevronRight size={moderateScale(16)} color={colors.textTertiary} strokeWidth={2} />
+            <Paperclip size={moderateScale(13)} color={colors.textTertiary} strokeWidth={2} />
+            <Text
+              style={[typography.caption, { color: colors.textSecondary, flex: 1 }]}
+              numberOfLines={1}
+            >
+              Source: <Text style={{ fontFamily: 'DMSans_600SemiBold', color: colors.textPrimary }}>{sourceCaption}</Text>
+            </Text>
+            <ChevronRight size={moderateScale(14)} color={colors.textTertiary} strokeWidth={2} />
           </Pressable>
 
+          {/* Brief body */}
           {!brief ? (
             <GenerateCTA
               generating={generating}
               sourceCount={sourceRecordings.length}
-              caption={sourceCaption}
               onPress={generate}
             />
           ) : (
@@ -237,13 +374,6 @@ const AppointmentDetail: React.FC = () => {
                 />
               )}
               <BriefView brief={brief} />
-              <BriefActions
-                onCopy={copy}
-                onShare={share}
-                onExportPdf={exportPdf}
-                onRegenerate={generate}
-                regenerating={generating}
-              />
             </>
           )}
 
@@ -260,19 +390,37 @@ const AppointmentDetail: React.FC = () => {
           >
             Not medical advice. Review with your doctor.
           </Text>
-
-          <View style={{ marginTop: spacing.s8, gap: spacing.s3 }}>
-            <Button
-              label="Edit appointment"
-              variant="secondary"
-              onPress={() => {
-                hapticLight();
-                router.push(`/appointment-new?editId=${appt.id}`);
-              }}
-            />
-            <Button label="Delete appointment" variant="destructive" onPress={del} />
-          </View>
         </ScrollView>
+
+        {/* Sticky primary action — only when brief exists */}
+        {brief && (
+          <View style={[styles.ctaBar, { borderTopColor: colors.border, backgroundColor: colors.bgPrimary }]}>
+            <View style={{ flex: 1 }}>
+              <Button
+                label="Share with doctor"
+                onPress={share}
+              />
+            </View>
+            <Pressable
+              onPress={exportPdf}
+              hitSlop={8}
+              style={[styles.iconAction, { backgroundColor: colors.bgMuted }]}
+              accessibilityRole="button"
+              accessibilityLabel="Export as PDF"
+            >
+              <Download size={moderateScale(18)} color={colors.textPrimary} strokeWidth={2} />
+            </Pressable>
+            <Pressable
+              onPress={copy}
+              hitSlop={8}
+              style={[styles.iconAction, { backgroundColor: colors.bgMuted }]}
+              accessibilityRole="button"
+              accessibilityLabel="Copy as text"
+            >
+              <CopyIcon size={moderateScale(18)} color={colors.textPrimary} strokeWidth={2} />
+            </Pressable>
+          </View>
+        )}
 
         <RecordingPicker
           visible={pickerOpen}
@@ -280,6 +428,42 @@ const AppointmentDetail: React.FC = () => {
           initialSelected={appt.relatedRecordingIds}
           onClose={() => setPickerOpen(false)}
           onSave={(ids) => setRelatedRecordings(appt.id, ids)}
+        />
+
+        <ActionMenu
+          visible={menuOpen}
+          hasBrief={!!brief}
+          regenerating={generating}
+          status={appt.status}
+          onClose={() => setMenuOpen(false)}
+          onRegenerate={() => {
+            setMenuOpen(false);
+            generate();
+          }}
+          onEdit={() => {
+            setMenuOpen(false);
+            editAppointment();
+          }}
+          onDelete={() => {
+            setMenuOpen(false);
+            del();
+          }}
+          onAttend={() => {
+            setMenuOpen(false);
+            attend();
+          }}
+          onMissed={() => {
+            setMenuOpen(false);
+            missed();
+          }}
+          onCancelled={() => {
+            setMenuOpen(false);
+            cancelled();
+          }}
+          onReopen={() => {
+            setMenuOpen(false);
+            reopen();
+          }}
         />
       </SafeAreaView>
     </SharedElementScene>
@@ -293,14 +477,12 @@ export default AppointmentDetail;
 interface GenerateCTAProps {
   generating: boolean;
   sourceCount: number;
-  caption: string;
   onPress: () => void;
 }
 
 const GenerateCTA: React.FC<GenerateCTAProps> = ({
   generating,
   sourceCount,
-  caption,
   onPress,
 }) => {
   const { colors } = useTheme();
@@ -321,10 +503,10 @@ const GenerateCTA: React.FC<GenerateCTAProps> = ({
       </Text>
       <Text style={[styles.generateSub, { color: colors.textSecondary }]}>
         {sourceCount > 0
-          ? `Your doctor will read the structured brief. ${caption}`
+          ? 'Your doctor will read the structured brief built from your recent entries.'
           : 'Record at least one entry before drafting. Your brief comes from your voice logs.'}
       </Text>
-      <View style={{ marginTop: spacing.s4 }}>
+      <View style={{ marginTop: spacing.s4, alignSelf: 'stretch' }}>
         <Button
           label={generating ? 'Drafting…' : 'Generate brief'}
           disabled={generating || sourceCount === 0}
@@ -541,62 +723,194 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({ Icon, label, tint }) => {
   );
 };
 
-interface BriefActionsProps {
-  onCopy: () => void;
-  onShare: () => void;
-  onExportPdf: () => void;
-  onRegenerate: () => void;
+interface ActionMenuProps {
+  visible: boolean;
+  hasBrief: boolean;
   regenerating: boolean;
+  status: AppointmentStatus;
+  onClose: () => void;
+  onRegenerate: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onAttend: () => void;
+  onMissed: () => void;
+  onCancelled: () => void;
+  onReopen: () => void;
 }
 
-const BriefActions: React.FC<BriefActionsProps> = ({
-  onCopy,
-  onShare,
-  onExportPdf,
-  onRegenerate,
+const ActionMenu: React.FC<ActionMenuProps> = ({
+  visible,
+  hasBrief,
   regenerating,
+  status,
+  onClose,
+  onRegenerate,
+  onEdit,
+  onDelete,
+  onAttend,
+  onMissed,
+  onCancelled,
+  onReopen,
 }) => {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  if (!visible) return null;
+  const isUpcoming = status === 'upcoming';
   return (
-    <View style={{ marginTop: spacing.s6, gap: spacing.s3 }}>
-      <View style={{ flexDirection: 'row', gap: spacing.s3 }}>
-        <View style={{ flex: 1 }}>
-          <Button label="Copy" variant="secondary" haptic="light" onPress={onCopy} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Button label="Share" variant="secondary" haptic="light" onPress={onShare} />
-        </View>
-      </View>
-      <Button label="Export PDF" variant="secondary" haptic="light" onPress={onExportPdf} />
-      <Button
-        label={regenerating ? 'Regenerating…' : 'Regenerate brief'}
-        disabled={regenerating}
-        onPress={onRegenerate}
-      />
-    </View>
+    <Pressable onPress={onClose} style={styles.menuBackdrop}>
+      <Pressable
+        onPress={(e) => e.stopPropagation()}
+        style={[
+          styles.menuCard,
+          { backgroundColor: colors.bgSurface, borderColor: colors.border },
+          shadows.card,
+        ]}
+      >
+        {isUpcoming ? (
+          <>
+            <MenuRow
+              Icon={CalendarCheck}
+              label="Mark attended"
+              tint={colors.success}
+              onPress={onAttend}
+            />
+            <MenuRow
+              Icon={CalendarX}
+              label="Didn't go"
+              tint={colors.textSecondary}
+              onPress={onMissed}
+            />
+            <MenuRow
+              Icon={CalendarX}
+              label="Cancelled"
+              tint={colors.textSecondary}
+              onPress={onCancelled}
+            />
+          </>
+        ) : (
+          <MenuRow
+            Icon={RotateCcw}
+            label="Reopen as upcoming"
+            tint={colors.accent}
+            onPress={onReopen}
+          />
+        )}
+        {hasBrief && (
+          <MenuRow
+            Icon={RefreshCw}
+            label={regenerating ? 'Regenerating…' : 'Regenerate brief'}
+            tint={colors.accent}
+            disabled={regenerating}
+            onPress={onRegenerate}
+          />
+        )}
+        <MenuRow
+          Icon={Pencil}
+          label="Edit appointment"
+          tint={colors.textPrimary}
+          onPress={onEdit}
+        />
+        <MenuRow
+          Icon={Trash2}
+          label="Delete appointment"
+          tint={colors.coral}
+          destructive
+          onPress={onDelete}
+        />
+      </Pressable>
+    </Pressable>
+  );
+};
+
+interface MenuRowProps {
+  Icon: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
+  label: string;
+  tint: string;
+  destructive?: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+}
+
+const MenuRow: React.FC<MenuRowProps> = ({ Icon, label, tint, disabled, onPress }) => {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  return (
+    <Pressable
+      onPress={disabled ? undefined : onPress}
+      style={[
+        styles.menuRow,
+        { borderBottomColor: colors.border, opacity: disabled ? 0.5 : 1 },
+      ]}
+    >
+      <Icon size={moderateScale(16)} color={tint} strokeWidth={2} />
+      <Text
+        style={[
+          typography.body,
+          { color: tint, flex: 1, fontFamily: 'DMSans_500Medium' },
+        ]}
+      >
+        {label}
+      </Text>
+    </Pressable>
   );
 };
 
 const useStyles = makeStyles((theme) => ({
+  topBar: {
+    paddingHorizontal: theme.spacing.s6,
+    paddingVertical: theme.spacing.s3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.colors.border,
+  },
+  menuBtn: {
+    width: moderateScale(36),
+    height: moderateScale(36),
+    borderRadius: moderateScale(18),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   content: {
     paddingHorizontal: theme.spacing.s6,
-    paddingVertical: theme.spacing.s6,
-    paddingBottom: theme.spacing.s12,
+    paddingTop: theme.spacing.s5,
+    paddingBottom: theme.spacing.s10,
+  },
+  hero: {
+    marginBottom: spacing.s4,
+  },
+  heroHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: moderateScale(12),
+  },
+  heroName: {
+    ...theme.typography.h1,
+    fontFamily: 'Fraunces_500Medium',
+    letterSpacing: -0.5,
+  },
+  countdown: {
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(4),
+    borderRadius: theme.radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginTop: verticalScale(6),
+  },
+  heroMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(6),
+    marginTop: moderateScale(8),
   },
   attachRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: moderateScale(12),
-    marginTop: spacing.s5,
-    padding: moderateScale(14),
-    borderRadius: theme.radius.lg,
+    gap: moderateScale(8),
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(8),
+    borderRadius: theme.radius.full,
     borderWidth: StyleSheet.hairlineWidth,
-  },
-  attachIcon: {
-    width: moderateScale(36),
-    height: moderateScale(36),
-    borderRadius: moderateScale(10),
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   generateCard: {
     marginTop: spacing.s5,
@@ -704,5 +1018,46 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: 'row',
     alignItems: 'flex-start',
     paddingVertical: verticalScale(6),
+  },
+  ctaBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(8),
+    paddingHorizontal: theme.spacing.s6,
+    paddingTop: verticalScale(10),
+    paddingBottom: verticalScale(10),
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  iconAction: {
+    width: moderateScale(48),
+    height: moderateScale(48),
+    borderRadius: moderateScale(24),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'flex-end',
+    paddingTop: verticalScale(56),
+    paddingRight: theme.spacing.s5,
+  },
+  menuCard: {
+    minWidth: moderateScale(220),
+    borderRadius: theme.radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+  },
+  menuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(12),
+    paddingHorizontal: moderateScale(14),
+    paddingVertical: verticalScale(14),
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
 }));
