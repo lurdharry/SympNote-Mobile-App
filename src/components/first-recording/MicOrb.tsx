@@ -12,7 +12,7 @@ import Svg, { Circle as SvgCircle, Defs, RadialGradient, Stop } from 'react-nati
 import { Mic } from 'lucide-react-native';
 import { makeStyles, moderateScale } from '@/theme';
 
-export type MicOrbPhase = 'idle' | 'recording' | 'processing' | 'structured' | 'error';
+export type MicOrbPhase = 'idle' | 'recording' | 'ready';
 
 interface MicOrbProps {
   phase: MicOrbPhase;
@@ -27,9 +27,9 @@ interface MicOrbGradientProps {
 const MicOrbGradient: React.FC<MicOrbGradientProps> = ({ active }) => (
   <Svg width="100%" height="100%" viewBox="0 0 120 120">
     <Defs>
-      <RadialGradient id="micG" cx="0.3" cy="0.3" r="0.8">
-        <Stop offset="0" stopColor={active ? '#F5B873' : '#4DB8B0'} />
-        <Stop offset="0.8" stopColor={active ? '#C97A1E' : '#2C6E6B'} />
+      <RadialGradient id="micG" cx="0.3" cy="0.3" r="0.9">
+        <Stop offset="0" stopColor={active ? '#F5A3A3' : '#4DB8B0'} />
+        <Stop offset="0.85" stopColor={active ? '#C45C3F' : '#2C6E6B'} />
       </RadialGradient>
     </Defs>
     <SvgCircle cx={60} cy={60} r={60} fill="url(#micG)" />
@@ -110,9 +110,10 @@ export const MicOrb: React.FC<MicOrbProps> = ({ phase, onPress, reduced }) => {
       <Animated.View style={core}>
         <Pressable
           onPress={onPress}
-          disabled={phase !== 'idle'}
           accessibilityRole="button"
-          accessibilityLabel="Start voice log"
+          accessibilityLabel={
+            active ? 'Stop voice log' : phase === 'ready' ? 'Record again' : 'Start voice log'
+          }
         >
           <View style={[styles.core, active ? styles.coreActive : styles.coreIdle]}>
             <MicOrbGradient active={active} />
@@ -156,10 +157,10 @@ const useStyles = makeStyles((theme) => ({
     elevation: 10,
   },
   coreActive: {
-    shadowColor: '#C97A1E',
+    shadowColor: '#C45C3F',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.4,
-    shadowRadius: 24,
+    shadowOpacity: 0.32,
+    shadowRadius: 28,
     elevation: 12,
   },
   iconLayer: {
