@@ -1,36 +1,49 @@
 import React, { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Plus } from "lucide-react-native";
+import { addDays, setHours, setMinutes, setSeconds } from "date-fns";
+import { Lock, Plus } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
   moderateScale,
   scale,
-  shadows,
   spacing,
   typography,
   useTheme,
   verticalScale,
-} from "../../theme";
-import { SceneTransition } from "../../components/navigation/SceneTransition";
-import { BackButton } from "../../components/ui/BackButton";
-import { PrimaryButton } from "../../components/ui/PrimaryButton";
-import { StaggeredList } from "../../components/animated/StaggeredList";
-import { useProfileStore } from "../../stores/useProfileStore";
-import { hapticLight, hapticSuccess } from "../../services/haptics";
-import { uuid } from "../../utils/uuid";
-import { CARE_TEAM_PALETTE } from "../../constants/onboarding";
+} from "@/theme";
+import { SceneTransition } from "@/components/navigation/SceneTransition";
+import { BackButton } from "@/components/ui/BackButton";
+import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { StaggeredList } from "@/components/animated/StaggeredList";
+import { ClinicianCard } from "@/components/onboarding/care-team/ClinicianCard";
+import type { Clinician } from "@/components/onboarding/care-team/ClinicianCard";
+import { AddClinicianSheet } from "@/components/onboarding/care-team/AddClinicianSheet";
+import { CareTeamEmpty } from "@/components/onboarding/care-team/CareTeamEmpty";
+import { AppointmentBlock } from "@/components/onboarding/care-team/AppointmentBlock";
+import { Specialty } from "@/constants/specialties";
+import { useProfileStore } from "@/stores/useProfileStore";
+import { hapticLight } from "@/services/haptics";
+import { uuid } from "@/utils/uuid";
 
-type Member = {
-  id: string;
-  name: string;
-  role: string;
-  color: string;
+const defaultNextAppointment = (): Date => {
+  const d = addDays(new Date(), 7);
+  return setSeconds(setMinutes(setHours(d, 9), 0), 0);
 };
 
-const PALETTE = CARE_TEAM_PALETTE;
+const continueLabel = (clinicianCount: number, hasAppointment: boolean): string => {
+  if (clinicianCount === 0 && !hasAppointment) return "Skip for now";
+  const parts: string[] = [];
+  if (clinicianCount > 0) {
+    parts.push(
+      `${clinicianCount} ${clinicianCount === 1 ? "clinician" : "clinicians"}`,
+    );
+  }
+  if (hasAppointment) parts.push("1 appointment");
+  return `Continue · ${parts.join(" and ")}`;
+};
 
 const ScreenCareTeam: React.FC = () => {
   const router = useRouter();
@@ -38,33 +51,25 @@ const ScreenCareTeam: React.FC = () => {
   const styles = useStyles();
   const setAnswer = useProfileStore((s) => s.setOnboardingAnswer);
 
-  const [members, setMembers] = useState<Member[]>([
-    { id: uuid(), name: "Dr. Chen", role: "Rheumatology", color: "#2C6E6B" },
-  ]);
-  const [adding, setAdding] = useState(false);
-  const [name, setName] = useState("");
-  const [role, setRole] = useState("");
+  const [members, setMembers] = useState<Clinician[]>([]);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetSeed, setSheetSeed] = useState<Specialty | null>(null);
 
-  const add = () => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    hapticSuccess();
-    setMembers((m) => [
-      ...m,
-      {
-        id: uuid(),
-        name: trimmed,
-        role: role.trim() || "Clinician",
-        color: PALETTE[m.length % PALETTE.length]!,
-      },
-    ]);
-    setName("");
-    setRole("");
-    setAdding(false);
+  const [hasAppointment, setHasAppointment] = useState(false);
+  const [nextWhen, setNextWhen] = useState<Date>(defaultNextAppointment);
+  const [pickerMode, setPickerMode] = useState<"date" | "time" | null>(null);
+
+  const openSheet = (preset?: Specialty) => {
+    hapticLight();
+    setSheetSeed(preset ?? null);
+    setSheetOpen(true);
   };
 
-  const remove = (id: string) => {
-    hapticLight();
+  const handleAdd = (value: { name: string; role: string }) => {
+    setMembers((m) => [...m, { id: uuid(), ...value }]);
+  };
+
+  const handleRemove = (id: string) => {
     setMembers((m) => m.filter((x) => x.id !== id));
   };
 
@@ -73,8 +78,14 @@ const ScreenCareTeam: React.FC = () => {
       "careTeam",
       members.map(({ name, role }) => ({ name, role })),
     );
+    setAnswer(
+      "nextAppointment",
+      hasAppointment ? nextWhen.toISOString() : "none",
+    );
     router.push("/onboarding/analyzing");
   };
+
+  const hasMembers = members.length > 0;
 
   return (
     <SceneTransition mode="scale-fade">
@@ -82,15 +93,16 @@ const ScreenCareTeam: React.FC = () => {
         <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
           <View style={styles.topBar}>
             <BackButton onPress={() => router.back()} />
-            <Text style={[typography.label, { color: colors.textTertiary }]}>7 of 9</Text>
+            <View style={[styles.stagePill, { backgroundColor: colors.bgMuted }]}>
+              <Text style={[typography.label, { color: colors.textTertiary }]}>
+                7 of 9
+              </Text>
+            </View>
             <Pressable onPress={onContinue} hitSlop={8}>
               <Text
                 style={[
                   typography.label,
-                  {
-                    color: colors.accent,
-                    fontFamily: "DMSans_600SemiBold",
-                  },
+                  { color: colors.textTertiary, fontFamily: "DMSans_500Medium" },
                 ]}
               >
                 Skip
@@ -103,206 +115,120 @@ const ScreenCareTeam: React.FC = () => {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            <Text style={[typography.h1, { color: colors.textPrimary }]}>
-              Who's on your care team?
+            {/* Hero */}
+            <Text style={[styles.eyebrow, { color: colors.accent }]}>
+              YOUR CARE TEAM
             </Text>
-            <Text style={[typography.body, { color: colors.textSecondary, marginTop: 8 }]}>
-              Optional. Adding clinicians lets us tag entries and build summaries by doctor.
+            <Text style={[styles.headline, { color: colors.textPrimary }]}>
+              Who takes care{"\n"}of you?
+            </Text>
+            <Text style={[styles.sub, { color: colors.textSecondary }]}>
+              Add the doctors and specialists you see. Sympnote organizes your
+              entries by clinician so each visit prep stays relevant.
             </Text>
 
-            <View style={{ marginTop: spacing.s5, gap: 8 }}>
-              <StaggeredList stagger={80}>
-                {members.map((m) => (
-                  <View
-                    key={m.id}
-                    style={[
-                      styles.memberCard,
-                      {
-                        backgroundColor: colors.bgSurface,
-                        borderColor: colors.border,
-                      },
-                      shadows.card,
-                    ]}
+            {/* Body */}
+            <View style={styles.body}>
+              {hasMembers ? (
+                <>
+                  <StaggeredList stagger={80}>
+                    {members.map((m) => (
+                      <ClinicianCard
+                        key={m.id}
+                        clinician={m}
+                        onRemove={handleRemove}
+                      />
+                    ))}
+                  </StaggeredList>
+                  <Pressable
+                    onPress={() => openSheet()}
+                    style={styles.addAnother}
+                    accessibilityRole="button"
+                    accessibilityLabel="Add another clinician"
                   >
-                    <View style={[styles.avatar, { backgroundColor: m.color }]}>
-                      <Text style={styles.avatarLetter}>
-                        {m.name.replace(/^Dr\.?\s*/, "")[0] ?? "?"}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={[typography.h3, { color: colors.textPrimary }]}
-                        numberOfLines={1}
-                      >
-                        {m.name}
-                      </Text>
-                      <Text style={[typography.caption, { color: colors.textTertiary }]}>
-                        {m.role}
-                      </Text>
-                    </View>
-                    <Pressable onPress={() => remove(m.id)} hitSlop={8}>
-                      <Text
-                        style={[
-                          typography.label,
-                          {
-                            color: colors.textTertiary,
-                            fontFamily: "DMSans_600SemiBold",
-                          },
-                        ]}
-                      >
-                        Remove
-                      </Text>
-                    </Pressable>
-                  </View>
-                ))}
-              </StaggeredList>
-
-              {adding ? (
-                <View
-                  style={[
-                    styles.addingCard,
-                    {
-                      backgroundColor: colors.bgSurface,
-                      borderColor: colors.accent,
-                    },
-                    shadows.card,
-                  ]}
-                >
-                  <InputField
-                    value={name}
-                    onChangeText={setName}
-                    placeholder="Doctor name (e.g. Dr. Patel)"
-                  />
-                  <InputField
-                    value={role}
-                    onChangeText={setRole}
-                    placeholder="Specialty (e.g. Primary care)"
-                  />
-                  <View style={{ flexDirection: "row", gap: 8, paddingTop: 4 }}>
-                    <Pressable
-                      onPress={() => {
-                        setAdding(false);
-                        setName("");
-                        setRole("");
-                      }}
-                      style={[styles.smallBtn, { backgroundColor: colors.bgMuted }]}
-                    >
-                      <Text
-                        style={[
-                          typography.label,
-                          {
-                            color: colors.textPrimary,
-                            fontFamily: "DMSans_600SemiBold",
-                          },
-                        ]}
-                      >
-                        Cancel
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={add}
-                      disabled={!name.trim()}
+                    <View
                       style={[
-                        styles.smallBtn,
+                        styles.addAnotherIcon,
+                        { backgroundColor: colors.accent + "1A" },
+                      ]}
+                    >
+                      <Plus
+                        size={moderateScale(14)}
+                        color={colors.accent}
+                        strokeWidth={2.2}
+                      />
+                    </View>
+                    <Text
+                      style={[
+                        typography.label,
                         {
-                          backgroundColor: colors.accent,
-                          opacity: name.trim() ? 1 : 0.4,
+                          color: colors.accent,
+                          fontFamily: "DMSans_600SemiBold",
                         },
                       ]}
                     >
-                      <Text
-                        style={[
-                          typography.label,
-                          {
-                            color: "#FFFFFF",
-                            fontFamily: "DMSans_600SemiBold",
-                          },
-                        ]}
-                      >
-                        Add
-                      </Text>
-                    </Pressable>
-                  </View>
-                </View>
+                      Add another
+                    </Text>
+                  </Pressable>
+                </>
               ) : (
-                <Pressable
-                  onPress={() => {
-                    hapticLight();
-                    setAdding(true);
-                  }}
-                  style={[styles.addDashed, { borderColor: colors.border }]}
-                >
-                  <Plus size={16} color={colors.textSecondary} />
-                  <Text
-                    style={[
-                      typography.body,
-                      {
-                        color: colors.textSecondary,
-                        fontFamily: "DMSans_600SemiBold",
-                      },
-                    ]}
-                  >
-                    Add clinician
-                  </Text>
-                </Pressable>
+                <CareTeamEmpty onPickSpecialty={openSheet} />
               )}
             </View>
 
-            <Text
+            {/* Appointment module — visually secondary */}
+            <View style={styles.appointmentSlot}>
+              <AppointmentBlock
+                enabled={hasAppointment}
+                onToggle={(v) => {
+                  setHasAppointment(v);
+                  if (!v) setPickerMode(null);
+                }}
+                when={nextWhen}
+                onChange={setNextWhen}
+                pickerMode={pickerMode}
+                onOpenPicker={setPickerMode}
+                onClosePicker={() => setPickerMode(null)}
+              />
+            </View>
+
+            {/* Privacy footer */}
+            <View
               style={[
-                typography.caption,
-                {
-                  color: colors.textTertiary,
-                  textAlign: "center",
-                  marginTop: spacing.s4,
-                },
+                styles.privacyRow,
+                { backgroundColor: colors.bgMuted },
               ]}
             >
-              We never contact your clinicians. This is just for your records.
-            </Text>
+              <Lock size={moderateScale(12)} color={colors.textTertiary} strokeWidth={2.2} />
+              <Text
+                style={[
+                  typography.caption,
+                  { color: colors.textTertiary, flex: 1 },
+                ]}
+              >
+                Private to you. Sympnote never contacts your clinicians.
+              </Text>
+            </View>
           </ScrollView>
 
-          <View style={{ paddingHorizontal: spacing.s6, paddingTop: 8 }}>
+          <View style={styles.ctaSlot}>
             <PrimaryButton
-              label={members.length > 0 ? "Continue" : "Skip for now"}
+              label={continueLabel(members.length, hasAppointment)}
               onPress={onContinue}
             />
           </View>
         </SafeAreaView>
+
+        <AddClinicianSheet
+          visible={sheetOpen}
+          initialSpecialty={sheetSeed}
+          onClose={() => setSheetOpen(false)}
+          onAdd={handleAdd}
+        />
       </View>
     </SceneTransition>
   );
-}
-
-interface InputFieldProps {
-  value: string;
-  onChangeText: (v: string) => void;
-  placeholder: string;
-}
-
-const InputField: React.FC<InputFieldProps> = ({ value,
-  onChangeText,
-  placeholder }) => {
-  const { colors } = useTheme();
-  const styles = useStyles();
-  return (
-    <TextInput
-      value={value}
-      onChangeText={onChangeText}
-      placeholder={placeholder}
-      placeholderTextColor={colors.textTertiary}
-      style={[
-        typography.body,
-        styles.input,
-        {
-          color: colors.textPrimary,
-          backgroundColor: colors.bgPrimary,
-          borderColor: colors.border,
-        },
-      ]}
-    />
-  );
-}
+};
 
 export default ScreenCareTeam;
 
@@ -316,58 +242,67 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  stagePill: {
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(4),
+    borderRadius: theme.radius.full,
+  },
   content: {
     paddingHorizontal: theme.spacing.s6,
-    paddingTop: theme.spacing.s4,
+    paddingTop: theme.spacing.s5,
     paddingBottom: theme.spacing.s6,
   },
-  memberCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(12),
-    padding: moderateScale(16),
-    borderRadius: theme.radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  avatar: {
-    width: moderateScale(40),
-    height: moderateScale(40),
-    borderRadius: moderateScale(20),
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarLetter: {
-    color: "#FFFFFF",
-    fontSize: fontScale(15),
+  eyebrow: {
+    ...theme.typography.label,
     fontFamily: "DMSans_700Bold",
+    letterSpacing: 1.2,
   },
-  addingCard: {
-    padding: moderateScale(16),
-    borderRadius: theme.radius.lg,
-    borderWidth: 2,
-    gap: moderateScale(8),
+  headline: {
+    ...theme.typography.h1,
+    fontFamily: "Fraunces_500Medium",
+    letterSpacing: -0.6,
+    marginTop: moderateScale(4),
+    lineHeight: fontScale(36),
   },
-  input: {
-    height: verticalScale(44),
-    paddingHorizontal: scale(12),
-    borderRadius: theme.radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
+  sub: {
+    ...theme.typography.body,
+    marginTop: moderateScale(8),
+    lineHeight: fontScale(22),
   },
-  smallBtn: {
-    flex: 1,
-    height: verticalScale(40),
-    borderRadius: theme.radius.full,
-    alignItems: "center",
-    justifyContent: "center",
+  body: {
+    marginTop: spacing.s6,
+    gap: moderateScale(10),
   },
-  addDashed: {
-    borderWidth: 2,
-    borderStyle: "dashed",
-    borderRadius: theme.radius.lg,
-    paddingVertical: verticalScale(20),
-    alignItems: "center",
-    justifyContent: "center",
+  addAnother: {
     flexDirection: "row",
-    gap: moderateScale(6),
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: moderateScale(8),
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(8),
+    marginTop: moderateScale(4),
+  },
+  addAnotherIcon: {
+    width: moderateScale(24),
+    height: moderateScale(24),
+    borderRadius: moderateScale(12),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  appointmentSlot: {
+    marginTop: spacing.s6,
+  },
+  privacyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(8),
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(10),
+    borderRadius: theme.radius.full,
+    marginTop: spacing.s5,
+  },
+  ctaSlot: {
+    paddingHorizontal: theme.spacing.s6,
+    paddingTop: verticalScale(8),
   },
 }));
