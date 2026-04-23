@@ -203,7 +203,7 @@ export async function exportBriefPdf(brief: PdfBrief): Promise<string> {
   if (canShare) {
     await Sharing.shareAsync(uri, {
       mimeType: 'application/pdf',
-      dialogTitle: `Visit brief — ${brief.doctor}`,
+      dialogTitle: `Visit brief: ${brief.doctor}`,
       UTI: 'com.adobe.pdf',
     });
   }

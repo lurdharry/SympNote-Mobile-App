@@ -18,7 +18,7 @@ export const PAYWALL_PLANS: PlanDef[] = [
     label: 'Annual',
     price: '$59.99',
     per: '/year',
-    note: 'Just $4.99/month',
+    note: '$4.99 a month',
     badge: 'BEST VALUE · SAVE 50%',
   },
 ];

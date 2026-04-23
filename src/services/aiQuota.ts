@@ -43,7 +43,7 @@ const buildMessage = (
   if (scope === 'day') {
     return 'Daily Gemini free-tier limit reached. Try again tomorrow or upgrade your API plan.';
   }
-  if (retry) return `Gemini rate limit — try again in ${retry}s.`;
+  if (retry) return `Gemini rate limit. Try again in ${retry}s.`;
   return 'Gemini rate limit reached. Please wait and try again.';
 };
 
