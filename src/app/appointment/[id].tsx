@@ -43,7 +43,7 @@ import { Button } from '@/components/ui/Button';
 import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { useRecordingsStore } from '@/stores/useRecordingsStore';
 import { useProfileStore } from '@/stores/useProfileStore';
-import { generateAppointmentBrief } from '@/services/ai';
+import { useGenerateBrief } from '@/hooks/useGenerateBrief';
 import {
   briefSourceWindowLabel,
   isBriefStale,
@@ -73,7 +73,6 @@ const AppointmentDetail: React.FC = () => {
   const styles = useStyles();
   const appt = useAppointmentsStore((s) => s.getById(id!));
   const allAppointments = useAppointmentsStore((s) => s.appointments);
-  const setBrief = useAppointmentsStore((s) => s.setBrief);
   const remove = useAppointmentsStore((s) => s.remove);
   const markAttended = useAppointmentsStore((s) => s.markAttended);
   const markMissed = useAppointmentsStore((s) => s.markMissed);
@@ -84,8 +83,10 @@ const AppointmentDetail: React.FC = () => {
   const { closeScene } = useTransition();
   const insets = useSafeAreaInsets();
 
-  const [generating, setGenerating] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const briefMutation = useGenerateBrief();
+  const generating = briefMutation.isPending;
 
   const goBack = async () => {
     hapticLight();
@@ -137,7 +138,7 @@ const AppointmentDetail: React.FC = () => {
     return { label, tint };
   })();
 
-  const generate = async () => {
+  const generate = () => {
     if (sourceRecordings.length === 0) {
       Alert.alert(
         'No entries yet',
@@ -147,20 +148,13 @@ const AppointmentDetail: React.FC = () => {
       return;
     }
     hapticMedium();
-    setGenerating(true);
-    try {
-      const fresh = await generateAppointmentBrief(
-        appt,
-        sourceRecordings,
-        personalization,
-      );
-      setBrief(appt.id, fresh, sourceRecordings.map((r) => r.id));
-      hapticSuccess();
-    } catch (e) {
-      Alert.alert('Brief failed', String(e));
-    } finally {
-      setGenerating(false);
-    }
+    briefMutation.mutate(
+      { appointment: appt, sourceRecordings, profile: personalization },
+      {
+        onSuccess: () => hapticSuccess(),
+        onError: (e) => Alert.alert('Brief failed', String(e)),
+      },
+    );
   };
 
   const copy = async () => {
