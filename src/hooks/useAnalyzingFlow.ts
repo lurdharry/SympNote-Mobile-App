@@ -80,7 +80,6 @@ const seedPendingAppointment = (
     status: 'upcoming',
     attendedAt: null,
     outcome: null,
-    relatedRecordingIds: [],
     brief: null,
     briefGeneratedAt: null,
     briefSourceRecordingIds: [],

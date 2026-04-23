@@ -85,7 +85,7 @@ export const usePrepRows = (): PrepRowsResult => {
     );
 
     const upcoming: PrepRow[] = upcomingAppts.map((a, i) => {
-      const derived = deriveAppointmentBrief(a, storeRecordings);
+      const derived = deriveAppointmentBrief(a, storeRecordings, storeAppts);
       const briefState: PrepBriefState = !a.brief?.summary
         ? 'none'
         : isBriefStale(a, storeRecordings)

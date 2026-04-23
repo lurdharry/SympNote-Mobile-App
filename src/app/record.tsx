@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -19,7 +19,6 @@ import { ExtractingPhase } from '../components/recording/ExtractingPhase';
 import { ExtractedPhase } from '../components/recording/ExtractedPhase';
 import { useRecordingFlow } from '../components/recording/useRecordingFlow';
 import { useRecordingsStore } from '../stores/useRecordingsStore';
-import { useProfileStore } from '../stores/useProfileStore';
 import { uuid } from '../utils/uuid';
 import { hapticHeavy, hapticLight } from '../services/haptics';
 
@@ -42,8 +41,6 @@ const RecordModal: React.FC = () => {
   const styles = useStyles();
   const { kind } = useLocalSearchParams<{ kind?: string }>();
   const flow = useRecordingFlow();
-  const careTeam = useProfileStore((s) => s.personalization?.careTeam ?? []);
-  const [clinicianName, setClinicianName] = useState<string | null>(null);
 
   // Persisted tag derived from the `kind` query parameter. Kept once the
   // screen mounts so late-arriving tag params don't overwrite.
@@ -72,7 +69,6 @@ const RecordModal: React.FC = () => {
       transcript: flow.reviewText.trim(),
       structured: flow.structured,
       tags,
-      ...(clinicianName ? { clinicianName } : {}),
     });
     hapticHeavy();
     router.back();
@@ -176,13 +172,7 @@ const RecordModal: React.FC = () => {
             )}
 
             {flow.phase === 'extracted' && flow.structured && (
-              <ExtractedPhase
-                structured={flow.structured}
-                onSave={save}
-                careTeam={careTeam}
-                clinicianName={clinicianName}
-                onClinicianChange={setClinicianName}
-              />
+              <ExtractedPhase structured={flow.structured} onSave={save} />
             )}
           </ScrollView>
         </SafeAreaView>

@@ -1,6 +1,7 @@
 import { format, parseISO, startOfDay } from 'date-fns';
 import { capitalize, orderBy, sortBy, take, truncate } from 'lodash';
 import { Appointment, Recording } from '../stores/types';
+import { recordingsForAppointmentBrief } from './briefSource';
 
 export type DerivedConcern = {
   t: string;
@@ -33,40 +34,39 @@ const CONCERN_LIMIT = 3;
 const shortDate = (iso: string): string => format(parseISO(iso), 'MMM d');
 
 /**
- * Build a visit brief from the recordings attached (via
- * `appointment.relatedRecordingIds`) to the appointment.
+ * Build a visit brief preview from the recordings that will feed the AI
+ * brief for this appointment — i.e. everything logged since the patient's
+ * last attended visit with the same doctor. Drives the expandable
+ * AppointmentCard preview on the Prep tab.
  *
  *  - Concerns: top 3 symptom names by frequency, paired with their
  *    supporting detail (most recent duration + peak severity).
- *  - Timeline: narrative combining earliest + most-recent transcripts,
- *    bookended by dates. Falls back to the single transcript when the
- *    user only has one related recording.
+ *  - Timeline: narrative combining earliest + most-recent transcripts.
  *  - Severity: chronological (date-only, peak per day) for the chart.
- *  - Meds: de-duped from `structured.medications`. We don't know doses
- *    from the current model so we display raw name + "As needed".
+ *  - Meds: de-duped from `structured.medications`.
  *
- * Returns all-empty arrays when no recordings are attached. Callers
- * decide whether to fall back to demo content or show empty states.
+ * Returns all-empty arrays when the window is empty.
  */
 export function deriveAppointmentBrief(
   appointment: Appointment,
   allRecordings: Recording[],
+  allAppointments: Appointment[] = [],
 ): DerivedBrief {
-  const ids = new Set(appointment.relatedRecordingIds);
-  const attached = sortBy(
-    allRecordings.filter((r) => ids.has(r.id)),
-    (r) => parseISO(r.createdAt).getTime(),
+  const entries = recordingsForAppointmentBrief(
+    appointment,
+    allRecordings,
+    allAppointments,
   );
 
-  if (attached.length === 0) {
+  if (entries.length === 0) {
     return { concerns: [], timeline: '', severity: [], meds: [] };
   }
 
   return {
-    concerns: deriveConcerns(attached),
-    timeline: deriveTimeline(attached),
-    severity: deriveSeverity(attached),
-    meds: deriveMeds(attached),
+    concerns: deriveConcerns(entries),
+    timeline: deriveTimeline(entries),
+    severity: deriveSeverity(entries),
+    meds: deriveMeds(entries),
   };
 }
 

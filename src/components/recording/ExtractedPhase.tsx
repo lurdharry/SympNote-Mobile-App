@@ -7,24 +7,13 @@ import { FIELDS, StructuredWithSources, fieldValue } from './types';
 import { SeverityBadge } from '../clinical/SeverityBadge';
 import { UrgencyChip } from '../clinical/UrgencyChip';
 import { RedFlagAlert } from '../clinical/RedFlagAlert';
-import { ClinicianTagPicker } from './ClinicianTagPicker';
-import type { Clinician } from '../../stores/types';
 
 type Props = {
   structured: StructuredWithSources;
   onSave: () => void;
-  careTeam: Clinician[];
-  clinicianName: string | null;
-  onClinicianChange: (name: string | null) => void;
 };
 
-export const ExtractedPhase: React.FC<Props> = ({
-  structured,
-  onSave,
-  careTeam,
-  clinicianName,
-  onClinicianChange,
-}) => {
+export const ExtractedPhase: React.FC<Props> = ({ structured, onSave }) => {
   const styles = useStyles();
   return (
     <View style={{ marginTop: spacing.s6, gap: spacing.s5 }}>
@@ -48,12 +37,6 @@ export const ExtractedPhase: React.FC<Props> = ({
           <FieldRow label="Notes" value={structured.notes} active />
         ) : null}
       </View>
-
-      <ClinicianTagPicker
-        careTeam={careTeam}
-        selected={clinicianName}
-        onChange={onClinicianChange}
-      />
 
       <Button label="Save entry" breathe haptic="heavy" onPress={onSave} />
     </View>
