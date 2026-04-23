@@ -1,17 +1,9 @@
 import React, { useEffect } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X as XIcon } from 'lucide-react-native';
-import { makeStyles, moderateScale, spacing, typography, useTheme } from '../theme';
-import { SceneTransition } from '../components/navigation/SceneTransition';
-import { TypewriterText } from '../components/animated/TypewriterText';
+import { fontScale, makeStyles, moderateScale, useTheme } from '../theme';
 import { IdlePhase } from '../components/recording/IdlePhase';
 import { RecordingPhase } from '../components/recording/RecordingPhase';
 import { ReviewPhase } from '../components/recording/ReviewPhase';
@@ -21,19 +13,14 @@ import { useRecordingFlow } from '../components/recording/useRecordingFlow';
 import { useRecordingsStore } from '../stores/useRecordingsStore';
 import { uuid } from '../utils/uuid';
 import { hapticHeavy, hapticLight } from '../services/haptics';
+import type { Phase } from '../components/recording/types';
 
 /**
- * Standalone recording modal — used from the Home tab (FAB + quick-log
- * tiles) and anywhere else an entry needs to be captured outside of
- * onboarding.
- *
- * Behavior:
- *  - Reuses `useRecordingFlow` so privacy/idle/recording/review/
- *    extracting/extracted states match the onboarding screen exactly
- *  - On save: persists the recording to the store (with a preset tag if
- *    the caller passed `?kind=medication|symptom|sideEffect`) and
- *    dismisses the modal
- *  - Close button in the header lets the user abort mid-flow
+ * Full-screen capture surface — opens over everything so the recording
+ * orb and transcript own the device. Four phases progress left→right in
+ * the indicator: record → review → analyze → confirm. Idle and recording
+ * share the first step; extracting and extracted share the last two so
+ * the stepper feels stable rather than jumping.
  */
 const RecordModal: React.FC = () => {
   const router = useRouter();
@@ -42,8 +29,6 @@ const RecordModal: React.FC = () => {
   const { kind } = useLocalSearchParams<{ kind?: string }>();
   const flow = useRecordingFlow();
 
-  // Persisted tag derived from the `kind` query parameter. Kept once the
-  // screen mounts so late-arriving tag params don't overwrite.
   const presetTag = typeof kind === 'string' ? kindToTag(kind) : null;
 
   useEffect(() => {
@@ -59,8 +44,8 @@ const RecordModal: React.FC = () => {
         [
           ...(presetTag ? [presetTag] : []),
           ...flow.structured.symptoms.slice(0, 2),
-        ].filter(Boolean)
-      )
+        ].filter(Boolean),
+      ),
     );
     useRecordingsStore.getState().add({
       id: uuid(),
@@ -79,107 +64,128 @@ const RecordModal: React.FC = () => {
     router.back();
   };
 
-  const kindLabel = kindToLabel(kind);
+  const title = titleForKind(kind);
 
   return (
-    <SceneTransition mode="sheet-up">
-      <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
-        <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={{ flex: 1 }}>
-              {kindLabel && (
-                <Text
-                  style={[
-                    typography.label,
-                    {
-                      color: colors.accent,
-                      fontFamily: 'DMSans_600SemiBold',
-                      letterSpacing: 0.4,
-                    },
-                  ]}
-                >
-                  {kindLabel.toUpperCase()}
-                </Text>
-              )}
-              <Text
-                style={[
-                  typography.h2,
-                  { color: colors.textPrimary, marginTop: kindLabel ? 2 : 0 },
-                ]}
-              >
-                New entry
-              </Text>
-            </View>
-            <Pressable
-              onPress={close}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Close"
-              style={[styles.closeBtn, { backgroundColor: colors.bgMuted }]}
-            >
-              <XIcon size={18} color={colors.textPrimary} strokeWidth={2} />
-            </Pressable>
-          </View>
-
-          <ScrollView
-            contentContainerStyle={styles.content}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
+    <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={styles.topBar}>
+          <PhaseIndicator phase={flow.phase} />
+          <Pressable
+            onPress={close}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+            style={[styles.close, { backgroundColor: colors.bgMuted }]}
           >
-            <View style={{ minHeight: 56, marginTop: spacing.s3 }}>
-              <TypewriterText
-                text="Tell me what's going on"
-                speed={30}
-                style={[typography.h1, { color: colors.textPrimary }]}
-              />
-            </View>
+            <XIcon size={18} color={colors.textPrimary} strokeWidth={2} />
+          </Pressable>
+        </View>
 
-            {flow.phase === 'idle' && (
-              <IdlePhase
-                onStart={flow.beginRecording}
-                onTypeInstead={flow.skipToTyping}
-              />
-            )}
+        <View style={styles.titleArea}>
+          <Text
+            style={[styles.title, { color: colors.textPrimary }]}
+            numberOfLines={2}
+          >
+            {title}
+          </Text>
+        </View>
 
-            {flow.phase === 'recording' && (
-              <RecordingPhase
-                meterSv={flow.meterSv}
-                liveTranscript={flow.liveTranscript}
-                durationSec={flow.durationSec}
-                onStop={flow.endRecording}
-              />
-            )}
+        <View style={styles.body}>
+          {flow.phase === 'idle' && (
+            <IdlePhase
+              onStart={flow.beginRecording}
+              onTypeInstead={flow.skipToTyping}
+            />
+          )}
 
-            {flow.phase === 'review' && (
-              <ReviewPhase
-                text={flow.reviewText}
-                onChange={flow.setReviewText}
-                durationSec={flow.durationSec}
-                onProcess={flow.processWithAI}
-                onDiscard={flow.discardAndRetry}
-                error={flow.reviewError}
-                retryInSec={flow.retryInSec}
-              />
-            )}
+          {flow.phase === 'recording' && (
+            <RecordingPhase
+              meterSv={flow.meterSv}
+              liveTranscript={flow.liveTranscript}
+              durationSec={flow.durationSec}
+              onStop={flow.endRecording}
+            />
+          )}
 
-            {flow.phase === 'extracting' && (
-              <ExtractingPhase
-                structured={flow.structured}
-                transcript={flow.reviewText}
-                onDone={flow.setStructuredDone}
-              />
-            )}
+          {flow.phase === 'review' && (
+            <ReviewPhase
+              text={flow.reviewText}
+              onChange={flow.setReviewText}
+              durationSec={flow.durationSec}
+              onProcess={flow.processWithAI}
+              onDiscard={flow.discardAndRetry}
+              error={flow.reviewError}
+              retryInSec={flow.retryInSec}
+            />
+          )}
 
-            {flow.phase === 'extracted' && flow.structured && (
-              <ExtractedPhase structured={flow.structured} onSave={save} />
-            )}
-          </ScrollView>
-        </SafeAreaView>
-      </View>
-    </SceneTransition>
+          {flow.phase === 'extracting' && (
+            <ExtractingPhase
+              structured={flow.structured}
+              transcript={flow.reviewText}
+              onDone={flow.setStructuredDone}
+            />
+          )}
+
+          {flow.phase === 'extracted' && flow.structured && (
+            <ExtractedPhase structured={flow.structured} onSave={save} />
+          )}
+        </View>
+      </SafeAreaView>
+    </View>
   );
-}
+};
+
+// ─── Phase indicator ──────────────────────────────────────────────────────
+// Four visible steps. Idle + recording = step 1 (capture). Review = 2.
+// Extracting = 3 (analyze). Extracted = 4 (confirm). Privacy lives outside
+// the stepper because it's a consent gate, not a capture step.
+
+const STEP_ORDER: { label: string; phases: Phase[] }[] = [
+  { label: 'Capture', phases: ['idle', 'recording'] },
+  { label: 'Review', phases: ['review'] },
+  { label: 'Analyze', phases: ['extracting'] },
+  { label: 'Confirm', phases: ['extracted'] },
+];
+
+const indexForPhase = (phase: Phase): number => {
+  const idx = STEP_ORDER.findIndex((step) => step.phases.includes(phase));
+  return idx === -1 ? 0 : idx;
+};
+
+const PhaseIndicator: React.FC<{ phase: Phase }> = ({ phase }) => {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const active = indexForPhase(phase);
+  return (
+    <View style={styles.stepperRow}>
+      {STEP_ORDER.map((step, i) => {
+        const isActive = i === active;
+        const isPast = i < active;
+        return (
+          <View key={step.label} style={styles.stepperCell}>
+            <View
+              style={[
+                styles.stepDot,
+                {
+                  backgroundColor: isActive
+                    ? colors.accent
+                    : isPast
+                      ? colors.accent + '66'
+                      : colors.border,
+                  width: isActive ? moderateScale(18) : moderateScale(6),
+                },
+              ]}
+            />
+          </View>
+        );
+      })}
+    </View>
+  );
+};
+
+// ─── Title helpers ────────────────────────────────────────────────────────
 
 function kindToTag(raw: string): string | null {
   const k = raw.toLowerCase();
@@ -190,14 +196,14 @@ function kindToTag(raw: string): string | null {
   return null;
 }
 
-function kindToLabel(raw?: string): string | null {
-  if (!raw) return null;
+function titleForKind(raw?: string): string {
+  if (!raw) return 'New entry';
   const k = raw.toLowerCase();
-  if (k === 'medication' || k === 'meds' || k === 'med') return 'Medication';
-  if (k === 'symptom' || k === 'symptoms') return 'Symptom';
+  if (k === 'medication' || k === 'meds' || k === 'med') return 'Log medication';
+  if (k === 'symptom' || k === 'symptoms') return 'Log a symptom';
   if (k === 'side-effect' || k === 'sideeffect' || k === 'side_effect')
-    return 'Side effect';
-  return null;
+    return 'Log a side effect';
+  return 'New entry';
 }
 
 export default RecordModal;
@@ -205,24 +211,48 @@ export default RecordModal;
 const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },
   safe: { flex: 1 },
-  header: {
+  topBar: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.s6,
     paddingTop: theme.spacing.s4,
     paddingBottom: theme.spacing.s3,
     gap: moderateScale(12),
   },
-  closeBtn: {
-    width: moderateScale(40),
-    height: moderateScale(40),
-    borderRadius: moderateScale(20),
+  stepperRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(6),
+  },
+  stepperCell: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  content: {
+  stepDot: {
+    height: moderateScale(6),
+    borderRadius: moderateScale(3),
+  },
+  close: {
+    width: moderateScale(32),
+    height: moderateScale(32),
+    borderRadius: moderateScale(16),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titleArea: {
     paddingHorizontal: theme.spacing.s6,
-    paddingBottom: theme.spacing.s12,
+    paddingTop: theme.spacing.s2,
+    paddingBottom: theme.spacing.s3,
+  },
+  title: {
+    ...theme.typography.h1,
+    fontSize: fontScale(28),
+    lineHeight: fontScale(34),
+  },
+  body: {
+    flex: 1,
+    paddingHorizontal: theme.spacing.s6,
   },
 }));

@@ -89,15 +89,14 @@ const RootLayout: React.FC = () => {
                 <Stack.Screen
                   name="record"
                   options={{
-                    animation: "slide_from_bottom",
-                    presentation: "modal",
+                    animation: "fade",
+                    presentation: "fullScreenModal",
                   }}
                 />
                 <Stack.Screen
                   name="appointment-new"
                   options={{
-                    animation: "slide_from_bottom",
-                    presentation: "modal",
+                    animation: "slide_from_right",
                   }}
                 />
               </Stack>
