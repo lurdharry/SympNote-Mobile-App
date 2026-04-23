@@ -69,6 +69,28 @@ interface Actions {
   ) => void;
   /** Forget the brief (lets the user regenerate from scratch). */
   clearBrief: (appointmentId: string) => void;
+  /**
+   * Lifecycle transitions — called from the post-visit prompt on home
+   * and the action menu on the appointment detail screen. Each sets
+   * the status and, where relevant, a timestamp / note.
+   *  - `markAttended` optionally captures an outcome note (user-typed,
+   *    short free text).
+   *  - `reopenAppointment` flips any terminal status back to 'upcoming'
+   *    in case the user marked the wrong one.
+   */
+  markAttended: (appointmentId: string, outcome?: string) => void;
+  markMissed: (appointmentId: string) => void;
+  markCancelled: (appointmentId: string) => void;
+  reopenAppointment: (appointmentId: string) => void;
+  /**
+   * Past appointments still sitting in 'upcoming' state — used by the
+   * home-screen prompt to nudge the user to categorize them.
+   * Today's appointments are NOT included; the prompt kicks in the day
+   * after.
+   */
+  unresolvedPast: () => Appointment[];
+  /** All appointments in a terminal state (attended/missed/cancelled). */
+  past: () => Appointment[];
 }
 
 export const useAppointmentsStore = create<State & Actions>()(
@@ -181,10 +203,87 @@ export const useAppointmentsStore = create<State & Actions>()(
             briefSourceRecordingIds: [],
           })),
         })),
+
+      markAttended: (appointmentId, outcome) =>
+        set((s) => ({
+          appointments: patchOne(s.appointments, appointmentId, (a) => ({
+            ...a,
+            status: 'attended',
+            attendedAt: new Date().toISOString(),
+            outcome: outcome?.trim() ? outcome.trim() : a.outcome,
+          })),
+        })),
+
+      markMissed: (appointmentId) =>
+        set((s) => ({
+          appointments: patchOne(s.appointments, appointmentId, (a) => ({
+            ...a,
+            status: 'missed',
+          })),
+        })),
+
+      markCancelled: (appointmentId) =>
+        set((s) => ({
+          appointments: patchOne(s.appointments, appointmentId, (a) => ({
+            ...a,
+            status: 'cancelled',
+          })),
+        })),
+
+      reopenAppointment: (appointmentId) =>
+        set((s) => ({
+          appointments: patchOne(s.appointments, appointmentId, (a) => ({
+            ...a,
+            status: 'upcoming',
+            attendedAt: null,
+            outcome: null,
+          })),
+        })),
+
+      unresolvedPast: () => {
+        // "Day after" cutoff: appointment's date is before the start of
+        // today (local time). We keep today's appointments in 'upcoming'
+        // so the prompt doesn't fire mid-visit.
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        return sortBy(
+          get().appointments.filter(
+            (a) =>
+              a.status === 'upcoming' &&
+              parseISO(a.date).getTime() < startOfToday.getTime(),
+          ),
+          byDateAsc,
+        );
+      },
+
+      past: () =>
+        sortBy(
+          get().appointments.filter((a) => a.status !== 'upcoming'),
+          (a) => -parseISO(a.date).getTime(),
+        ),
     }),
     {
       name: 'appointments',
       storage: createJSONStorage(() => mmkvStorage),
+      version: 1,
+      migrate: (persisted, version) => {
+        // v0 → v1: add status / attendedAt / outcome defaults to every
+        // appointment so existing users land in 'upcoming' and can
+        // categorize past visits through the new prompt.
+        if (version === 0) {
+          const s = persisted as { appointments?: Appointment[] };
+          return {
+            ...s,
+            appointments: (s.appointments ?? []).map((a) => ({
+              ...a,
+              status: a.status ?? 'upcoming',
+              attendedAt: a.attendedAt ?? null,
+              outcome: a.outcome ?? null,
+            })),
+          };
+        }
+        return persisted as State;
+      },
     },
   ),
 );
