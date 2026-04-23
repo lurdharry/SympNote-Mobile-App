@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -8,9 +8,9 @@ import Animated, {
   withDelay,
   withSpring,
   withTiming,
-} from 'react-native-reanimated';
-import { format, parseISO } from 'date-fns';
-import { Sparkles, X as XIcon } from 'lucide-react-native';
+} from "react-native-reanimated";
+import { format, parseISO } from "date-fns";
+import { Sparkles, X as XIcon, Microchip, Mic } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
@@ -21,10 +21,10 @@ import {
   typography,
   useTheme,
   verticalScale,
-} from '@/theme';
-import { useReducedMotion } from '@/hooks/useReducedMotion';
-import type { Appointment, Recording } from '@/stores/types';
-import { hapticLight } from '@/services/haptics';
+} from "@/theme";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
+import type { Appointment, Recording } from "@/stores/types";
+import { hapticLight } from "@/services/haptics";
 
 interface FirstEntryHeroProps {
   recording: Recording;
@@ -56,10 +56,7 @@ export const FirstEntryHero: React.FC<FirstEntryHeroProps> = ({
       80,
       withTiming(1, { duration: 320, easing: Easing.out(Easing.cubic) }),
     );
-    translate.value = withDelay(
-      80,
-      withSpring(0, { damping: 16, stiffness: 130, mass: 0.7 }),
-    );
+    translate.value = withDelay(80, withSpring(0, { damping: 16, stiffness: 130, mass: 0.7 }));
   }, [reduced, opacity, translate]);
 
   const enterStyle = useAnimatedStyle(() => ({
@@ -69,9 +66,9 @@ export const FirstEntryHero: React.FC<FirstEntryHeroProps> = ({
 
   const sub = nextAppointment
     ? `Prep for your visit with ${nextAppointment.doctorName} starts here.`
-    : 'Every entry you add makes your next visit stronger.';
+    : "Every entry you add makes your next visit stronger.";
 
-  const meta = `${format(parseISO(recording.createdAt), 'h:mm a')} · ${recording.durationSec}s`;
+  const meta = `${format(parseISO(recording.createdAt), "d MMM Y, h:mm a")} · `;
 
   const handleDismiss = () => {
     hapticLight();
@@ -82,13 +79,13 @@ export const FirstEntryHero: React.FC<FirstEntryHeroProps> = ({
     <Animated.View
       style={[
         styles.card,
-        { backgroundColor: colors.bgSurface, borderColor: colors.accent + '33' },
+        { backgroundColor: colors.bgSurface, borderColor: colors.accent + "33" },
         shadows.card,
         enterStyle,
       ]}
     >
       <LinearGradient
-        colors={[colors.accent + '14', 'transparent']}
+        colors={[colors.accent + "14", "transparent"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
@@ -96,11 +93,9 @@ export const FirstEntryHero: React.FC<FirstEntryHeroProps> = ({
       />
 
       <View style={styles.topRow}>
-        <View style={[styles.pill, { backgroundColor: colors.accent + '1A' }]}>
+        <View style={[styles.pill, { backgroundColor: colors.accent + "1A" }]}>
           <Sparkles size={moderateScale(11)} color={colors.accent} strokeWidth={2.4} />
-          <Text style={[styles.pillText, { color: colors.accent }]}>
-            FIRST ENTRY · SAVED
-          </Text>
+          <Text style={[styles.pillText, { color: colors.accent }]}>FIRST ENTRY · SAVED</Text>
         </View>
         <Pressable
           onPress={handleDismiss}
@@ -112,39 +107,59 @@ export const FirstEntryHero: React.FC<FirstEntryHeroProps> = ({
         </Pressable>
       </View>
 
-      <Text style={[styles.headline, { color: colors.textPrimary }]}>
-        Your record{"\n"}has begun.
+      <Text style={[styles.headline, { color: colors.textPrimary }]}>Your record has begun.</Text>
+      <Text style={[styles.sub, { color: colors.textSecondary }]}>
+        {nextAppointment ? (
+          <Text>
+            Prep for your visit with{" "}
+            <Text style={styles.docName}>{nextAppointment.doctorName}</Text> starts here.
+          </Text>
+        ) : (
+          "Every entry you add makes your next visit stronger."
+        )}
       </Text>
-      <Text style={[styles.sub, { color: colors.textSecondary }]}>{sub}</Text>
 
       <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
       <View style={styles.metaRow}>
         <View style={[styles.metaDot, { backgroundColor: colors.accent }]} />
-        <Text style={[typography.caption, { color: colors.textTertiary }]}>
-          {meta}
-        </Text>
+        <Text style={[typography.caption, { color: colors.textTertiary }]}>{meta}</Text>
+        <View style={styles.microPhone}>
+          <Mic size={moderateScale(16)} color={colors.coral} strokeWidth={1} />
+          <Text style={[typography.caption, { color: colors.textTertiary }]}>
+            {recording.durationSec + "s"}
+          </Text>
+        </View>
       </View>
     </Animated.View>
   );
 };
 
 const useStyles = makeStyles((theme) => ({
+  docName: {
+    ...theme.typography.label,
+    color: "rgba(246,192,106,0.9)",
+    fontSize: fontScale(14),
+  },
+  microPhone: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   card: {
     padding: moderateScale(18),
     borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: spacing.s3,
   },
   pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: moderateScale(6),
     paddingHorizontal: scale(10),
     paddingVertical: verticalScale(4),
@@ -152,13 +167,13 @@ const useStyles = makeStyles((theme) => ({
   },
   pillText: {
     ...theme.typography.label,
-    fontFamily: 'DMSans_700Bold',
+    fontFamily: "DMSans_700Bold",
     letterSpacing: 0.9,
     fontSize: fontScale(10),
   },
   headline: {
     ...theme.typography.h2,
-    fontFamily: 'Fraunces_500Medium',
+    fontFamily: "Fraunces_500Medium",
     fontSize: fontScale(26),
     lineHeight: fontScale(32),
     letterSpacing: -0.4,
@@ -174,8 +189,8 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: spacing.s3,
   },
   metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: moderateScale(6),
   },
   metaDot: {
