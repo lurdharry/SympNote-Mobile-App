@@ -7,14 +7,14 @@ import type { PrepRow } from '@/hooks/usePrepRows';
  */
 export const renderBrief = (row: PrepRow): string => {
   const lines: string[] = [];
-  lines.push(`Visit brief — ${row.doc}, ${row.spec}`);
+  lines.push(`Visit brief. ${row.doc}, ${row.spec}`);
   lines.push(`${row.dateLabel} · ${row.timeLabel}`);
   lines.push('');
 
   if (row.content.concerns.length > 0) {
     lines.push('Concerns');
     row.content.concerns.forEach((c) => {
-      lines.push(`  • ${c.t} (${c.sev}/10) — ${c.s}`);
+      lines.push(`  • ${c.t} (${c.sev}/10). ${c.s}`);
     });
     lines.push('');
   }
@@ -34,11 +34,11 @@ export const renderBrief = (row: PrepRow): string => {
   if (row.content.meds.length > 0) {
     lines.push('Medications');
     row.content.meds.forEach((m) => {
-      lines.push(`  • ${m.name} ${m.dose} — ${m.freq} (last: ${m.last})`);
+      lines.push(`  • ${m.name} ${m.dose}. ${m.freq}. Last: ${m.last}.`);
     });
     lines.push('');
   }
 
-  lines.push('Shared from Sympnote — organizational tool, not medical advice.');
+  lines.push('Shared from Sympnote. Organizational tool, not medical advice.');
   return lines.join('\n');
 };

@@ -234,9 +234,9 @@ const ProgressStrip: React.FC<ProgressStripProps> = ({ xp,
   const stagesRemaining = Math.max(0, stagesTotal - stagesComplete);
   const footCopy =
     stagesRemaining === 0
-      ? "Setup complete — one last step to unlock unlimited."
+      ? "Setup complete. One last step to unlock unlimited."
       : stagesRemaining === 1
-        ? `Almost there — 1 step from 100%.`
+        ? `Almost there. 1 step from 100%.`
         : `${stagesComplete} of ${stagesTotal} onboarding steps complete.`;
 
   return (
