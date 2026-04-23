@@ -14,12 +14,10 @@ import * as Clipboard from 'expo-clipboard';
 import {
   AlertTriangle,
   CalendarDays,
-  ChevronRight,
   Copy as CopyIcon,
   Download,
   MessageCircleQuestion,
   MoreVertical,
-  Paperclip,
   Pencil,
   Pill,
   RefreshCw,
@@ -42,12 +40,12 @@ import { SharedElementScene } from '@/components/navigation/SharedElementScene';
 import { StaggeredList } from '@/components/animated/StaggeredList';
 import { BackButton } from '@/components/ui/BackButton';
 import { Button } from '@/components/ui/Button';
-import { RecordingPicker } from '@/components/appointment/RecordingPicker';
 import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { useRecordingsStore } from '@/stores/useRecordingsStore';
 import { useProfileStore } from '@/stores/useProfileStore';
 import { generateAppointmentBrief } from '@/services/ai';
 import {
+  briefSourceWindowLabel,
   isBriefStale,
   recordingsForAppointmentBrief,
 } from '@/utils/briefSource';
@@ -77,7 +75,6 @@ const AppointmentDetail: React.FC = () => {
   const allAppointments = useAppointmentsStore((s) => s.appointments);
   const setBrief = useAppointmentsStore((s) => s.setBrief);
   const remove = useAppointmentsStore((s) => s.remove);
-  const setRelatedRecordings = useAppointmentsStore((s) => s.setRelatedRecordings);
   const markAttended = useAppointmentsStore((s) => s.markAttended);
   const markMissed = useAppointmentsStore((s) => s.markMissed);
   const markCancelled = useAppointmentsStore((s) => s.markCancelled);
@@ -87,7 +84,6 @@ const AppointmentDetail: React.FC = () => {
   const { closeScene } = useTransition();
   const insets = useSafeAreaInsets();
 
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -116,8 +112,8 @@ const AppointmentDetail: React.FC = () => {
     allRecordings,
     allAppointments,
   );
+  const sourceWindowLabel = briefSourceWindowLabel(appt, allAppointments);
   const stale = isBriefStale(appt, allRecordings);
-  const hasAttached = appt.relatedRecordingIds.length > 0;
   const brief = appt.brief;
   const days = daysUntil(appt.date);
 
@@ -257,11 +253,6 @@ const AppointmentDetail: React.FC = () => {
     hapticLight();
   };
 
-  const attachedCount = appt.relatedRecordingIds.length;
-  const sourceCaption = hasAttached
-    ? `${attachedCount} ${attachedCount === 1 ? 'recording' : 'recordings'}`
-    : `Last ${sourceRecordings.length} ${sourceRecordings.length === 1 ? 'entry' : 'entries'}`;
-
   return (
     <SharedElementScene style={{ backgroundColor: colors.bgPrimary }}>
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
@@ -342,26 +333,21 @@ const AppointmentDetail: React.FC = () => {
             </View>
           </View>
 
-          {/* Attach row — smaller, less prominent */}
-          <Pressable
-            onPress={() => {
-              hapticLight();
-              setPickerOpen(true);
-            }}
+          {/* Source caption — lets the user see what the brief is drawing
+              from without needing to curate recordings by hand. */}
+          <Text
             style={[
-              styles.attachRow,
-              { backgroundColor: colors.bgSurface, borderColor: colors.border },
+              typography.caption,
+              { color: colors.textTertiary, marginTop: spacing.s2, marginBottom: spacing.s3 },
             ]}
           >
-            <Paperclip size={moderateScale(13)} color={colors.textTertiary} strokeWidth={2} />
-            <Text
-              style={[typography.caption, { color: colors.textSecondary, flex: 1 }]}
-              numberOfLines={1}
-            >
-              Source: <Text style={{ fontFamily: 'DMSans_600SemiBold', color: colors.textPrimary }}>{sourceCaption}</Text>
-            </Text>
-            <ChevronRight size={moderateScale(14)} color={colors.textTertiary} strokeWidth={2} />
-          </Pressable>
+            Drawing from{' '}
+            <Text style={{ fontFamily: 'DMSans_600SemiBold', color: colors.textSecondary }}>
+              {sourceRecordings.length}{' '}
+              {sourceRecordings.length === 1 ? 'entry' : 'entries'}
+            </Text>{' '}
+            · {sourceWindowLabel}
+          </Text>
 
           {/* Brief body */}
           {!brief ? (
@@ -426,14 +412,6 @@ const AppointmentDetail: React.FC = () => {
             </Pressable>
           </View>
         )}
-
-        <RecordingPicker
-          visible={pickerOpen}
-          recordings={allRecordings}
-          initialSelected={appt.relatedRecordingIds}
-          onClose={() => setPickerOpen(false)}
-          onSave={(ids) => setRelatedRecordings(appt.id, ids)}
-        />
 
         <ActionMenu
           visible={menuOpen}
@@ -907,15 +885,6 @@ const useStyles = makeStyles((theme) => ({
     alignItems: 'center',
     gap: moderateScale(6),
     marginTop: moderateScale(8),
-  },
-  attachRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: moderateScale(8),
-    paddingHorizontal: scale(12),
-    paddingVertical: verticalScale(8),
-    borderRadius: theme.radius.full,
-    borderWidth: StyleSheet.hairlineWidth,
   },
   generateCard: {
     marginTop: spacing.s5,
