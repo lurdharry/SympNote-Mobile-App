@@ -35,53 +35,20 @@ const windowStart = (
 };
 
 /**
- * Pick which recordings feed the AI brief for a given appointment.
- *
- *  - If the user has explicitly attached recordings via
- *    `relatedRecordingIds`, respect that curation (highest priority).
- *  - Else if any recordings are tagged for this appointment's doctor
- *    (matched by case-insensitive clinicianName), use that set,
- *    filtered to entries after the last attended visit with the doctor.
- *  - Else fall back to entries since the last attended visit (or 30d
- *    if no prior visit).
- *
- * Returns recordings sorted oldest-first so the AI receives a
- * chronological view (earliest onset first, most recent last).
+ * Pick which recordings feed the AI brief for a given appointment —
+ * everything logged since the patient's last attended visit with the
+ * same doctor, falling back to the last 30 days when no prior visit
+ * exists. Returned oldest-first so the AI receives a chronological view.
  */
 export const recordingsForAppointmentBrief = (
   appointment: Appointment,
   allRecordings: Recording[],
   allAppointments: Appointment[] = [],
 ): Recording[] => {
-  const now = Date.now();
-  const startMs = windowStart(appointment, allAppointments, now);
-
-  let source: Recording[];
-  if (appointment.relatedRecordingIds.length > 0) {
-    const ids = new Set(appointment.relatedRecordingIds);
-    source = allRecordings.filter((r) => ids.has(r.id));
-  } else {
-    const doctor = appointment.doctorName.trim().toLowerCase();
-    const tagged = doctor
-      ? allRecordings.filter(
-          (r) =>
-            r.clinicianName &&
-            r.clinicianName.trim().toLowerCase() === doctor &&
-            parseISO(r.createdAt).getTime() >= startMs,
-        )
-      : [];
-    if (tagged.length > 0) {
-      source = tagged;
-    } else {
-      source = allRecordings.filter(
-        (r) => parseISO(r.createdAt).getTime() >= startMs,
-      );
-    }
-  }
-
-  return [...source].sort(
-    (a, b) => parseISO(a.createdAt).getTime() - parseISO(b.createdAt).getTime(),
-  );
+  const startMs = windowStart(appointment, allAppointments, Date.now());
+  return allRecordings
+    .filter((r) => parseISO(r.createdAt).getTime() >= startMs)
+    .sort((a, b) => parseISO(a.createdAt).getTime() - parseISO(b.createdAt).getTime());
 };
 
 /**

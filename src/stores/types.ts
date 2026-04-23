@@ -39,13 +39,6 @@ export type Recording = {
   transcript: string;
   structured: StructuredEntry;
   tags: string[];
-  /**
-   * Optional clinician this entry is tagged for. When set, the
-   * appointment brief generator prefers entries tagged for the
-   * matching clinician over the generic "last 30 days" fallback.
-   * Matched by the clinician's display name (case-insensitive).
-   */
-  clinicianName?: string;
 };
 
 /**
@@ -97,12 +90,6 @@ export type Appointment = {
   attendedAt: string | null;
   /** Optional short free-text note the user adds after attending. */
   outcome: string | null;
-  /**
-   * Recordings the user explicitly attached to this appointment.
-   * Optional — the default brief generator uses "last 30 days" unless
-   * the user has curated a specific set.
-   */
-  relatedRecordingIds: string[];
   /** The generated structured brief. Null until generated. */
   brief: AppointmentBrief | null;
   /** When the current brief was generated. Null when none. */
