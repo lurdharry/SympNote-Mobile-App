@@ -85,6 +85,39 @@ export const recordingsForAppointmentBrief = (
 };
 
 /**
+ * Label describing the source window the brief is drawing from, e.g.
+ * "since your visit on Mar 14" or "last 30 days". Used on the detail
+ * screen so the user knows what's in scope without needing to curate
+ * recordings themselves.
+ */
+export const briefSourceWindowLabel = (
+  appointment: Appointment,
+  allAppointments: Appointment[],
+): string => {
+  const doctor = appointment.doctorName.trim().toLowerCase();
+  const thisApptMs = parseISO(appointment.date).getTime();
+  const priorAttendedMs = doctor
+    ? allAppointments
+        .filter(
+          (a) =>
+            a.id !== appointment.id &&
+            a.status === 'attended' &&
+            a.doctorName.trim().toLowerCase() === doctor,
+        )
+        .map((a) => parseISO(a.attendedAt ?? a.date).getTime())
+        .filter((t) => t < thisApptMs)
+        .sort((a, b) => b - a)[0]
+    : undefined;
+
+  if (priorAttendedMs) {
+    const d = new Date(priorAttendedMs);
+    const month = d.toLocaleString('en-US', { month: 'short' });
+    return `since your visit on ${month} ${d.getDate()}`;
+  }
+  return `last ${DEFAULT_WINDOW_DAYS} days`;
+};
+
+/**
  * Is the appointment's brief stale? True when at least one recording
  * has been added or modified since `briefGeneratedAt` and isn't in the
  * brief's source set. Returns false when no brief exists (caller should

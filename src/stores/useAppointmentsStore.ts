@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { parseISO, subDays } from 'date-fns';
-import { sortBy, uniq } from 'lodash';
+import { sortBy } from 'lodash';
 import { mmkvStorage } from './mmkv';
 import { Appointment, AppointmentBrief } from './types';
 
@@ -48,9 +48,6 @@ interface Actions {
   getById: (id: string) => Appointment | undefined;
   upcoming: () => Appointment[];
   next: () => Appointment | undefined;
-  attachRecording: (appointmentId: string, recordingId: string) => void;
-  /** Replace the full set of related recordings for an appointment. */
-  setRelatedRecordings: (appointmentId: string, recordingIds: string[]) => void;
   /** Push a question onto the appointment's brief. */
   addQuestion: (appointmentId: string, question: string) => void;
   /** Remove a question by its index in `brief.questions`. */
@@ -130,22 +127,6 @@ export const useAppointmentsStore = create<State & Actions>()(
           byDateAsc,
         )[0];
       },
-
-      attachRecording: (appointmentId, recordingId) =>
-        set((s) => ({
-          appointments: patchOne(s.appointments, appointmentId, (a) => ({
-            ...a,
-            relatedRecordingIds: uniq([...a.relatedRecordingIds, recordingId]),
-          })),
-        })),
-
-      setRelatedRecordings: (appointmentId, recordingIds) =>
-        set((s) => ({
-          appointments: patchOne(s.appointments, appointmentId, (a) => ({
-            ...a,
-            relatedRecordingIds: uniq(recordingIds),
-          })),
-        })),
 
       addQuestion: (appointmentId, question) => {
         const q = question.trim();
