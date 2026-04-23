@@ -17,6 +17,7 @@ import { useHomeDashboard } from '@/hooks/useHomeDashboard';
 import { UpNextCard } from '@/components/home/UpNextCard';
 import { QuickLogRow } from '@/components/home/QuickLogRow';
 import { TimelineCard } from '@/components/home/TimelineCard';
+import { TodayEmpty } from '@/components/home/TodayEmpty';
 import { InsightNudge } from '@/components/home/InsightNudge';
 import { RecordFAB } from '@/components/home/RecordFAB';
 import { SectionLabel } from '@/components/ui/SectionLabel';
@@ -71,6 +72,7 @@ const TabHome: React.FC = () => {
             <UpNextCard
               appointment={nextAppointment}
               onPress={() => router.push('/(tabs)/prep')}
+              onAdd={() => router.push('/appointment-new')}
             />
 
             <View style={{ marginTop: spacing.s4 }}>
@@ -80,11 +82,18 @@ const TabHome: React.FC = () => {
             <View style={{ marginTop: spacing.s5 }}>
               <View style={styles.sectionRow}>
                 <SectionLabel label="Today" />
-                <Text style={[typography.label, { color: colors.textTertiary }]}>
-                  {todayEntries.length} entries
-                </Text>
+                {todayEntries.length > 0 && (
+                  <Text style={[typography.label, { color: colors.textTertiary }]}>
+                    {todayEntries.length}{' '}
+                    {todayEntries.length === 1 ? 'entry' : 'entries'}
+                  </Text>
+                )}
               </View>
-              <TimelineCard entries={todayEntries} />
+              {todayEntries.length > 0 ? (
+                <TimelineCard entries={todayEntries} />
+              ) : (
+                <TodayEmpty onPress={() => router.push('/record')} />
+              )}
             </View>
 
             {nudge && (

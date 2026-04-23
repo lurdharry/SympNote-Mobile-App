@@ -13,6 +13,7 @@ import {
 } from '@/theme';
 import { SceneTransition } from '@/components/navigation/SceneTransition';
 import { AppointmentCard } from '@/components/prep/AppointmentCard';
+import { PrepEmpty } from '@/components/empty/PrepEmpty';
 import { usePrepRows } from '@/hooks/usePrepRows';
 import { hapticLight } from '@/services/haptics';
 
@@ -39,14 +40,18 @@ const TabPrep: React.FC = () => {
             contentContainerStyle={styles.content}
             showsVerticalScrollIndicator={false}
           >
-            {rows.map((r) => (
-              <AppointmentCard
-                key={r.id}
-                row={r}
-                open={expanded === r.id}
-                onToggle={() => setExpanded(expanded === r.id ? null : r.id)}
-              />
-            ))}
+            {rows.length === 0 ? (
+              <PrepEmpty />
+            ) : (
+              rows.map((r) => (
+                <AppointmentCard
+                  key={r.id}
+                  row={r}
+                  open={expanded === r.id}
+                  onToggle={() => setExpanded(expanded === r.id ? null : r.id)}
+                />
+              ))
+            )}
 
             <Pressable
               onPress={() => {

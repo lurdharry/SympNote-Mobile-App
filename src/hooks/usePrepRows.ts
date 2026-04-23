@@ -1,22 +1,12 @@
 import { useMemo } from 'react';
-import { useAppointmentsStore } from '../stores/useAppointmentsStore';
-import { useRecordingsStore } from '../stores/useRecordingsStore';
-import { deriveAppointmentBrief } from '../utils/prep';
-import { daysUntil, formatDate, formatTime } from '../utils/date';
-import {
-  DEMO_APPTS,
-  DEMO_PREP_CONTENT,
-  PrepContent,
-} from '../constants/demo/prep';
+import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
+import { useRecordingsStore } from '@/stores/useRecordingsStore';
+import { deriveAppointmentBrief } from '@/utils/prep';
+import { daysUntil, formatDate, formatTime } from '@/utils/date';
+import type { PrepContent } from '@/constants/demo/prep';
 
-export type PrepRow = {
+export interface PrepRow {
   id: string;
-  /**
-   * True when this row came from the local demo array rather than the
-   * appointments store. Demo rows suppress mutations so we never fake
-   * persistence.
-   */
-  isDemo: boolean;
   doc: string;
   spec: string;
   dateLabel: string;
@@ -24,31 +14,32 @@ export type PrepRow = {
   inDays: number;
   color: string;
   content: PrepContent;
-};
+}
+
+const ACCENTS = ['#2C6E6B', '#E07A5F', '#D97706', '#5A8F6E', '#F6C06A'];
 
 /**
- * Compose the rows rendered on the Prep tab. Falls back to demo
- * appointments when the user has none attached; otherwise derives
- * real content (concerns/timeline/severity/meds) from the recordings
- * attached to each appointment.
+ * Compose the rows rendered on the Prep tab. Each row is a real
+ * appointment with concerns/timeline/severity/meds derived from the
+ * recordings attached to it. Returns an empty array when the user has
+ * no appointments — the screen renders the empty state in that case.
  */
-export function usePrepRows(): PrepRow[] {
+export const usePrepRows = (): PrepRow[] => {
   const storeAppts = useAppointmentsStore((s) => s.appointments);
   const storeRecordings = useRecordingsStore((s) => s.recordings);
 
-  return useMemo<PrepRow[]>(() => {
-    if (storeAppts.length > 0) {
-      return storeAppts.map((a, i) => {
+  return useMemo<PrepRow[]>(
+    () =>
+      storeAppts.map((a, i) => {
         const derived = deriveAppointmentBrief(a, storeRecordings);
         return {
           id: a.id,
-          isDemo: false,
           doc: a.doctorName,
           spec: a.specialty,
           dateLabel: formatDate(a.date),
           timeLabel: formatTime(a.date),
           inDays: Math.max(0, daysUntil(a.date)),
-          color: i === 0 ? '#2C6E6B' : '#E07A5F',
+          color: ACCENTS[i % ACCENTS.length]!,
           content: {
             concerns: derived.concerns,
             timeline: derived.timeline,
@@ -57,18 +48,7 @@ export function usePrepRows(): PrepRow[] {
             questions: a.brief?.questions ?? [],
           },
         };
-      });
-    }
-    return DEMO_APPTS.map((a) => ({
-      id: a.id,
-      isDemo: true,
-      doc: a.doc,
-      spec: a.spec,
-      dateLabel: a.date,
-      timeLabel: a.time,
-      inDays: a.inDays,
-      color: a.color,
-      content: DEMO_PREP_CONTENT[a.id]!,
-    }));
-  }, [storeAppts, storeRecordings]);
-}
+      }),
+    [storeAppts, storeRecordings],
+  );
+};
