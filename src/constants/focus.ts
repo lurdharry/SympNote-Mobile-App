@@ -76,8 +76,8 @@ export const FOCUS_OPTIONS: FocusOption[] = [
   },
   {
     id: 'general',
-    t: 'General wellness journal',
-    s: "Keeping track, no specific goal yet.",
+    t: 'Just keeping track',
+    s: "No specific goal yet. Building the record for later.",
     Icon: BookOpen,
     grad: ['#C7B98F', '#9E8F5F'],
     fg: '#fff',
