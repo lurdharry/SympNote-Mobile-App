@@ -32,20 +32,42 @@ interface AddClinicianSheetProps {
    * the empty-state shortcut chips skip the picker for the user.
    */
   initialSpecialty?: Specialty | null;
+  /**
+   * When provided, the sheet is in edit mode: fields pre-populate from
+   * the existing clinician, header copy flips to "Edit clinician", and
+   * the save button calls `onSave` instead of `onAdd`. One of onAdd or
+   * onSave must be provided.
+   */
+  initialValue?: { name: string; role: string } | null;
   onClose: () => void;
-  onAdd: (value: { name: string; role: string }) => void;
+  onAdd?: (value: { name: string; role: string }) => void;
+  onSave?: (value: { name: string; role: string }) => void;
 }
 
 const DEFAULT_SPECIALTY = SPECIALTIES[0]!;
 
+/**
+ * Match an arbitrary role string back to a Specialty so the picker
+ * pre-selects correctly when editing. Falls back to "other" with the
+ * role text in customRole.
+ */
+const matchSpecialty = (role: string): Specialty => {
+  const target = role.trim().toLowerCase();
+  const hit = SPECIALTIES.find((s) => s.label.toLowerCase() === target);
+  return hit ?? SPECIALTIES.find((s) => s.id === 'other')! ?? DEFAULT_SPECIALTY;
+};
+
 export const AddClinicianSheet: React.FC<AddClinicianSheetProps> = ({
   visible,
   initialSpecialty,
+  initialValue,
   onClose,
   onAdd,
+  onSave,
 }) => {
   const { colors } = useTheme();
   const styles = useStyles();
+  const isEdit = !!initialValue;
 
   const [picked, setPicked] = useState<Specialty>(
     initialSpecialty ?? DEFAULT_SPECIALTY,
@@ -54,12 +76,18 @@ export const AddClinicianSheet: React.FC<AddClinicianSheetProps> = ({
   const [customRole, setCustomRole] = useState('');
 
   useEffect(() => {
-    if (visible) {
+    if (!visible) return;
+    if (initialValue) {
+      const matched = matchSpecialty(initialValue.role);
+      setPicked(matched);
+      setName(initialValue.name);
+      setCustomRole(matched.id === 'other' ? initialValue.role : '');
+    } else {
       setPicked(initialSpecialty ?? DEFAULT_SPECIALTY);
       setName('');
       setCustomRole('');
     }
-  }, [visible, initialSpecialty]);
+  }, [visible, initialSpecialty, initialValue]);
 
   const isOther = picked.id === 'other';
   const role = isOther ? customRole.trim() : picked.label;
@@ -68,7 +96,12 @@ export const AddClinicianSheet: React.FC<AddClinicianSheetProps> = ({
   const handleAdd = () => {
     if (!canAdd) return;
     hapticSuccess();
-    onAdd({ name: name.trim(), role });
+    const payload = { name: name.trim(), role };
+    if (isEdit) {
+      onSave?.(payload);
+    } else {
+      onAdd?.(payload);
+    }
     onClose();
   };
 
@@ -99,7 +132,7 @@ export const AddClinicianSheet: React.FC<AddClinicianSheetProps> = ({
             <XIcon size={moderateScale(18)} color={colors.textPrimary} strokeWidth={2} />
           </Pressable>
           <Text style={[typography.h3, { color: colors.textPrimary, flex: 1 }]}>
-            Add a clinician
+            {isEdit ? 'Edit clinician' : 'Add a clinician'}
           </Text>
         </View>
 
@@ -230,7 +263,9 @@ export const AddClinicianSheet: React.FC<AddClinicianSheetProps> = ({
               shadows.accentGlow,
             ]}
           >
-            <Text style={styles.addLabel}>Add clinician</Text>
+            <Text style={styles.addLabel}>
+              {isEdit ? 'Save changes' : 'Add clinician'}
+            </Text>
           </Pressable>
         </View>
       </SafeAreaView>

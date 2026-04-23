@@ -181,7 +181,7 @@ const profileRows = (
       personalization && personalization.careTeam.length > 0
         ? `${personalization.careTeam.length} ${personalization.careTeam.length === 1 ? 'clinician' : 'clinicians'}`
         : 'None added',
-    onPress: () => router.push('/onboarding/care-team'),
+    onPress: () => router.push('/care-team'),
   },
   {
     Icon: Heart,
