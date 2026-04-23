@@ -1,5 +1,6 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import type { AppointmentBrief } from '../stores/types';
 
 /**
  * Render a visit brief into a shareable PDF.
@@ -9,29 +10,17 @@ import * as Sharing from 'expo-sharing';
  * section rules, tabular severity. No color blocks, no background
  * tints — a doctor's office should be able to print this on a B&W
  * printer and have it still read well.
+ *
+ * Consumes the full structured AppointmentBrief shape so what the
+ * doctor gets in the PDF matches what the patient sees on the
+ * appointment detail screen. Sections with empty content are skipped.
  */
-export type PdfConcern = {
-  title: string;
-  detail: string;
-  severity: number;
-};
-
-export type PdfMed = {
-  name: string;
-  dose: string;
-  freq: string;
-  last: string;
-};
-
-export type PdfBrief = {
+export type PdfBriefInput = {
   doctor: string;
   specialty: string;
   dateLabel: string;
   timeLabel: string;
-  concerns: PdfConcern[];
-  timeline: string;
-  questions: string[];
-  meds: PdfMed[];
+  brief: AppointmentBrief;
 };
 
 function escapeHtml(input: string): string {
@@ -43,72 +32,111 @@ function escapeHtml(input: string): string {
     .replace(/'/g, '&#39;');
 }
 
-function renderHtml(brief: PdfBrief): string {
-  const concernsBlock =
-    brief.concerns.length === 0
-      ? ''
-      : `
+function renderSummaryBlock(summary: string): string {
+  if (!summary.trim()) return '';
+  return `
     <section>
-      <h2>Concerns</h2>
+      <h2>Summary</h2>
+      <p>${escapeHtml(summary)}</p>
+    </section>`;
+}
+
+function renderFlagsBlock(flags: string[]): string {
+  if (flags.length === 0) return '';
+  return `
+    <section class="flags">
+      <h2>Worth flagging</h2>
+      <ul>
+        ${flags.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}
+      </ul>
+    </section>`;
+}
+
+function renderConcernsBlock(concerns: AppointmentBrief['topConcerns']): string {
+  if (concerns.length === 0) return '';
+  return `
+    <section>
+      <h2>Top concerns</h2>
       <table class="concerns">
         <tbody>
-          ${brief.concerns
+          ${concerns
             .map(
               (c) => `
             <tr>
-              <td class="name"><strong>${escapeHtml(c.title)}</strong><div class="detail">${escapeHtml(c.detail)}</div></td>
-              <td class="sev">${c.severity}/10</td>
-            </tr>`
+              <td class="name"><strong>${escapeHtml(c.label)}</strong>${
+                c.detail
+                  ? `<div class="detail">${escapeHtml(c.detail)}</div>`
+                  : ''
+              }</td>
+            </tr>`,
             )
             .join('')}
         </tbody>
       </table>
     </section>`;
+}
 
-  const timelineBlock = brief.timeline
-    ? `
+function renderTimelineBlock(timeline: AppointmentBrief['timeline']): string {
+  if (timeline.length === 0) return '';
+  return `
     <section>
       <h2>Timeline</h2>
-      <p>${escapeHtml(brief.timeline)}</p>
-    </section>`
-    : '';
+      <table class="timeline">
+        <tbody>
+          ${timeline
+            .map(
+              (t) => `
+            <tr>
+              <td class="date">${escapeHtml(t.date)}</td>
+              <td>${escapeHtml(t.line)}</td>
+            </tr>`,
+            )
+            .join('')}
+        </tbody>
+      </table>
+    </section>`;
+}
 
-  const questionsBlock =
-    brief.questions.length === 0
-      ? ''
-      : `
+function renderPatternsBlock(patterns: string[]): string {
+  if (patterns.length === 0) return '';
+  return `
+    <section>
+      <h2>Patterns</h2>
+      <ul>
+        ${patterns.map((p) => `<li>${escapeHtml(p)}</li>`).join('')}
+      </ul>
+    </section>`;
+}
+
+function renderMedsBlock(meds: string[]): string {
+  if (meds.length === 0) return '';
+  return `
+    <section>
+      <h2>Medications</h2>
+      <ul>
+        ${meds.map((m) => `<li>${escapeHtml(m)}</li>`).join('')}
+      </ul>
+    </section>`;
+}
+
+function renderQuestionsBlock(questions: string[]): string {
+  if (questions.length === 0) return '';
+  return `
     <section>
       <h2>Questions for the doctor</h2>
       <ol>
-        ${brief.questions.map((q) => `<li>${escapeHtml(q)}</li>`).join('')}
+        ${questions.map((q) => `<li>${escapeHtml(q)}</li>`).join('')}
       </ol>
     </section>`;
+}
 
-  const medsBlock =
-    brief.meds.length === 0
-      ? ''
-      : `
-    <section>
-      <h2>Medications</h2>
-      <table class="meds">
-        <tbody>
-          ${brief.meds
-            .map(
-              (m) => `
-            <tr>
-              <td><strong>${escapeHtml(m.name)} ${escapeHtml(m.dose)}</strong><div class="detail">${escapeHtml(m.freq)} · last ${escapeHtml(m.last)}</div></td>
-            </tr>`
-            )
-            .join('')}
-        </tbody>
-      </table>
-    </section>`;
-
+function renderHtml(input: PdfBriefInput): string {
+  const { doctor, specialty, dateLabel, timeLabel, brief } = input;
   return `<!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Visit brief — ${escapeHtml(brief.doctor)}</title>
+    <title>Visit brief — ${escapeHtml(doctor)}</title>
     <style>
       * { box-sizing: border-box; }
       html, body { margin: 0; padding: 0; }
@@ -149,13 +177,24 @@ function renderHtml(brief: PdfBrief): string {
         padding-bottom: 4px;
       }
       p, li { margin: 0 0 6px; }
-      ol { padding-left: 20px; }
+      ol, ul { padding-left: 20px; }
       table { width: 100%; border-collapse: collapse; }
-      .concerns td, .meds td { padding: 6px 0; vertical-align: top; border-bottom: 0.25pt solid #E0D9CC; }
-      .concerns tr:last-child td, .meds tr:last-child td { border-bottom: none; }
-      .concerns .name { width: 80%; }
-      .concerns .sev { width: 20%; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+      .concerns td, .timeline td { padding: 6px 0; vertical-align: top; border-bottom: 0.25pt solid #E0D9CC; }
+      .concerns tr:last-child td, .timeline tr:last-child td { border-bottom: none; }
+      .timeline .date { width: 25%; font-weight: 600; font-variant-numeric: tabular-nums; }
       .detail { font-size: 9.5pt; color: #5A6361; margin-top: 2px; }
+      .flags h2 { border-bottom-color: #C45C3F; }
+      .flags ul { list-style: none; padding-left: 0; }
+      .flags li {
+        padding-left: 14px;
+        position: relative;
+      }
+      .flags li::before {
+        content: "⚠";
+        position: absolute;
+        left: 0;
+        color: #C45C3F;
+      }
       footer {
         margin-top: 28px;
         padding-top: 10px;
@@ -168,14 +207,17 @@ function renderHtml(brief: PdfBrief): string {
   <body>
     <header>
       <div class="eyebrow">Visit Brief</div>
-      <h1>${escapeHtml(brief.doctor)} — ${escapeHtml(brief.specialty)}</h1>
-      <div class="when">${escapeHtml(brief.dateLabel)} · ${escapeHtml(brief.timeLabel)}</div>
+      <h1>${escapeHtml(doctor)} — ${escapeHtml(specialty)}</h1>
+      <div class="when">${escapeHtml(dateLabel)} · ${escapeHtml(timeLabel)}</div>
     </header>
 
-    ${concernsBlock}
-    ${timelineBlock}
-    ${questionsBlock}
-    ${medsBlock}
+    ${renderSummaryBlock(brief.summary)}
+    ${renderFlagsBlock(brief.flags)}
+    ${renderConcernsBlock(brief.topConcerns)}
+    ${renderTimelineBlock(brief.timeline)}
+    ${renderPatternsBlock(brief.patterns)}
+    ${renderMedsBlock(brief.medications)}
+    ${renderQuestionsBlock(brief.questions)}
 
     <footer>
       Shared from Sympnote. This is an organizational tool, not medical advice.
@@ -189,8 +231,8 @@ function renderHtml(brief: PdfBrief): string {
  * URI if the caller wants to do something else with it. Throws on
  * render failure — caller should Alert the error.
  */
-export async function exportBriefPdf(brief: PdfBrief): Promise<string> {
-  const html = renderHtml(brief);
+export async function exportBriefPdf(input: PdfBriefInput): Promise<string> {
+  const html = renderHtml(input);
   const { uri } = await Print.printToFileAsync({
     html,
     base64: false,
@@ -203,7 +245,7 @@ export async function exportBriefPdf(brief: PdfBrief): Promise<string> {
   if (canShare) {
     await Sharing.shareAsync(uri, {
       mimeType: 'application/pdf',
-      dialogTitle: `Visit brief: ${brief.doctor}`,
+      dialogTitle: `Visit brief: ${input.doctor}`,
       UTI: 'com.adobe.pdf',
     });
   }

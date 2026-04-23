@@ -28,6 +28,8 @@ import {
 } from '@/theme';
 import type { PrepRow } from '@/hooks/usePrepRows';
 import type { PrepSectionId } from '@/constants/prep';
+import type { AppointmentBrief } from '@/stores/types';
+import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { renderBrief } from '@/utils/prepBrief';
 import { exportBriefPdf } from '@/services/pdf';
 import { hapticLight } from '@/services/haptics';
@@ -43,26 +45,43 @@ interface AppointmentCardProps {
   onToggle: () => void;
 }
 
-const exportRowPdf = async (row: PrepRow): Promise<void> => {
+/**
+ * Synthesize an AppointmentBrief shell from the prep card's heuristic
+ * preview data. Used when the user hits Export PDF before having
+ * generated the real AI brief — the PDF still renders something
+ * concrete instead of erroring out.
+ */
+const shellBriefFromRow = (row: PrepRow): AppointmentBrief => ({
+  summary: '',
+  topConcerns: row.content.concerns.map((c) => ({
+    label: c.t,
+    detail: [c.s, `Peak severity ${c.sev}/10`].filter(Boolean).join('. '),
+  })),
+  timeline: row.content.timeline
+    ? [{ date: 'Recent', line: row.content.timeline }]
+    : [],
+  patterns: [],
+  medications: row.content.meds.map((m) =>
+    [m.name, m.dose && m.dose !== '—' ? m.dose : '', m.freq]
+      .filter(Boolean)
+      .join(' ')
+      .trim(),
+  ),
+  questions: row.content.questions,
+  flags: [],
+});
+
+const exportRowPdf = async (
+  row: PrepRow,
+  brief: AppointmentBrief | null,
+): Promise<void> => {
   try {
     await exportBriefPdf({
       doctor: row.doc,
       specialty: row.spec,
       dateLabel: row.dateLabel,
       timeLabel: row.timeLabel,
-      concerns: row.content.concerns.map((c) => ({
-        title: c.t,
-        detail: c.s,
-        severity: c.sev,
-      })),
-      timeline: row.content.timeline,
-      questions: row.content.questions,
-      meds: row.content.meds.map((m) => ({
-        name: m.name,
-        dose: m.dose,
-        freq: m.freq,
-        last: m.last,
-      })),
+      brief: brief ?? shellBriefFromRow(row),
     });
   } catch (e) {
     Alert.alert('Export failed', String(e));
@@ -74,6 +93,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({ row, open, onT
   const styles = useStyles();
   const router = useRouter();
   const [section, setSection] = useState<PrepSectionId>('summary');
+  const aiBrief = useAppointmentsStore((s) => s.getById(row.id)?.brief ?? null);
 
   const openFullBrief = () => {
     hapticLight();
@@ -206,7 +226,7 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({ row, open, onT
               <Pressable
                 onPress={() => {
                   hapticLight();
-                  exportRowPdf(row);
+                  exportRowPdf(row, aiBrief);
                 }}
                 style={[styles.secondaryAction, { backgroundColor: colors.bgMuted }]}
               >

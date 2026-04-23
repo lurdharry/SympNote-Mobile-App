@@ -44,7 +44,8 @@ import {
   recordingsForAppointmentBrief,
 } from '@/utils/briefSource';
 import { briefToPlainText } from '@/utils/briefExport';
-import { formatDate } from '@/utils/date';
+import { exportBriefPdf } from '@/services/pdf';
+import { formatDate, formatTime } from '@/utils/date';
 import {
   hapticLight,
   hapticMedium,
@@ -129,6 +130,22 @@ const AppointmentDetail: React.FC = () => {
   const share = () => {
     if (!brief) return;
     Share.share({ message: briefToPlainText(appt, brief) }).catch(() => {});
+  };
+
+  const exportPdf = async () => {
+    if (!brief) return;
+    hapticLight();
+    try {
+      await exportBriefPdf({
+        doctor: appt.doctorName,
+        specialty: appt.specialty,
+        dateLabel: formatDate(appt.date),
+        timeLabel: formatTime(appt.date),
+        brief,
+      });
+    } catch (e) {
+      Alert.alert('Export failed', String(e));
+    }
   };
 
   const del = () => {
@@ -223,6 +240,7 @@ const AppointmentDetail: React.FC = () => {
               <BriefActions
                 onCopy={copy}
                 onShare={share}
+                onExportPdf={exportPdf}
                 onRegenerate={generate}
                 regenerating={generating}
               />
@@ -526,6 +544,7 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({ Icon, label, tint }) => {
 interface BriefActionsProps {
   onCopy: () => void;
   onShare: () => void;
+  onExportPdf: () => void;
   onRegenerate: () => void;
   regenerating: boolean;
 }
@@ -533,6 +552,7 @@ interface BriefActionsProps {
 const BriefActions: React.FC<BriefActionsProps> = ({
   onCopy,
   onShare,
+  onExportPdf,
   onRegenerate,
   regenerating,
 }) => {
@@ -546,6 +566,7 @@ const BriefActions: React.FC<BriefActionsProps> = ({
           <Button label="Share" variant="secondary" haptic="light" onPress={onShare} />
         </View>
       </View>
+      <Button label="Export PDF" variant="secondary" haptic="light" onPress={onExportPdf} />
       <Button
         label={regenerating ? 'Regenerating…' : 'Regenerate brief'}
         disabled={regenerating}
