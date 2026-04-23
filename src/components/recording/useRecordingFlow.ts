@@ -7,9 +7,9 @@ import {
   describeSpeechError,
   SpeechHandle,
 } from "../../services/speech";
-import { structureTranscript, GeminiQuotaError } from "../../services/ai";
+import { GeminiQuotaError } from "../../services/ai";
 import { hapticHeavy, hapticLight, hapticMedium } from "../../services/haptics";
-import { useProfileStore } from "../../stores/useProfileStore";
+import { useStructureTranscript } from "../../hooks/useStructureTranscript";
 import { Phase, StructuredWithSources } from "./types";
 
 const DEBUG = __DEV__;
@@ -201,6 +201,8 @@ export function useRecordingFlow(): RecordingFlow {
     setPhase("idle");
   }, [resetForNewAttempt, setPhase]);
 
+  const structureMutation = useStructureTranscript();
+
   const processWithAI = useCallback(async () => {
     const text = reviewText.trim();
     if (!text) {
@@ -212,23 +214,25 @@ export function useRecordingFlow(): RecordingFlow {
     setRetryInSec(0);
     setPhase("extracting");
     log("extracting: calling Gemini");
-    try {
-      const s = await structureTranscript(text);
-      log("extracting: done");
-      setStructured(s);
-      // ExtractingPhase plays the flying-word animation, then calls
-      // setStructuredDone to advance to 'extracted'.
-    } catch (e) {
-      log("extracting: failed", e);
-      if (e instanceof GeminiQuotaError) {
-        setReviewError(e.message);
-        setRetryInSec(e.retryAfterSec ?? 0);
-      } else {
-        setReviewError(e instanceof Error ? e.message : "Could not structure transcript.");
-      }
-      setPhase("review");
-    }
-  }, [reviewText, setPhase]);
+    structureMutation.mutate(text, {
+      onSuccess: (s) => {
+        log("extracting: done");
+        setStructured(s);
+        // ExtractingPhase plays the flying-word animation, then calls
+        // setStructuredDone to advance to 'extracted'.
+      },
+      onError: (e) => {
+        log("extracting: failed", e);
+        if (e instanceof GeminiQuotaError) {
+          setReviewError(e.message);
+          setRetryInSec(e.retryAfterSec ?? 0);
+        } else {
+          setReviewError(e instanceof Error ? e.message : "Could not structure transcript.");
+        }
+        setPhase("review");
+      },
+    });
+  }, [reviewText, setPhase, structureMutation]);
 
   const setStructuredDone = useCallback(() => {
     setPhase("extracted");
