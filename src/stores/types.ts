@@ -76,12 +76,27 @@ export type AppointmentBrief = {
   flags: string[];
 };
 
+/**
+ * Lifecycle state of a single appointment. Appointments start as
+ * `upcoming`; once the date passes the user is prompted to mark what
+ * happened (attended / missed / cancelled). Attended appointments
+ * anchor the "since last visit with Dr. X" source window for future
+ * briefs with the same clinician.
+ */
+export type AppointmentStatus = 'upcoming' | 'attended' | 'missed' | 'cancelled';
+
 export type Appointment = {
   id: string;
   title: string;
   doctorName: string;
   specialty: string;
   date: string;
+  /** Lifecycle state — see `AppointmentStatus`. Defaults to 'upcoming'. */
+  status: AppointmentStatus;
+  /** ISO timestamp set when the user marks the visit attended. */
+  attendedAt: string | null;
+  /** Optional short free-text note the user adds after attending. */
+  outcome: string | null;
   /**
    * Recordings the user explicitly attached to this appointment.
    * Optional — the default brief generator uses "last 30 days" unless
