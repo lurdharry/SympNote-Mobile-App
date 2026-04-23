@@ -1,4 +1,4 @@
-import { Lock, Mic, Send, Sparkles } from 'lucide-react-native';
+import { Bell, ClipboardList, Lock, Mic, Sparkles } from 'lucide-react-native';
 import { Plan } from '../services/subscription';
 
 export type PlanDef = {
@@ -26,8 +26,9 @@ export const PAYWALL_PLANS: PlanDef[] = [
 type IconRef = typeof Mic;
 
 export const PLAN_FEATURES: Array<{ Icon: IconRef; t: string }> = [
-  { Icon: Mic,      t: 'Unlimited voice notes' },
-  { Icon: Sparkles, t: 'AI summary for every appointment' },
-  { Icon: Lock,     t: 'Private & encrypted' },
-  { Icon: Send,     t: 'Export to your doctor' },
+  { Icon: Mic,           t: 'Unlimited voice notes' },
+  { Icon: Sparkles,      t: 'Doctor-ready notes for every recording' },
+  { Icon: ClipboardList, t: 'Visit briefs for every clinician' },
+  { Icon: Bell,          t: 'Appointment reminders' },
+  { Icon: Lock,          t: 'Private on your device' },
 ];
