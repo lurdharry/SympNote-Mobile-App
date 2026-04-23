@@ -19,6 +19,13 @@ interface HomeDashboard {
   /** The user's one-and-only recording when count === 1; used by the
    *  first-entry celebration hero on home. Null otherwise. */
   firstRecording: Recording | null;
+  /**
+   * Oldest past-date appointment still sitting in 'upcoming' state. The
+   * home screen surfaces a PostVisitPrompt for this one; once the user
+   * resolves it, the next unresolved (if any) surfaces on re-render.
+   * Undefined when everything is resolved.
+   */
+  unresolvedVisit: Appointment | undefined;
 }
 
 const TODAYS_ENTRY_LIMIT = 5;
@@ -52,8 +59,25 @@ export const useHomeDashboard = (): HomeDashboard => {
 
   const nextAppointment = useMemo(() => {
     const now = Date.now();
-    const upcoming = appointments.filter((a) => parseISO(a.date).getTime() >= now);
+    const upcoming = appointments.filter(
+      (a) =>
+        a.status === 'upcoming' && parseISO(a.date).getTime() >= now,
+    );
     return sortBy(upcoming, (a) => parseISO(a.date).getTime())[0];
+  }, [appointments]);
+
+  const unresolvedVisit = useMemo(() => {
+    // Appointment's date is before the start of today (local) and
+    // status is still 'upcoming'. We deliberately exclude today so
+    // the nudge never fires mid-visit.
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const stale = appointments.filter(
+      (a) =>
+        a.status === 'upcoming' &&
+        parseISO(a.date).getTime() < startOfToday.getTime(),
+    );
+    return sortBy(stale, (a) => parseISO(a.date).getTime())[0];
   }, [appointments]);
 
   const todayEntries = useMemo<DemoEntry[]>(() => {
@@ -81,5 +105,6 @@ export const useHomeDashboard = (): HomeDashboard => {
     greeting,
     recordingsCount: recordings.length,
     firstRecording,
+    unresolvedVisit,
   };
 };
