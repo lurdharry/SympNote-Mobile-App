@@ -13,7 +13,9 @@ import {
 } from '@/theme';
 import { SceneTransition } from '@/components/navigation/SceneTransition';
 import { AppointmentCard } from '@/components/prep/AppointmentCard';
+import { PastVisitCard } from '@/components/prep/PastVisitCard';
 import { PrepEmpty } from '@/components/empty/PrepEmpty';
+import { SectionLabel } from '@/components/ui/SectionLabel';
 import { usePrepRows } from '@/hooks/usePrepRows';
 import { hapticLight } from '@/services/haptics';
 
@@ -21,9 +23,9 @@ const TabPrep: React.FC = () => {
   const { colors } = useTheme();
   const styles = useStyles();
   const router = useRouter();
-  const rows = usePrepRows();
+  const { upcoming, past } = usePrepRows();
 
-  const [expanded, setExpanded] = useState<string | null>(rows[0]?.id ?? null);
+  const [expanded, setExpanded] = useState<string | null>(upcoming[0]?.id ?? null);
 
   return (
     <SceneTransition mode="crossfade-parallax-up">
@@ -40,10 +42,10 @@ const TabPrep: React.FC = () => {
             contentContainerStyle={styles.content}
             showsVerticalScrollIndicator={false}
           >
-            {rows.length === 0 ? (
+            {upcoming.length === 0 && past.length === 0 ? (
               <PrepEmpty />
             ) : (
-              rows.map((r) => (
+              upcoming.map((r) => (
                 <AppointmentCard
                   key={r.id}
                   row={r}
@@ -70,6 +72,19 @@ const TabPrep: React.FC = () => {
                 Add appointment
               </Text>
             </Pressable>
+
+            {past.length > 0 && (
+              <View style={styles.pastSection}>
+                <SectionLabel label="Past visits" />
+                {past.map((p) => (
+                  <PastVisitCard
+                    key={p.id}
+                    row={p}
+                    onPress={() => router.push(`/appointment/${p.id}`)}
+                  />
+                ))}
+              </View>
+            )}
 
             <Text
               style={[
@@ -113,5 +128,9 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: theme.radius.lg,
     borderWidth: 2,
     borderStyle: 'dashed',
+  },
+  pastSection: {
+    marginTop: theme.spacing.s6,
+    gap: verticalScale(6),
   },
 }));
