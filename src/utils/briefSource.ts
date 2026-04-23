@@ -5,33 +5,64 @@ import type { Appointment, Recording } from '@/stores/types';
 const DEFAULT_WINDOW_DAYS = 30;
 const DAY_MS = 86_400_000;
 
+interface Anchor {
+  ms: number;
+  /** True when the anchor comes from a visit with the same clinician. */
+  sameDoctor: boolean;
+}
+
 /**
- * The earliest moment (ms epoch) a recording may have been created to
- * be eligible for this appointment's brief. Anchored at the most recent
- * attended visit with the same doctor — everything since that visit is
- * "what's new to discuss". Falls back to 30 days before `now` when the
- * patient has no prior attended visit with this clinician.
+ * Find the moment (ms epoch) to anchor this appointment's source window
+ * on, and remember whether that anchor was the same clinician.
+ *
+ *  - Prefer the most recent attended visit with the SAME doctor —
+ *    that's "since we last spoke" for this specific clinician.
+ *  - Otherwise (brand-new clinician, no prior same-doctor history),
+ *    cap at the most recent attended visit of ANY doctor. Without this
+ *    cap a new clinician's brief sweeps up recordings that were
+ *    already discussed at an earlier attended visit with a different
+ *    doctor, which surprises the user.
+ *  - If there are no attended visits at all, return null so the caller
+ *    can fall back to the default 30-day reach.
  */
+const priorVisitAnchor = (
+  appointment: Appointment,
+  allAppointments: Appointment[],
+): Anchor | null => {
+  const doctor = appointment.doctorName.trim().toLowerCase();
+  const thisApptMs = parseISO(appointment.date).getTime();
+  const attendedBefore = allAppointments
+    .filter(
+      (a) =>
+        a.id !== appointment.id &&
+        a.status === 'attended' &&
+        parseISO(a.attendedAt ?? a.date).getTime() < thisApptMs,
+    )
+    .map((a) => ({
+      ms: parseISO(a.attendedAt ?? a.date).getTime(),
+      sameDoctor:
+        !!doctor && a.doctorName.trim().toLowerCase() === doctor,
+    }));
+
+  if (attendedBefore.length === 0) return null;
+
+  const sameDoc = attendedBefore
+    .filter((a) => a.sameDoctor)
+    .sort((a, b) => b.ms - a.ms)[0];
+  if (sameDoc) return sameDoc;
+
+  // No same-doctor history. Cap at the most recent attended visit of
+  // any doctor — everything before then was already used.
+  return attendedBefore.sort((a, b) => b.ms - a.ms)[0] ?? null;
+};
+
 const windowStart = (
   appointment: Appointment,
   allAppointments: Appointment[],
   nowMs: number,
 ): number => {
-  const doctor = appointment.doctorName.trim().toLowerCase();
-  const thisApptMs = parseISO(appointment.date).getTime();
-  const priorAttended = doctor
-    ? allAppointments
-        .filter(
-          (a) =>
-            a.id !== appointment.id &&
-            a.status === 'attended' &&
-            a.doctorName.trim().toLowerCase() === doctor,
-        )
-        .map((a) => parseISO(a.attendedAt ?? a.date).getTime())
-        .filter((t) => t < thisApptMs)
-        .sort((a, b) => b - a)[0]
-    : undefined;
-  return priorAttended ?? nowMs - DEFAULT_WINDOW_DAYS * DAY_MS;
+  const anchor = priorVisitAnchor(appointment, allAppointments);
+  return anchor ? anchor.ms : nowMs - DEFAULT_WINDOW_DAYS * DAY_MS;
 };
 
 /**
@@ -61,27 +92,13 @@ export const briefSourceWindowLabel = (
   appointment: Appointment,
   allAppointments: Appointment[],
 ): string => {
-  const doctor = appointment.doctorName.trim().toLowerCase();
-  const thisApptMs = parseISO(appointment.date).getTime();
-  const priorAttendedMs = doctor
-    ? allAppointments
-        .filter(
-          (a) =>
-            a.id !== appointment.id &&
-            a.status === 'attended' &&
-            a.doctorName.trim().toLowerCase() === doctor,
-        )
-        .map((a) => parseISO(a.attendedAt ?? a.date).getTime())
-        .filter((t) => t < thisApptMs)
-        .sort((a, b) => b - a)[0]
-    : undefined;
-
-  if (priorAttendedMs) {
-    const d = new Date(priorAttendedMs);
-    const month = d.toLocaleString('en-US', { month: 'short' });
-    return `since your visit on ${month} ${d.getDate()}`;
-  }
-  return `last ${DEFAULT_WINDOW_DAYS} days`;
+  const anchor = priorVisitAnchor(appointment, allAppointments);
+  if (!anchor) return `last ${DEFAULT_WINDOW_DAYS} days`;
+  const d = new Date(anchor.ms);
+  const month = d.toLocaleString('en-US', { month: 'short' });
+  return anchor.sameDoctor
+    ? `since your visit on ${month} ${d.getDate()}`
+    : `since your last appointment on ${month} ${d.getDate()}`;
 };
 
 /**
