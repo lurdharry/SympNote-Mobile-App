@@ -1,7 +1,9 @@
 import React from 'react';
 import {
+  Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -10,7 +12,7 @@ import {
 import DateTimePicker, {
   DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
-import { format } from 'date-fns';
+import { addDays, format } from 'date-fns';
 import { Calendar, Clock } from 'lucide-react-native';
 import {
   fontScale,
@@ -34,6 +36,20 @@ interface AppointmentBlockProps {
   onClosePicker: () => void;
 }
 
+type Preset = { label: string; days: number };
+
+const PRESETS: Preset[] = [
+  { label: 'Tomorrow', days: 1 },
+  { label: 'Next week', days: 7 },
+  { label: 'Two weeks', days: 14 },
+  { label: 'A month', days: 30 },
+];
+
+const isSameDay = (a: Date, b: Date): boolean =>
+  a.getFullYear() === b.getFullYear() &&
+  a.getMonth() === b.getMonth() &&
+  a.getDate() === b.getDate();
+
 export const AppointmentBlock: React.FC<AppointmentBlockProps> = ({
   enabled,
   onToggle,
@@ -51,11 +67,23 @@ export const AppointmentBlock: React.FC<AppointmentBlockProps> = ({
     onToggle(value);
   };
 
+  const applyPreset = (days: number) => {
+    hapticLight();
+    const target = addDays(new Date(), days);
+    // Preserve the current time-of-day on the new date.
+    target.setHours(when.getHours(), when.getMinutes(), 0, 0);
+    onChange(target);
+    onClosePicker();
+  };
+
   const handlePickerChange = (event: DateTimePickerEvent, selected?: Date) => {
     if (Platform.OS === 'android') onClosePicker();
     if (event.type === 'dismissed') return;
     if (selected) onChange(selected);
   };
+
+  const iosDateDisplay: 'inline' | 'spinner' =
+    pickerMode === 'date' ? 'inline' : 'spinner';
 
   return (
     <View style={[styles.wrap, { borderColor: colors.border }]}>
@@ -85,6 +113,45 @@ export const AppointmentBlock: React.FC<AppointmentBlockProps> = ({
       {enabled && (
         <>
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.presets}
+          >
+            {PRESETS.map((p) => {
+              const target = addDays(new Date(), p.days);
+              const active = isSameDay(when, target);
+              return (
+                <Pressable
+                  key={p.label}
+                  onPress={() => applyPreset(p.days)}
+                  style={[
+                    styles.presetChip,
+                    {
+                      backgroundColor: active
+                        ? colors.accent + '14'
+                        : 'transparent',
+                      borderColor: active ? colors.accent : colors.border,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      typography.label,
+                      {
+                        color: active ? colors.accent : colors.textSecondary,
+                        fontFamily: 'DMSans_600SemiBold',
+                      },
+                    ]}
+                  >
+                    {p.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+
           <View style={styles.whenRow}>
             <Pressable
               onPress={() => onOpenPicker('date')}
@@ -127,28 +194,61 @@ export const AppointmentBlock: React.FC<AppointmentBlockProps> = ({
             </Pressable>
           </View>
 
-          {pickerMode && (
-            <View style={styles.pickerSlot}>
-              <DateTimePicker
-                value={when}
-                mode={pickerMode}
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                minimumDate={pickerMode === 'date' ? new Date() : undefined}
-                onChange={handlePickerChange}
-              />
-              {Platform.OS === 'ios' && (
-                <Pressable onPress={onClosePicker} style={styles.doneRow}>
-                  <Text
-                    style={[
-                      typography.label,
-                      { color: colors.accent, fontFamily: 'DMSans_600SemiBold' },
-                    ]}
-                  >
-                    Done
-                  </Text>
-                </Pressable>
-              )}
-            </View>
+          {/* Android renders DateTimePicker as its own native dialog
+              when mounted — no wrapper needed. */}
+          {pickerMode && Platform.OS === 'android' && (
+            <DateTimePicker
+              value={when}
+              mode={pickerMode}
+              display="default"
+              minimumDate={pickerMode === 'date' ? new Date() : undefined}
+              onChange={handlePickerChange}
+            />
+          )}
+
+          {/* iOS wraps the picker in a centered modal card so the
+              calendar doesn't eat the whole page. */}
+          {Platform.OS === 'ios' && (
+            <Modal
+              visible={!!pickerMode}
+              transparent
+              animationType="fade"
+              onRequestClose={onClosePicker}
+            >
+              <View style={styles.backdrop}>
+                <Pressable
+                  style={StyleSheet.absoluteFill}
+                  onPress={onClosePicker}
+                />
+                <View
+                  style={[
+                    styles.modalCard,
+                    { backgroundColor: colors.bgPrimary },
+                  ]}
+                >
+                  {pickerMode && (
+                    <DateTimePicker
+                      value={when}
+                      mode={pickerMode}
+                      display={iosDateDisplay}
+                      minimumDate={pickerMode === 'date' ? new Date() : undefined}
+                      onChange={handlePickerChange}
+                      accentColor={colors.accent}
+                    />
+                  )}
+                  <Pressable onPress={onClosePicker} style={styles.doneRow}>
+                    <Text
+                      style={[
+                        typography.label,
+                        { color: colors.accent, fontFamily: 'DMSans_600SemiBold' },
+                      ]}
+                    >
+                      Done
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            </Modal>
           )}
         </>
       )}
@@ -177,9 +277,21 @@ const useStyles = makeStyles((theme) => ({
     marginTop: spacing.s4,
     marginBottom: spacing.s4,
   },
+  presets: {
+    flexDirection: 'row',
+    gap: moderateScale(8),
+    paddingRight: moderateScale(4),
+  },
+  presetChip: {
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(7),
+    borderRadius: theme.radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
   whenRow: {
     flexDirection: 'row',
     gap: moderateScale(10),
+    marginTop: spacing.s4,
   },
   whenTile: {
     flex: 1,
@@ -203,11 +315,23 @@ const useStyles = makeStyles((theme) => ({
     fontFamily: 'DMSans_600SemiBold',
     marginTop: 1,
   },
-  pickerSlot: {
-    marginTop: spacing.s3,
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.s5,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: moderateScale(360),
+    borderRadius: theme.radius.xl,
+    paddingHorizontal: spacing.s5,
+    paddingTop: spacing.s4,
+    paddingBottom: spacing.s2,
   },
   doneRow: {
     alignItems: 'flex-end',
-    paddingVertical: verticalScale(6),
+    paddingVertical: verticalScale(8),
   },
 }));
