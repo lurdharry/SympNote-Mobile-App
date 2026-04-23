@@ -34,6 +34,14 @@ interface AppointmentBlockProps {
   pickerMode: 'date' | 'time' | null;
   onOpenPicker: (mode: 'date' | 'time') => void;
   onClosePicker: () => void;
+  /**
+   * When true, the Switch toggle hides and the body always renders.
+   * Used on the new-visit screen where adding an appointment is the
+   * whole point of being there — a toggle would be redundant. The
+   * header and subtext still show so the module feels identical to
+   * the onboarding version.
+   */
+  alwaysOn?: boolean;
 }
 
 type Preset = { label: string; days: number };
@@ -58,9 +66,11 @@ export const AppointmentBlock: React.FC<AppointmentBlockProps> = ({
   pickerMode,
   onOpenPicker,
   onClosePicker,
+  alwaysOn = false,
 }) => {
   const { colors } = useTheme();
   const styles = useStyles();
+  const open = alwaysOn || enabled;
 
   const handleToggle = (value: boolean) => {
     hapticLight();
@@ -102,15 +112,17 @@ export const AppointmentBlock: React.FC<AppointmentBlockProps> = ({
             Sympnote will prep a visit brief for this date.
           </Text>
         </View>
-        <Switch
-          value={enabled}
-          onValueChange={handleToggle}
-          trackColor={{ false: colors.bgMuted, true: colors.accent }}
-          thumbColor="#FFFFFF"
-        />
+        {!alwaysOn && (
+          <Switch
+            value={enabled}
+            onValueChange={handleToggle}
+            trackColor={{ false: colors.bgMuted, true: colors.accent }}
+            thumbColor="#FFFFFF"
+          />
+        )}
       </View>
 
-      {enabled && (
+      {open && (
         <>
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 

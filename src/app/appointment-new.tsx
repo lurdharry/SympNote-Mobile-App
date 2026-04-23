@@ -1,27 +1,16 @@
 import React, { useMemo, useState } from 'react';
 import {
-  Modal,
-  Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
+  ScrollView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import DateTimePicker, {
-  DateTimePickerEvent,
-} from '@react-native-community/datetimepicker';
-import { addDays, format, setHours, setMinutes, setSeconds } from 'date-fns';
-import {
-  Calendar,
-  Check,
-  Clock,
-  Lock,
-  Plus,
-} from 'lucide-react-native';
+import { addDays, setHours, setMinutes, setSeconds } from 'date-fns';
+import { Check, Lock, Plus } from 'lucide-react-native';
 import {
   fontScale,
   makeStyles,
@@ -37,6 +26,7 @@ import { BackButton } from '@/components/ui/BackButton';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { StaggeredList } from '@/components/animated/StaggeredList';
 import { AddClinicianSheet } from '@/components/onboarding/care-team/AddClinicianSheet';
+import { AppointmentBlock } from '@/components/onboarding/care-team/AppointmentBlock';
 import { findSpecialty, type Specialty } from '@/constants/specialties';
 import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { useProfileStore } from '@/stores/useProfileStore';
@@ -53,19 +43,6 @@ const defaultDate = (): Date => {
     0,
   );
 };
-
-type Preset = { label: string; days: number };
-const PRESETS: Preset[] = [
-  { label: 'Tomorrow', days: 1 },
-  { label: 'Next week', days: 7 },
-  { label: 'Two weeks', days: 14 },
-  { label: 'A month', days: 30 },
-];
-
-const isSameDay = (a: Date, b: Date): boolean =>
-  a.getFullYear() === b.getFullYear() &&
-  a.getMonth() === b.getMonth() &&
-  a.getDate() === b.getDate();
 
 const AppointmentNew: React.FC = () => {
   const router = useRouter();
@@ -113,25 +90,6 @@ const AppointmentNew: React.FC = () => {
     addClinicianToStore(value);
     setDoctorName(value.name);
     setSpecialty(value.role);
-  };
-
-  const applyPreset = (days: number) => {
-    hapticLight();
-    const target = addDays(new Date(), days);
-    target.setHours(when.getHours(), when.getMinutes(), 0, 0);
-    setWhen(target);
-    setPickerMode(null);
-  };
-
-  const openPicker = (mode: 'date' | 'time') => {
-    hapticLight();
-    setPickerMode((prev) => (prev === mode ? null : mode));
-  };
-
-  const onPickerChange = (event: DateTimePickerEvent, selected?: Date) => {
-    if (Platform.OS === 'android') setPickerMode(null);
-    if (event.type === 'dismissed') return;
-    if (selected) setWhen(selected);
   };
 
   const save = () => {
@@ -207,182 +165,18 @@ const AppointmentNew: React.FC = () => {
             </StaggeredList>
           </View>
 
-          <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
-            When
-          </Text>
-          <View
-            style={[
-              styles.whenWrap,
-              { borderColor: colors.border },
-            ]}
-          >
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.presets}
-            >
-              {PRESETS.map((p) => {
-                const target = addDays(new Date(), p.days);
-                const active = isSameDay(when, target);
-                return (
-                  <Pressable
-                    key={p.label}
-                    onPress={() => applyPreset(p.days)}
-                    style={[
-                      styles.presetChip,
-                      {
-                        backgroundColor: active
-                          ? colors.accent + '14'
-                          : 'transparent',
-                        borderColor: active ? colors.accent : colors.border,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        typography.label,
-                        {
-                          color: active ? colors.accent : colors.textSecondary,
-                          fontFamily: 'DMSans_600SemiBold',
-                        },
-                      ]}
-                    >
-                      {p.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-
-            <View style={styles.whenRow}>
-              <Pressable
-                onPress={() => openPicker('date')}
-                style={[styles.whenTile, { borderColor: colors.border }]}
-              >
-                <View
-                  style={[
-                    styles.whenIcon,
-                    { backgroundColor: colors.accent + '1A' },
-                  ]}
-                >
-                  <Calendar
-                    size={moderateScale(14)}
-                    color={colors.accent}
-                    strokeWidth={2.2}
-                  />
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text
-                    style={[
-                      typography.caption,
-                      { color: colors.textTertiary },
-                    ]}
-                  >
-                    Date
-                  </Text>
-                  <Text
-                    style={[styles.whenValue, { color: colors.textPrimary }]}
-                    numberOfLines={1}
-                  >
-                    {format(when, 'EEE, MMM d')}
-                  </Text>
-                </View>
-              </Pressable>
-
-              <Pressable
-                onPress={() => openPicker('time')}
-                style={[styles.whenTile, { borderColor: colors.border }]}
-              >
-                <View
-                  style={[
-                    styles.whenIcon,
-                    { backgroundColor: colors.accent + '1A' },
-                  ]}
-                >
-                  <Clock
-                    size={moderateScale(14)}
-                    color={colors.accent}
-                    strokeWidth={2.2}
-                  />
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text
-                    style={[
-                      typography.caption,
-                      { color: colors.textTertiary },
-                    ]}
-                  >
-                    Time
-                  </Text>
-                  <Text
-                    style={[styles.whenValue, { color: colors.textPrimary }]}
-                    numberOfLines={1}
-                  >
-                    {format(when, 'h:mm a')}
-                  </Text>
-                </View>
-              </Pressable>
-            </View>
-          </View>
-
-          {pickerMode && Platform.OS === 'android' && (
-            <DateTimePicker
-              value={when}
-              mode={pickerMode}
-              display="default"
-              minimumDate={pickerMode === 'date' ? new Date() : undefined}
-              onChange={onPickerChange}
+          <View style={styles.appointmentSlot}>
+            <AppointmentBlock
+              alwaysOn
+              enabled
+              onToggle={() => {}}
+              when={when}
+              onChange={setWhen}
+              pickerMode={pickerMode}
+              onOpenPicker={setPickerMode}
+              onClosePicker={() => setPickerMode(null)}
             />
-          )}
-
-          {Platform.OS === 'ios' && (
-            <Modal
-              visible={!!pickerMode}
-              transparent
-              animationType="fade"
-              onRequestClose={() => setPickerMode(null)}
-            >
-              <View style={styles.backdrop}>
-                <Pressable
-                  style={StyleSheet.absoluteFill}
-                  onPress={() => setPickerMode(null)}
-                />
-                <View
-                  style={[
-                    styles.modalCard,
-                    { backgroundColor: colors.bgPrimary },
-                  ]}
-                >
-                  {pickerMode && (
-                    <DateTimePicker
-                      value={when}
-                      mode={pickerMode}
-                      display={iosDateDisplay}
-                      minimumDate={pickerMode === 'date' ? new Date() : undefined}
-                      onChange={onPickerChange}
-                      accentColor={colors.accent}
-                    />
-                  )}
-                  <Pressable
-                    onPress={() => setPickerMode(null)}
-                    style={styles.doneRow}
-                  >
-                    <Text
-                      style={[
-                        typography.label,
-                        {
-                          color: colors.accent,
-                          fontFamily: 'DMSans_600SemiBold',
-                        },
-                      ]}
-                    >
-                      Done
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-            </Modal>
-          )}
+          </View>
 
           <View style={[styles.privacyRow, { backgroundColor: colors.bgMuted }]}>
             <Lock
@@ -624,75 +418,8 @@ const useStyles = makeStyles((theme) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sectionLabel: {
-    ...theme.typography.label,
-    fontFamily: 'DMSans_700Bold',
-    letterSpacing: 0.6,
+  appointmentSlot: {
     marginTop: spacing.s6,
-    marginBottom: spacing.s3,
-  },
-  whenWrap: {
-    borderRadius: theme.radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: moderateScale(14),
-    backgroundColor: 'transparent',
-  },
-  presets: {
-    flexDirection: 'row',
-    gap: moderateScale(8),
-    paddingRight: moderateScale(4),
-  },
-  presetChip: {
-    paddingHorizontal: scale(12),
-    paddingVertical: verticalScale(7),
-    borderRadius: theme.radius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  whenRow: {
-    flexDirection: 'row',
-    gap: moderateScale(10),
-    marginTop: spacing.s4,
-  },
-  whenTile: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: moderateScale(10),
-    paddingHorizontal: scale(12),
-    paddingVertical: verticalScale(10),
-    borderRadius: theme.radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  whenIcon: {
-    width: moderateScale(28),
-    height: moderateScale(28),
-    borderRadius: moderateScale(8),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  whenValue: {
-    ...theme.typography.body,
-    fontFamily: 'DMSans_600SemiBold',
-    marginTop: 1,
-  },
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.s5,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: moderateScale(360),
-    borderRadius: theme.radius.xl,
-    paddingHorizontal: spacing.s5,
-    paddingTop: spacing.s4,
-    paddingBottom: spacing.s2,
-  },
-  doneRow: {
-    alignItems: 'flex-end',
-    paddingVertical: verticalScale(8),
   },
   privacyRow: {
     flexDirection: 'row',
