@@ -1,7 +1,12 @@
 import { format, parseISO } from 'date-fns';
 import { sortBy } from 'lodash';
-import type { Recording } from '@/stores/types';
-import { STRUCTURE_SYSTEM_PROMPT, SUMMARY_SYSTEM_PROMPT } from '@/constants/aiPrompts';
+import type { PersonalizationProfile, Recording } from '@/stores/types';
+import {
+  STRUCTURE_SYSTEM_PROMPT,
+  SUMMARY_SYSTEM_PROMPT,
+  buildPatientContext,
+} from '@/constants/aiPrompts';
+import { useProfileStore } from '@/stores/useProfileStore';
 import { GeminiQuotaError, parseQuotaError } from './aiQuota';
 import { parseStructured, type StructuredWithSources } from './aiParse';
 
@@ -72,12 +77,23 @@ const FALLBACK_STRUCTURED: Omit<StructuredWithSources, 'notes'> = {
   sourcePhrases: {},
 };
 
+const currentProfile = (): PersonalizationProfile | null =>
+  useProfileStore.getState().personalization;
+
+const withContext = (body: string, profile?: PersonalizationProfile | null): string => {
+  const context = buildPatientContext(profile === undefined ? currentProfile() : profile);
+  return context ? `${context}\n\n${body}` : body;
+};
+
 export async function structureTranscript(
   transcript: string,
+  profile?: PersonalizationProfile | null,
 ): Promise<StructuredWithSources> {
   const text = await callGemini(STRUCTURE_MODEL, {
     systemInstruction: { parts: [{ text: STRUCTURE_SYSTEM_PROMPT }] },
-    contents: [{ parts: [{ text: `Transcript:\n${transcript}` }] }],
+    contents: [
+      { parts: [{ text: withContext(`Transcript:\n${transcript}`, profile) }] },
+    ],
     generationConfig: {
       temperature: 0.2,
       responseMimeType: 'application/json',
@@ -105,6 +121,7 @@ Medications: ${s.medications.join(', ') || '—'}`;
 
 export async function generateAppointmentSummary(
   recordings: Recording[],
+  profile?: PersonalizationProfile | null,
 ): Promise<string> {
   const logs = sortBy(recordings, (r) => parseISO(r.createdAt).getTime())
     .map(formatLog)
@@ -112,7 +129,9 @@ export async function generateAppointmentSummary(
 
   return callGemini(SUMMARY_MODEL, {
     systemInstruction: { parts: [{ text: SUMMARY_SYSTEM_PROMPT }] },
-    contents: [{ parts: [{ text: `Patient symptom logs:\n\n${logs}` }] }],
+    contents: [
+      { parts: [{ text: withContext(`Patient symptom logs:\n\n${logs}`, profile) }] },
+    ],
     generationConfig: { temperature: 0.4, maxOutputTokens: 1200 },
   });
 }

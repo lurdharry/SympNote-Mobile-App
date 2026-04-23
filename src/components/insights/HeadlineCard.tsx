@@ -15,8 +15,7 @@ import { formatTotalDuration, rangeLabel } from '@/utils/insights';
 
 interface HeadlineCardProps {
   range: InsightsRange;
-  summary: InsightsSummary | null;
-  isReal: boolean;
+  summary: InsightsSummary;
 }
 
 const recordingsText = (summary: InsightsSummary): string =>
@@ -27,7 +26,7 @@ const tagsText = (summary: InsightsSummary): string =>
     summary.distinctSymptoms === 1 ? '' : 's'
   } tracked · ${formatTotalDuration(summary.totalDurationSec)} recorded`;
 
-export const HeadlineCard: React.FC<HeadlineCardProps> = ({ range, summary, isReal }) => {
+export const HeadlineCard: React.FC<HeadlineCardProps> = ({ range, summary }) => {
   const styles = useStyles();
 
   return (
@@ -63,27 +62,13 @@ export const HeadlineCard: React.FC<HeadlineCardProps> = ({ range, summary, isRe
               { color: '#FFFFFF', fontFamily: 'DMSans_600SemiBold' },
             ]}
           >
-            {summary ? recordingsText(summary) : '42 voice notes'}
+            {recordingsText(summary)}
           </Text>
           <Text
             style={[typography.caption, { color: 'rgba(255,255,255,0.8)' }]}
           >
-            {summary ? tagsText(summary) : '4 symptoms tracked · 18h 12m recorded'}
+            {tagsText(summary)}
           </Text>
-          {!isReal && (
-            <Text
-              style={[
-                typography.caption,
-                {
-                  color: 'rgba(255,255,255,0.55)',
-                  marginTop: 4,
-                  fontStyle: 'italic',
-                },
-              ]}
-            >
-              Example data — log a few entries to see your own.
-            </Text>
-          )}
         </View>
       </View>
     </View>

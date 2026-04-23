@@ -17,6 +17,7 @@ import { WaveBars } from '@/components/ui/WaveBars';
 import { Confetti } from '@/components/ui/Confetti';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useOnboardingRecorder } from '@/hooks/useOnboardingRecorder';
+import { useProfileStore } from '@/stores/useProfileStore';
 import { RECORDING_PROMPTS } from '@/constants/prompts';
 import { MicOrb } from '@/components/first-recording/MicOrb';
 import { ShimmerLines } from '@/components/first-recording/ShimmerLines';
@@ -46,6 +47,9 @@ const ScreenFirstRecording: React.FC = () => {
   const { colors } = useTheme();
   const styles = useStyles();
   const reduced = useReducedMotion();
+  const personalization = useProfileStore((s) => s.personalization);
+  const micHeadline =
+    personalization?.firstRecordingPrompt ?? "Tell us what's going on";
 
   const {
     phase,
@@ -97,7 +101,7 @@ const ScreenFirstRecording: React.FC = () => {
                 { color: colors.textPrimary, textAlign: 'center' },
               ]}
             >
-              Tell us what's going on
+              {micHeadline}
             </Text>
             <Text
               style={[
@@ -109,7 +113,7 @@ const ScreenFirstRecording: React.FC = () => {
                 },
               ]}
             >
-              Just talk. We turn it into a clinical summary.
+              Talk in your own words. Sympnote turns it into a clinical summary.
             </Text>
 
             <View style={styles.micArea}>
