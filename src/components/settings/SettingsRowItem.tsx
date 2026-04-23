@@ -40,8 +40,8 @@ export const SettingsRowItem: React.FC<SettingsRowItemProps> = ({
         },
       ]}
     >
-      <View style={[styles.icon, { backgroundColor: colors.accent + '1A' }]}>
-        <row.Icon size={18} color={colors.accent} strokeWidth={2} />
+      <View style={[styles.icon, { backgroundColor: (row.tint ?? colors.accent) + '1A' }]}>
+        <row.Icon size={18} color={row.tint ?? colors.accent} strokeWidth={2} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={styles.labelRow}>

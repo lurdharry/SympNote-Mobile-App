@@ -14,8 +14,7 @@ import {
 } from '@/theme';
 import { hapticLight, hapticSuccess } from '@/services/haptics';
 import { useRecordingsStore } from '@/stores/useRecordingsStore';
-import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
-import { useProfileStore } from '@/stores/useProfileStore';
+import { resetAppState } from '@/utils/resetApp';
 import { useSettingsStats } from '@/hooks/useSettingsStats';
 import { useSettingsSections } from '@/hooks/useSettingsSections';
 import { ProfileCard } from '@/components/settings/ProfileCard';
@@ -40,21 +39,23 @@ const ScreenSettings: React.FC = () => {
     router.back();
   };
 
-  const signOut = () => {
-    Alert.alert('Sign out?', 'You can sign back in anytime.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign out',
-        style: 'destructive',
-        onPress: () => {
-          useProfileStore.getState().resetOnboarding();
-          useRecordingsStore.setState({ recordings: [] });
-          useAppointmentsStore.setState({ appointments: [] });
-          hapticSuccess();
-          router.replace('/onboarding');
+  const resetApp = () => {
+    Alert.alert(
+      'Reset app?',
+      'This clears every recording, appointment, brief, and your setup answers. You will start onboarding from the beginning.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset app',
+          style: 'destructive',
+          onPress: () => {
+            resetAppState();
+            hapticSuccess();
+            router.replace('/onboarding');
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   return (
@@ -100,7 +101,7 @@ const ScreenSettings: React.FC = () => {
 
           <View style={styles.signOutSlot}>
             <Pressable
-              onPress={signOut}
+              onPress={resetApp}
               style={[
                 styles.signOut,
                 { backgroundColor: colors.bgSurface, borderColor: colors.border },
@@ -113,7 +114,7 @@ const ScreenSettings: React.FC = () => {
                   { color: colors.coral, fontFamily: 'DMSans_600SemiBold' },
                 ]}
               >
-                Sign out
+                Reset app
               </Text>
             </Pressable>
             <Text
