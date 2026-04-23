@@ -19,7 +19,7 @@ import { useRecordingFlow } from '../components/recording/useRecordingFlow';
 import { useRecordingsStore } from '../stores/useRecordingsStore';
 import { uuid } from '../utils/uuid';
 import { hapticHeavy, hapticLight } from '../services/haptics';
-import type { Phase } from '../components/recording/types';
+import { Phase } from '../components/recording/types';
 
 /**
  * Full-screen capture surface — opens over everything so the recording
@@ -71,7 +71,10 @@ const RecordModal: React.FC = () => {
     router.back();
   };
 
-  const title = titleForKind(kind);
+  const kindLabel = kindToLabel(kind);
+  const title = titleForPhase(flow.phase, kind);
+  const titleVisible =
+    flow.phase !== 'extracting' && flow.phase !== 'recording';
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
@@ -97,14 +100,26 @@ const RecordModal: React.FC = () => {
           </Pressable>
         </View>
 
-        <View style={styles.titleArea}>
-          <Text
-            style={[styles.title, { color: colors.textPrimary }]}
-            numberOfLines={2}
-          >
-            {title}
-          </Text>
-        </View>
+        {titleVisible && (
+          <View style={styles.titleArea}>
+            {kindLabel && (
+              <Text
+                style={[
+                  styles.kindEyebrow,
+                  { color: colors.accent },
+                ]}
+              >
+                {kindLabel}
+              </Text>
+            )}
+            <Text
+              style={[styles.title, { color: colors.textPrimary }]}
+              numberOfLines={2}
+            >
+              {title}
+            </Text>
+          </View>
+        )}
 
         <View style={styles.body}>
           {flow.phase === 'idle' && (
@@ -211,14 +226,37 @@ function kindToTag(raw: string): string | null {
   return null;
 }
 
-function titleForKind(raw?: string): string {
-  if (!raw) return 'New entry';
+function kindToLabel(raw?: string): string | null {
+  if (!raw) return null;
   const k = raw.toLowerCase();
-  if (k === 'medication' || k === 'meds' || k === 'med') return 'Log medication';
-  if (k === 'symptom' || k === 'symptoms') return 'Log a symptom';
+  if (k === 'medication' || k === 'meds' || k === 'med') return 'Medication';
+  if (k === 'symptom' || k === 'symptoms') return 'Symptom';
   if (k === 'side-effect' || k === 'sideeffect' || k === 'side_effect')
-    return 'Log a side effect';
-  return 'New entry';
+    return 'Side effect';
+  return null;
+}
+
+/**
+ * Phase-adaptive headline. Guides the user through the flow instead of
+ * repeating the same static title across every step. Idle borrows the
+ * kind when set so it reads purposeful ("Note your symptom") rather
+ * than generic.
+ */
+function titleForPhase(phase: Phase, rawKind?: string): string {
+  const kind = kindToLabel(rawKind);
+  switch (phase) {
+    case 'review':
+      return 'Check what we heard';
+    case 'extracted':
+      return 'Does this look right?';
+    case 'idle':
+    case 'recording':
+    case 'extracting':
+    case 'privacy':
+    default:
+      if (kind) return `Note your ${kind.toLowerCase()}`;
+      return "What's going on?";
+  }
 }
 
 export default RecordModal;
@@ -260,6 +298,14 @@ const useStyles = makeStyles((theme) => ({
     paddingHorizontal: theme.spacing.s6,
     paddingTop: theme.spacing.s2,
     paddingBottom: theme.spacing.s3,
+  },
+  kindEyebrow: {
+    ...theme.typography.label,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: fontScale(11),
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    marginBottom: 4,
   },
   title: {
     ...theme.typography.h1,
