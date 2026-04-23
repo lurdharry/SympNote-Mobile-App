@@ -14,6 +14,12 @@ type State = UserProfile & {
   themePreference: ThemePreference;
   hapticsEnabled: boolean;
   reduceMotionOverride: ReduceMotionPreference;
+  /**
+   * Set once the user has seen (and dismissed) the one-time hero card
+   * that celebrates their first recording on the home screen. Gates
+   * the card so it never shows twice.
+   */
+  firstEntryHeroDismissed: boolean;
 };
 
 type Actions = {
@@ -25,6 +31,7 @@ type Actions = {
   setThemePreference: (pref: ThemePreference) => void;
   setHapticsEnabled: (enabled: boolean) => void;
   setReduceMotionOverride: (pref: ReduceMotionPreference) => void;
+  dismissFirstEntryHero: () => void;
 };
 
 const initial: State = {
@@ -36,6 +43,7 @@ const initial: State = {
   themePreference: "auto",
   hapticsEnabled: true,
   reduceMotionOverride: "auto",
+  firstEntryHeroDismissed: false,
 };
 
 export const useProfileStore = create<State & Actions>()(
@@ -55,6 +63,8 @@ export const useProfileStore = create<State & Actions>()(
       setThemePreference: (pref) => set(() => ({ themePreference: pref })),
       setHapticsEnabled: (enabled) => set(() => ({ hapticsEnabled: enabled })),
       setReduceMotionOverride: (pref) => set(() => ({ reduceMotionOverride: pref })),
+
+      dismissFirstEntryHero: () => set(() => ({ firstEntryHeroDismissed: true })),
     }),
     {
       name: "profile",

@@ -19,16 +19,36 @@ import { QuickLogRow } from '@/components/home/QuickLogRow';
 import { TimelineCard } from '@/components/home/TimelineCard';
 import { TodayEmpty } from '@/components/home/TodayEmpty';
 import { InsightNudge } from '@/components/home/InsightNudge';
+import { FirstEntryHero } from '@/components/home/FirstEntryHero';
 import { RecordFAB } from '@/components/home/RecordFAB';
 import { SectionLabel } from '@/components/ui/SectionLabel';
+import { useProfileStore } from '@/stores/useProfileStore';
 
 const TabHome: React.FC = () => {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useStyles();
 
-  const { nextAppointment, todayEntries, nudge, dateEyebrow, greeting } =
-    useHomeDashboard();
+  const {
+    nextAppointment,
+    todayEntries,
+    nudge,
+    dateEyebrow,
+    greeting,
+    recordingsCount,
+    firstRecording,
+  } = useHomeDashboard();
+
+  const firstEntryHeroDismissed = useProfileStore(
+    (s) => s.firstEntryHeroDismissed,
+  );
+  const dismissFirstEntryHero = useProfileStore(
+    (s) => s.dismissFirstEntryHero,
+  );
+  const showFirstEntryHero =
+    recordingsCount === 1 &&
+    !!firstRecording &&
+    !firstEntryHeroDismissed;
 
   return (
     <SceneTransition mode="crossfade-parallax-up">
@@ -69,6 +89,16 @@ const TabHome: React.FC = () => {
             contentContainerStyle={styles.scroll}
             showsVerticalScrollIndicator={false}
           >
+            {showFirstEntryHero && firstRecording && (
+              <View style={{ marginBottom: spacing.s4 }}>
+                <FirstEntryHero
+                  recording={firstRecording}
+                  nextAppointment={nextAppointment}
+                  onDismiss={dismissFirstEntryHero}
+                />
+              </View>
+            )}
+
             <UpNextCard
               appointment={nextAppointment}
               onPress={() => router.push('/(tabs)/prep')}
@@ -103,19 +133,21 @@ const TabHome: React.FC = () => {
               />
             )}
 
-            <Text
-              style={[
-                typography.caption,
-                {
-                  color: colors.textTertiary,
-                  textAlign: 'center',
-                  marginTop: spacing.s5,
-                  paddingHorizontal: spacing.s6,
-                },
-              ]}
-            >
-              Logging little and often makes your prep summaries sharper.
-            </Text>
+            {!showFirstEntryHero && (
+              <Text
+                style={[
+                  typography.caption,
+                  {
+                    color: colors.textTertiary,
+                    textAlign: 'center',
+                    marginTop: spacing.s5,
+                    paddingHorizontal: spacing.s6,
+                  },
+                ]}
+              >
+                Logging little and often makes your prep summaries sharper.
+              </Text>
+            )}
           </ScrollView>
 
           <RecordFAB
