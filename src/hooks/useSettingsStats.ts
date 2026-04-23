@@ -33,7 +33,7 @@ export function useSettingsStats(): SettingsStats {
 
   const streak = useMemo(() => computeStreak(recordings), [recordings]);
   const summariesCount = useMemo(
-    () => appointments.filter((a) => !!a.summary).length,
+    () => appointments.filter((a) => !!a.brief?.summary).length,
     [appointments]
   );
 
