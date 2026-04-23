@@ -17,9 +17,10 @@ import type { FocusArea } from "@/stores/types";
 import { useProfileStore } from "@/stores/useProfileStore";
 import { hapticLight } from "@/services/haptics";
 import { FocusCard } from "@/components/onboarding/focus/FocusCard";
+import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
 
 const ctaLabel = (count: number): string => {
-  if (count === 0) return "Pick at least one to continue";
+  if (count === 0) return "Tell us what you're tracking";
   if (count === 1) return "Continue";
   return `Continue · ${count} selected`;
 };
@@ -55,8 +56,10 @@ const ScreenFocus: React.FC = () => {
         <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
           <View style={styles.topBar}>
             <BackButton onPress={() => router.back()} />
-            <Text style={styles.stageCount}>5 of 9</Text>
             <View style={{ width: moderateScale(40) }} />
+          </View>
+          <View style={styles.progressSlot}>
+            <OnboardingProgress value={0.5} />
           </View>
 
           <ScrollView
@@ -112,6 +115,10 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  progressSlot: {
+    paddingHorizontal: theme.spacing.s6,
+    paddingTop: theme.spacing.s2,
+  },
   content: {
     paddingHorizontal: theme.spacing.s6,
     paddingTop: theme.spacing.s4,
@@ -134,10 +141,6 @@ const useStyles = makeStyles((theme) => ({
   cta: {
     paddingHorizontal: theme.spacing.s6,
     paddingTop: verticalScale(8),
-  },
-  stageCount: {
-    ...typography.label,
-    color: theme.colors.textTertiary,
   },
   headlineSubTitle: {
     ...typography.body,
