@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Platform,
   Pressable,
@@ -8,7 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -41,13 +41,29 @@ const defaultDate = (): Date => {
 
 const AppointmentNew: React.FC = () => {
   const router = useRouter();
+  const { editId } = useLocalSearchParams<{ editId?: string }>();
   const { colors } = useTheme();
   const styles = useStyles();
   const careTeam = useProfileStore((s) => s.personalization?.careTeam ?? []);
+  const existing = useAppointmentsStore((s) =>
+    editId ? s.getById(editId) : undefined,
+  );
+  const isEdit = !!existing;
 
-  const [doctorName, setDoctorName] = useState('');
-  const [specialty, setSpecialty] = useState('');
-  const [when, setWhen] = useState<Date>(defaultDate);
+  const initial = useMemo(() => {
+    if (existing) {
+      return {
+        doctor: existing.doctorName,
+        specialty: existing.specialty === 'General' ? '' : existing.specialty,
+        when: new Date(existing.date),
+      };
+    }
+    return { doctor: '', specialty: '', when: defaultDate() };
+  }, [existing]);
+
+  const [doctorName, setDoctorName] = useState(initial.doctor);
+  const [specialty, setSpecialty] = useState(initial.specialty);
+  const [when, setWhen] = useState<Date>(initial.when);
   const [pickerMode, setPickerMode] = useState<'date' | 'time' | null>(null);
 
   const canSave = doctorName.trim().length > 0;
@@ -72,18 +88,29 @@ const AppointmentNew: React.FC = () => {
 
   const save = () => {
     if (!canSave) return;
-    const id = uuid();
-    useAppointmentsStore.getState().add({
-      id,
-      title: `${specialty.trim() || 'Visit'} with ${doctorName.trim()}`,
-      doctorName: doctorName.trim(),
-      specialty: specialty.trim() || 'General',
-      date: when.toISOString(),
-      relatedRecordingIds: [],
-      brief: null,
-      briefGeneratedAt: null,
-      briefSourceRecordingIds: [],
-    });
+    const trimmedDoc = doctorName.trim();
+    const trimmedSpec = specialty.trim() || 'General';
+    const title = `${trimmedSpec} with ${trimmedDoc}`;
+    if (isEdit && existing) {
+      useAppointmentsStore.getState().update(existing.id, {
+        title,
+        doctorName: trimmedDoc,
+        specialty: trimmedSpec,
+        date: when.toISOString(),
+      });
+    } else {
+      useAppointmentsStore.getState().add({
+        id: uuid(),
+        title,
+        doctorName: trimmedDoc,
+        specialty: trimmedSpec,
+        date: when.toISOString(),
+        relatedRecordingIds: [],
+        brief: null,
+        briefGeneratedAt: null,
+        briefSourceRecordingIds: [],
+      });
+    }
     hapticSuccess();
     router.back();
   };
@@ -104,10 +131,10 @@ const AppointmentNew: React.FC = () => {
                   },
                 ]}
               >
-                NEW APPOINTMENT
+                {isEdit ? 'EDIT APPOINTMENT' : 'NEW APPOINTMENT'}
               </Text>
               <Text style={[typography.h2, { color: colors.textPrimary, marginTop: 2 }]}>
-                Add a visit
+                {isEdit ? 'Edit visit' : 'Add a visit'}
               </Text>
             </View>
             <Pressable
@@ -257,23 +284,25 @@ const AppointmentNew: React.FC = () => {
               </View>
             )}
 
-            <Text
-              style={[
-                typography.caption,
-                {
-                  color: colors.textTertiary,
-                  marginTop: spacing.s4,
-                  textAlign: 'center',
-                },
-              ]}
-            >
-              You can edit or delete this visit later from the Prep tab.
-            </Text>
+            {!isEdit && (
+              <Text
+                style={[
+                  typography.caption,
+                  {
+                    color: colors.textTertiary,
+                    marginTop: spacing.s4,
+                    textAlign: 'center',
+                  },
+                ]}
+              >
+                You can edit or delete this visit later from the Prep tab.
+              </Text>
+            )}
           </ScrollView>
 
           <View style={styles.ctaSlot}>
             <PrimaryButton
-              label="Add appointment"
+              label={isEdit ? 'Save changes' : 'Add appointment'}
               onPress={save}
               disabled={!canSave}
             />
