@@ -10,11 +10,15 @@ import {
   Lock,
   Mic,
   Sparkles,
+  Trash2,
   User as UserIcon,
   Users,
 } from 'lucide-react-native';
+import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
+import { usePendingRecordingStore } from '@/stores/usePendingRecordingStore';
 import { useRecordingsStore } from '@/stores/useRecordingsStore';
 import { useProfileStore } from '@/stores/useProfileStore';
+import { hapticSuccess } from '@/services/haptics';
 import type {
   AgeBand,
   FocusArea,
@@ -32,6 +36,12 @@ export interface SettingsRow {
   badge?: string;
   toggleKey?: 'voiceOnly';
   onPress?: () => void;
+  /**
+   * Optional override for the row's icon tile and icon tint. Used by
+   * destructive rows (e.g. Clear all data) to signal consequence
+   * without putting the whole row in red.
+   */
+  tint?: string;
 }
 
 export interface SettingsSection {
@@ -94,6 +104,36 @@ const openDeviceSettings = () => {
   Linking.openSettings().catch(() => {
     Alert.alert('Settings unavailable', 'Could not open device Settings.');
   });
+};
+
+/**
+ * Wipe user content (recordings + appointments + their briefs + any
+ * pending draft) while keeping session-level state: subscription,
+ * personalization profile, onboardingComplete, theme and haptic
+ * preferences. Intended as a content reset, NOT a sign-out.
+ * Re-arms the first-entry hero so the next recording still gets the
+ * one-time celebration.
+ */
+const clearAllContent = () => {
+  Alert.alert(
+    'Clear all data?',
+    'This deletes every recording, appointment, and visit brief. Your profile and subscription stay. You can start fresh right after.',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Clear everything',
+        style: 'destructive',
+        onPress: () => {
+          useRecordingsStore.setState({ recordings: [] });
+          useAppointmentsStore.setState({ appointments: [] });
+          usePendingRecordingStore.getState().clear();
+          useProfileStore.setState({ firstEntryHeroDismissed: false });
+          hapticSuccess();
+          Alert.alert('Cleared', 'Your record has been reset.');
+        },
+      },
+    ],
+  );
 };
 
 const openManageSubscription = () => {
@@ -215,6 +255,13 @@ export const useSettingsSections = (): SettingsSection[] => {
               'Not medical advice',
               'Sympnote is an organizational tool. Always consult your doctor for medical decisions.',
             ),
+        },
+        {
+          Icon: Trash2,
+          label: 'Clear all data',
+          value: 'Recordings, appointments, briefs',
+          tint: '#E07A5F',
+          onPress: clearAllContent,
         },
       ],
     },

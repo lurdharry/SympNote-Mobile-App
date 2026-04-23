@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, {
@@ -25,6 +25,8 @@ import { SympnoteHero } from "../../components/brand/SympnoteHero";
 import { PrimaryButton } from "../../components/ui/PrimaryButton";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { FULL_HEADLINE } from "../../constants/onboarding";
+import { resetAppState } from "../../utils/resetApp";
+import { hapticMedium } from "../../services/haptics";
 
 const ScreenHook: React.FC = () => {
   const router = useRouter();
@@ -81,10 +83,30 @@ const ScreenHook: React.FC = () => {
     router.push("/onboarding/questions");
   };
 
+  const handleDevReset = () => {
+    hapticMedium();
+    resetAppState();
+    router.replace("/onboarding");
+  };
+
   return (
     <SceneTransition mode="crossfade-parallax-up">
       <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
         <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+          {__DEV__ && (
+            <View style={styles.devBar}>
+              <Pressable
+                onPress={handleDevReset}
+                hitSlop={10}
+                style={[styles.devPill, { borderColor: colors.border }]}
+                accessibilityLabel="Dev: reset app"
+              >
+                <Text style={[styles.devPillText, { color: colors.textTertiary }]}>
+                  DEV · Reset
+                </Text>
+              </Pressable>
+            </View>
+          )}
           <View style={styles.heroArea}>
             <Animated.View style={[{ marginBottom: spacing.s6 }, hero]}>
               <SympnoteHero size={124} />
@@ -135,9 +157,9 @@ const ScreenHook: React.FC = () => {
             </Animated.Text>
 
             <Animated.View style={[styles.chips, chips]}>
-              <TrustChip Icon={Zap} label="2-min daily" tint={colors.accent} />
-              <TrustChip Icon={Heart} label="HIPAA-safe" tint={colors.success} />
-              <TrustChip Icon={Sparkles} label="AI summary" tint={colors.gold} />
+              <TrustChip Icon={Zap} label="Under 2 min" tint={colors.accent} />
+              <TrustChip Icon={Heart} label="Private by default" tint={colors.success} />
+              <TrustChip Icon={Sparkles} label="Doctor-ready notes" tint={colors.gold} />
             </Animated.View>
           </View>
 
@@ -252,5 +274,23 @@ const useStyles = makeStyles((theme) => ({
   ctaArea: {
     paddingHorizontal: theme.spacing.s6,
     paddingBottom: theme.spacing.s10,
+  },
+  devBar: {
+    paddingHorizontal: theme.spacing.s4,
+    paddingTop: theme.spacing.s2,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+  },
+  devPill: {
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(4),
+    borderRadius: theme.radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: "transparent",
+  },
+  devPillText: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: fontScale(10),
+    letterSpacing: 0.9,
   },
 }));
