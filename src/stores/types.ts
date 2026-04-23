@@ -39,6 +39,13 @@ export type Recording = {
   transcript: string;
   structured: StructuredEntry;
   tags: string[];
+  /**
+   * Optional clinician this entry is tagged for. When set, the
+   * appointment brief generator prefers entries tagged for the
+   * matching clinician over the generic "last 30 days" fallback.
+   * Matched by the clinician's display name (case-insensitive).
+   */
+  clinicianName?: string;
 };
 
 /**
