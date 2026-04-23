@@ -76,8 +76,9 @@ const AppointmentNew: React.FC = () => {
   const [when, setWhen] = useState<Date>(initial.when);
   const [pickerMode, setPickerMode] = useState<'date' | 'time' | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [appointmentEnabled, setAppointmentEnabled] = useState(true);
 
-  const canSave = doctorName.trim().length > 0;
+  const canSave = doctorName.trim().length > 0 && appointmentEnabled;
   const selectedName = doctorName.trim().toLowerCase();
 
   const pickClinician = (c: StoreClinician) => {
@@ -167,9 +168,11 @@ const AppointmentNew: React.FC = () => {
 
           <View style={styles.appointmentSlot}>
             <AppointmentBlock
-              alwaysOn
-              enabled
-              onToggle={() => {}}
+              enabled={appointmentEnabled}
+              onToggle={(v) => {
+                setAppointmentEnabled(v);
+                if (!v) setPickerMode(null);
+              }}
               when={when}
               onChange={setWhen}
               pickerMode={pickerMode}
@@ -204,7 +207,9 @@ const AppointmentNew: React.FC = () => {
                 },
               ]}
             >
-              Pick a clinician to continue
+              {!doctorName.trim()
+                ? 'Pick a clinician to continue'
+                : 'Turn on the appointment to continue'}
             </Text>
           )}
           <PrimaryButton
