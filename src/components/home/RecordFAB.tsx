@@ -2,9 +2,12 @@ import React, { useEffect } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
+  SharedValue,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
   withRepeat,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,19 +16,39 @@ import { makeStyles, moderateScale, verticalScale } from '@/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 interface RecordFABProps {
-  onPress: () => void;
+  /** Invoked when a press-and-release did not commit to recording
+   *  (short tap below the hold threshold). The page uses this to
+   *  show a "Hold to record" toast. Required. */
+  onPressIn: () => void;
+  onPressOut: () => void;
+  /** True while the user is actively holding and recording. Drives
+   *  the FAB's expanded/pulsing visual state. */
+  isRecording: boolean;
+  /** Optional volume 0-1 to pulse the FAB in sync with speech. */
+  volume?: SharedValue<number>;
 }
 
 const PULSE_DURATION_MS = 1800;
 
-export const RecordFAB: React.FC<RecordFABProps> = ({ onPress }) => {
+export const RecordFAB: React.FC<RecordFABProps> = ({
+  onPressIn,
+  onPressOut,
+  isRecording,
+  volume,
+}) => {
   const styles = useStyles();
   const reduced = useReducedMotion();
   const pulse1 = useSharedValue(0);
   const pulse2 = useSharedValue(0);
 
+  // Ambient breathing rings (pre-record). Stopped while holding so
+  // the FAB's own reactive pulse can read without competition.
   useEffect(() => {
-    if (reduced) return;
+    if (reduced || isRecording) {
+      pulse1.value = 0;
+      pulse2.value = 0;
+      return;
+    }
     pulse1.value = withRepeat(
       withTiming(1, { duration: PULSE_DURATION_MS, easing: Easing.bezier(0.4, 0, 0.6, 1) }),
       -1,
@@ -39,7 +62,7 @@ export const RecordFAB: React.FC<RecordFABProps> = ({ onPress }) => {
       );
     }, 900);
     return () => clearTimeout(id);
-  }, [reduced, pulse1, pulse2]);
+  }, [reduced, isRecording, pulse1, pulse2]);
 
   const ring1Style = useAnimatedStyle(() => ({
     opacity: 0.45 * (1 - pulse1.value),
@@ -52,25 +75,42 @@ export const RecordFAB: React.FC<RecordFABProps> = ({ onPress }) => {
     backgroundColor: 'rgba(246,192,106,0.24)',
   }));
 
+  // While holding, the FAB swells slightly and pulses with volume.
+  const holdScale = useDerivedValue(() => {
+    if (!isRecording) return 1;
+    const base = 1.12;
+    const bounce = volume ? volume.value * 0.08 : 0;
+    return base + bounce;
+  }, [isRecording]);
+
+  const fabStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: withSpring(holdScale.value, { damping: 14, stiffness: 180 }) }],
+  }));
+
   return (
     <View pointerEvents="box-none" style={styles.wrap}>
       <View style={styles.inner} pointerEvents="box-none">
         <Animated.View pointerEvents="none" style={[styles.ring, ring1Style]} />
         <Animated.View pointerEvents="none" style={[styles.ring, ring2Style]} />
-        <Pressable
-          onPress={onPress}
-          accessibilityRole="button"
-          accessibilityLabel="Start voice log"
-          style={styles.fab}
-        >
-          <LinearGradient
-            colors={['#4DB8B0', '#2C6E6B']}
-            start={{ x: 0.3, y: 0.3 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <Mic size={28} color="#FFFFFF" strokeWidth={2} />
-        </Pressable>
+        <Animated.View style={fabStyle}>
+          <Pressable
+            onPressIn={onPressIn}
+            onPressOut={onPressOut}
+            delayLongPress={500}
+            accessibilityRole="button"
+            accessibilityLabel="Hold to record a voice note"
+            accessibilityHint="Press and hold to record. Release to save."
+            style={styles.fab}
+          >
+            <LinearGradient
+              colors={isRecording ? ['#F6C06A', '#E07A5F'] : ['#4DB8B0', '#2C6E6B']}
+              start={{ x: 0.3, y: 0.3 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <Mic size={28} color="#FFFFFF" strokeWidth={2} />
+          </Pressable>
+        </Animated.View>
       </View>
     </View>
   );
