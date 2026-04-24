@@ -22,9 +22,14 @@ export type ColorPalette = {
 };
 
 export const lightColors: ColorPalette = {
-  bgPrimary: '#F5F1EA',
+  // Page now pure white; surfaces stay white so cards rely on
+  // shadows.card + border to lift off the page rather than a cream
+  // page-to-white-card contrast.
+  bgPrimary: '#FFFFFF',
   bgSurface: '#FFFFFF',
-  bgMuted: '#EBE5DA',
+  // Warm-neutral lifted to stay subtle on white — was #EBE5DA which
+  // read dingy against a white page.
+  bgMuted: '#F3F1EC',
   accent: '#2C6E6B',
   accentDark: '#1F504E',
   accentLight: '#A8C4C2',
@@ -32,7 +37,8 @@ export const lightColors: ColorPalette = {
   textPrimary: '#1A1F1E',
   textSecondary: '#5A6361',
   textTertiary: '#8A9290',
-  border: '#E0D9CC',
+  // Slightly lighter border so card edges don't scream on white.
+  border: '#E8E4DD',
   success: '#5A8F6E',
   warning: '#C88A4A',
   error: '#B85450',
