@@ -111,7 +111,9 @@ const ScreenHook: React.FC = () => {
           )}
           <View style={styles.heroArea}>
             <Animated.View style={[{ marginBottom: spacing.s6 }, hero]}>
-              <SympnoteHero size={124} />
+              <View style={styles.greetingSlot}>
+                <SympnoteSprite pose="greeting" reduced={reduced} size={moderateScale(120)} />
+              </View>
             </Animated.View>
             <View style={styles.headlineSlot}>
               <Text
@@ -166,9 +168,6 @@ const ScreenHook: React.FC = () => {
 
           {/* Greeting sprite + CTA */}
           <Animated.View style={[styles.ctaArea, cta]}>
-            <View style={styles.greetingSlot}>
-              <SympnoteSprite pose="greeting" reduced={reduced} size={moderateScale(120)} />
-            </View>
             <PrimaryButton label="Get started · Free" onPress={handleGetStarted} />
           </Animated.View>
         </SafeAreaView>

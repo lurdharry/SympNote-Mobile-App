@@ -1,22 +1,22 @@
-import React, { useEffect } from 'react';
-import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import React, { useEffect } from "react";
+import { StyleProp, StyleSheet, View, ViewStyle } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
   withSpring,
   Easing,
-} from 'react-native-reanimated';
-import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { useTheme } from '../../theme';
+} from "react-native-reanimated";
+import { useReducedMotion } from "../../hooks/useReducedMotion";
+import { useTheme } from "../../theme";
 
 export type SceneMode =
-  | 'scale-fade' // onboarding
-  | 'crossfade-parallax-up'
-  | 'crossfade-parallax-down'
-  | 'crossfade-parallax-left'
-  | 'crossfade-parallax-right'
-  | 'sheet-up';
+  | "scale-fade" // onboarding
+  | "crossfade-parallax-up"
+  | "crossfade-parallax-down"
+  | "crossfade-parallax-left"
+  | "crossfade-parallax-right"
+  | "sheet-up";
 
 type Props = {
   children: React.ReactNode;
@@ -32,29 +32,25 @@ type Props = {
  */
 export const SceneTransition: React.FC<Props> = ({
   children,
-  mode = 'scale-fade',
+  mode = "scale-fade",
   style,
   enterDelay = 0,
 }) => {
   const reduced = useReducedMotion();
   const { colors } = useTheme();
   const opacity = useSharedValue(0);
-  const scale = useSharedValue(mode === 'scale-fade' ? 0.95 : 1);
+  const scale = useSharedValue(mode === "scale-fade" ? 0.95 : 1);
   const translateY = useSharedValue(
-    mode === 'crossfade-parallax-up'
+    mode === "crossfade-parallax-up"
       ? 20
-      : mode === 'crossfade-parallax-down'
-      ? -20
-      : mode === 'sheet-up'
-      ? 60
-      : 0
+      : mode === "crossfade-parallax-down"
+        ? -20
+        : mode === "sheet-up"
+          ? 60
+          : 0,
   );
   const translateX = useSharedValue(
-    mode === 'crossfade-parallax-left'
-      ? 20
-      : mode === 'crossfade-parallax-right'
-      ? -20
-      : 0
+    mode === "crossfade-parallax-left" ? 20 : mode === "crossfade-parallax-right" ? -20 : 0,
   );
 
   useEffect(() => {
@@ -70,7 +66,7 @@ export const SceneTransition: React.FC<Props> = ({
         translateX.value = 0;
         return;
       }
-      if (mode === 'sheet-up') {
+      if (mode === "sheet-up") {
         translateY.value = withSpring(0, { damping: 18, stiffness: 100 });
       } else {
         scale.value = withSpring(1, { damping: 18, stiffness: 110 });
@@ -114,13 +110,11 @@ export const SceneTransition: React.FC<Props> = ({
   // opacity 0 during entry/exit. The inner Animated.View is what actually
   // fades + slides.
   return (
-    <View style={[styles.fill, { backgroundColor: colors.bgPrimary }]}>
-      <Animated.View style={[styles.fill, style$, style]}>
-        {children}
-      </Animated.View>
+    <View style={[styles.fill, { backgroundColor: colors.bgSurface }]}>
+      <Animated.View style={[styles.fill, style$, style]}>{children}</Animated.View>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
