@@ -1,27 +1,34 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Tabs } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { BlurView } from 'expo-blur';
-import { makeStyles, moderateScale, scale, useTheme, verticalScale } from '../../theme';
-import { hapticSelect } from '../../services/haptics';
-import { TABS } from '../../constants/tabs';
-
-/**
- * Bottom tab bar — 4 tabs (Home, Prep, Insights, History). Settings is
- * a modal from the Home avatar, not a tab.
- */
+import React, { useState } from "react";
+import {
+  LayoutChangeEvent,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { Tabs } from "expo-router";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { BlurView } from "expo-blur";
+import { makeStyles, moderateScale, useTheme, verticalScale } from "../../theme";
+import { hapticSelect } from "../../services/haptics";
+import { TABS } from "../../constants/tabs";
+import { SharedTabIndicator } from "../../components/animated/SharedTabIndicator";
 
 const TabsLayout: React.FC = () => {
   const { colors, isDark } = useTheme();
   const styles = useStyles();
+  const { bottom } = useSafeAreaInsets();
+  const [barWidth, setBarWidth] = useState(0);
+  const onBarLayout = (e: LayoutChangeEvent) => {
+    setBarWidth(e.nativeEvent.layout.width);
+  };
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: colors.bgPrimary },
-        animation: 'fade',
+        animation: "fade",
       }}
       tabBar={({ state, navigation }) => {
         const activeIndex = state.index;
@@ -29,17 +36,15 @@ const TabsLayout: React.FC = () => {
           <View style={styles.wrap}>
             <BlurView
               intensity={30}
-              tint={isDark ? 'dark' : 'light'}
+              tint={isDark ? "dark" : "light"}
               style={StyleSheet.absoluteFill}
             />
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: colors.bgSurface + 'F2' },
-              ]}
-            />
-            <SafeAreaView edges={['bottom']}>
-              <View style={styles.bar}>
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bgSurface + "F2" }]} />
+            <SafeAreaView
+              edges={[]}
+              style={{ paddingBottom: moderateScale(bottom ? bottom / 3 : 10) }}
+            >
+              <View style={styles.bar} onLayout={onBarLayout}>
                 {state.routes.map((route, i) => {
                   const isActive = i === activeIndex;
                   const cfg = TABS.find((t) => t.name === route.name);
@@ -59,16 +64,13 @@ const TabsLayout: React.FC = () => {
                       accessibilityState={{ selected: isActive }}
                       style={styles.tab}
                     >
-                      {isActive && <View style={styles.activeRule} />}
                       <cfg.Icon size={moderateScale(22)} color={tint} strokeWidth={2} />
                       <Text
                         style={[
                           styles.label,
                           {
                             color: tint,
-                            fontFamily: isActive
-                              ? 'DMSans_600SemiBold'
-                              : 'DMSans_400Regular',
+                            fontFamily: isActive ? "DMSans_600SemiBold" : "DMSans_400Regular",
                           },
                         ]}
                       >
@@ -77,6 +79,17 @@ const TabsLayout: React.FC = () => {
                     </Pressable>
                   );
                 })}
+                {barWidth > 0 && (
+                  <SharedTabIndicator
+                    count={state.routes.length}
+                    activeIndex={activeIndex}
+                    containerWidth={barWidth}
+                    color={colors.accent}
+                    height={verticalScale(2.5)}
+                    widthRatio={0.35}
+                    bottomInset={verticalScale(56)}
+                  />
+                )}
               </View>
             </SafeAreaView>
           </View>
@@ -89,14 +102,16 @@ const TabsLayout: React.FC = () => {
       <Tabs.Screen name="history" />
     </Tabs>
   );
-}
+};
 
 export default TabsLayout;
 
 const useStyles = makeStyles((theme) => ({
-  wrap: { overflow: 'hidden' },
+  wrap: {
+    overflow: "hidden",
+  },
   bar: {
-    flexDirection: 'row',
+    flexDirection: "row",
     height: verticalScale(60),
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: theme.colors.border,
@@ -104,18 +119,10 @@ const useStyles = makeStyles((theme) => ({
   },
   tab: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     gap: moderateScale(2),
-    position: 'relative',
-  },
-  activeRule: {
-    position: 'absolute',
-    top: 0,
-    width: scale(40),
-    height: verticalScale(2),
-    borderRadius: 1,
-    backgroundColor: theme.colors.accent,
+    position: "relative",
   },
   label: { ...theme.typography.caption },
 }));
