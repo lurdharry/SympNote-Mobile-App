@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Alert, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,15 +28,13 @@ import {
   verticalScale,
 } from '@/theme';
 import type { PrepRow } from '@/hooks/usePrepRows';
-import type { PrepSectionId } from '@/constants/prep';
 import type { AppointmentBrief } from '@/stores/types';
 import { findSpecialty } from '@/constants/specialties';
 import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { renderBrief } from '@/utils/prepBrief';
 import { exportBriefPdf } from '@/services/pdf';
 import { hapticLight } from '@/services/haptics';
-import { SectionTabs } from './SectionTabs';
-import { SummarySection } from './SummarySection';
+import { ConcernRow } from './ConcernRow';
 import { SeverityChart } from './SeverityChart';
 import { QuestionsSection } from './QuestionsSection';
 import { MedsSection } from './MedsSection';
@@ -94,10 +92,18 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({ row, open, onT
   const { colors } = useTheme();
   const styles = useStyles();
   const router = useRouter();
-  const [section, setSection] = useState<PrepSectionId>('summary');
   const aiBrief = useAppointmentsStore((s) => s.getById(row.id)?.brief ?? null);
   const specialty = findSpecialty(row.spec);
   const SpecIcon = specialty.Icon;
+
+  const { concerns, timeline, severity, questions, meds } = row.content;
+  const hasConcerns = concerns.length > 0;
+  const hasTimeline = !!timeline;
+  const hasSeverity = severity.length > 0;
+  const hasQuestions = questions.length > 0;
+  const hasMeds = meds.length > 0;
+  const hasAnyContent =
+    hasConcerns || hasTimeline || hasSeverity || hasQuestions || hasMeds;
   const isStale = row.briefState === 'stale';
 
   const openFullBrief = () => {
@@ -208,73 +214,196 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({ row, open, onT
 
         {open && (
           <View style={[styles.body, { borderTopColor: colors.border }]}>
+            {!hasAnyContent && (
+              <Text
+                style={[
+                  typography.body,
+                  {
+                    color: colors.textTertiary,
+                    textAlign: 'center',
+                    paddingVertical: spacing.s6,
+                    paddingHorizontal: spacing.s5,
+                    lineHeight: fontScale(20),
+                  },
+                ]}
+              >
+                Log entries leading up to this visit and they'll be summarized here.
+              </Text>
+            )}
 
-            <View style={{ padding: 16 }}>
-              <SectionTabs value={section} onChange={setSection} accent={row.color} />
-            </View>
-            <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
-              {section === 'summary' && (
-                <SummarySection
-                  concerns={row.content.concerns}
-                  timeline={row.content.timeline}
-                  accent={row.color}
-                />
-              )}
-              {section === 'chart' && (
-                <SeverityChart data={row.content.severity} accent={row.color} />
-              )}
-              {section === 'questions' && (
-                <QuestionsSection
-                  questions={row.content.questions}
-                  accent={row.color}
-                  appointmentId={row.id}
-                />
-              )}
-              {section === 'meds' && (
-                <MedsSection meds={row.content.meds} accent={row.color} />
-              )}
+            {hasConcerns && (
+              <View style={styles.section}>
+                <SectionHeader label="Top concerns" count={concerns.length} />
+                <View style={{ gap: moderateScale(8) }}>
+                  {concerns.map((c, i) => (
+                    <ConcernRow key={`${i}-${c.t}`} concern={c} accent={row.color} />
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {hasTimeline && (
+              <View
+                style={[
+                  styles.section,
+                  { borderTopWidth: hasConcerns ? StyleSheet.hairlineWidth : 0, borderTopColor: colors.border },
+                ]}
+              >
+                <SectionHeader label="Timeline" />
+                <Text
+                  style={[
+                    typography.body,
+                    { color: colors.textPrimary, lineHeight: fontScale(20) },
+                  ]}
+                >
+                  {timeline}
+                </Text>
+              </View>
+            )}
+
+            {hasSeverity && (
+              <View
+                style={[
+                  styles.section,
+                  {
+                    borderTopWidth:
+                      hasConcerns || hasTimeline ? StyleSheet.hairlineWidth : 0,
+                    borderTopColor: colors.border,
+                  },
+                ]}
+              >
+                <SectionHeader label="Severity" />
+                <SeverityChart data={severity} accent={row.color} />
+              </View>
+            )}
+
+            <View
+              style={[
+                styles.section,
+                {
+                  borderTopWidth:
+                    hasConcerns || hasTimeline || hasSeverity
+                      ? StyleSheet.hairlineWidth
+                      : 0,
+                  borderTopColor: colors.border,
+                },
+              ]}
+            >
+              <SectionHeader
+                label="Questions to ask"
+                count={questions.length || undefined}
+              />
+              <QuestionsSection
+                questions={questions}
+                accent={row.color}
+                appointmentId={row.id}
+              />
             </View>
 
-            <View style={styles.actions}>
+            {hasMeds && (
+              <View
+                style={[
+                  styles.section,
+                  { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+                ]}
+              >
+                <SectionHeader label="Medications" count={meds.length} />
+                <MedsSection meds={meds} accent={row.color} />
+              </View>
+            )}
+
+            <View
+              style={[styles.actions, { borderTopColor: colors.border }]}
+            >
               <Pressable
                 onPress={() => {
                   hapticLight();
                   exportRowPdf(row, aiBrief);
                 }}
-                style={[styles.secondaryAction, { backgroundColor: colors.bgMuted }]}
+                style={[styles.iconAction, { backgroundColor: colors.bgMuted }]}
+                accessibilityRole="button"
+                accessibilityLabel="Export PDF"
               >
-                <Download size={14} color={colors.textPrimary} strokeWidth={2} />
-                <Text
-                  style={[
-                    typography.label,
-                    { color: colors.textPrimary, fontFamily: 'DMSans_600SemiBold' },
-                  ]}
-                >
-                  Export PDF
-                </Text>
+                <Download size={moderateScale(16)} color={colors.textPrimary} strokeWidth={2} />
               </Pressable>
               <Pressable
                 onPress={() => {
                   hapticLight();
                   Share.share({ message: renderBrief(row) }).catch(() => {});
                 }}
-                style={[styles.primaryAction, { backgroundColor: row.color }]}
+                style={styles.primaryAction}
               >
-                <ShareIcon size={14} color="#FFFFFF" strokeWidth={2} />
-                <Text
-                  style={[
-                    typography.label,
-                    { color: '#FFFFFF', fontFamily: 'DMSans_600SemiBold' },
-                  ]}
-                >
-                  Share
-                </Text>
+                <LinearGradient
+                  colors={specialty.grad}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                />
+                <ShareIcon size={moderateScale(14)} color="#FFFFFF" strokeWidth={2.2} />
+                <Text style={styles.primaryActionText}>Share with doctor</Text>
               </Pressable>
             </View>
           </View>
         )}
       </View>
     </Animated.View>
+  );
+};
+
+// ─── SectionHeader ────────────────────────────────────────────────────────
+// Small uppercase label + optional count chip used by every stacked section
+// inside the expanded card body.
+
+interface SectionHeaderProps {
+  label: string;
+  count?: number;
+}
+
+const SectionHeader: React.FC<SectionHeaderProps> = ({ label, count }) => {
+  const { colors } = useTheme();
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: moderateScale(6),
+        marginBottom: moderateScale(10),
+      }}
+    >
+      <Text
+        style={{
+          fontFamily: 'DMSans_700Bold',
+          fontSize: fontScale(10),
+          letterSpacing: 1,
+          color: colors.textTertiary,
+        }}
+      >
+        {label.toUpperCase()}
+      </Text>
+      {typeof count === 'number' && count > 0 && (
+        <View
+          style={{
+            paddingHorizontal: moderateScale(6),
+            height: moderateScale(16),
+            borderRadius: moderateScale(8),
+            backgroundColor: colors.bgMuted,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: 'DMSans_700Bold',
+              fontSize: fontScale(9),
+              color: colors.textTertiary,
+              letterSpacing: 0.4,
+            }}
+          >
+            {count}
+          </Text>
+        </View>
+      )}
+    </View>
   );
 };
 
@@ -377,20 +506,24 @@ const useStyles = makeStyles((theme) => ({
   body: {
     borderTopWidth: StyleSheet.hairlineWidth,
   },
+  section: {
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: moderateScale(14),
+  },
   actions: {
     flexDirection: 'row',
-    gap: moderateScale(8),
+    alignItems: 'center',
+    gap: moderateScale(10),
     paddingHorizontal: scale(16),
-    paddingBottom: verticalScale(16),
+    paddingVertical: verticalScale(14),
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  secondaryAction: {
-    flex: 1,
-    height: verticalScale(44),
-    borderRadius: theme.radius.full,
+  iconAction: {
+    width: moderateScale(44),
+    height: moderateScale(44),
+    borderRadius: moderateScale(14),
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
-    gap: moderateScale(6),
   },
   primaryAction: {
     flex: 1,
@@ -399,6 +532,13 @@ const useStyles = makeStyles((theme) => ({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: moderateScale(6),
+    gap: moderateScale(8),
+    overflow: 'hidden',
+  },
+  primaryActionText: {
+    color: '#FFFFFF',
+    fontFamily: 'DMSans_700Bold',
+    fontSize: fontScale(14),
+    letterSpacing: 0.2,
   },
 }));
