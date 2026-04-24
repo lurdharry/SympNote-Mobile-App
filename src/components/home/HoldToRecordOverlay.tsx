@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, {
   Easing,
@@ -7,6 +7,8 @@ import Animated, {
   SharedValue,
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
+  withSequence,
   withSpring,
   withTiming,
 } from "react-native-reanimated";
@@ -44,19 +46,27 @@ export const HoldToRecordOverlay: React.FC<HoldToRecordOverlayProps> = ({
   const reduced = useReducedMotion();
 
   const progress = useSharedValue(0);
+  // Mount-state mirrors `visible` but stays true long enough for the
+  // exit animation to finish. Reading progress.value during render
+  // to decide mounting would trigger Reanimated strict-mode warnings.
+  const [mounted, setMounted] = useState(visible);
+  const exitDuration = reduced ? 100 : 220;
 
   useEffect(() => {
     if (visible) {
+      setMounted(true);
       progress.value = reduced
         ? withTiming(1, { duration: 90 })
         : withSpring(1, { damping: 20, stiffness: 160, mass: 0.8 });
-    } else {
-      progress.value = withTiming(0, {
-        duration: reduced ? 80 : 200,
-        easing: Easing.in(Easing.cubic),
-      });
+      return;
     }
-  }, [visible, reduced, progress]);
+    progress.value = withTiming(0, {
+      duration: exitDuration,
+      easing: Easing.in(Easing.cubic),
+    });
+    const id = setTimeout(() => setMounted(false), exitDuration + 20);
+    return () => clearTimeout(id);
+  }, [visible, reduced, progress, exitDuration]);
 
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(progress.value, [0, 1], [0, 1], Extrapolation.CLAMP),
@@ -81,7 +91,7 @@ export const HoldToRecordOverlay: React.FC<HoldToRecordOverlayProps> = ({
     opacity: interpolate(progress.value, [0, 0.8, 1], [0, 0, 1]),
   }));
 
-  if (!visible && progress.value === 0) return null;
+  if (!mounted) return null;
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -121,14 +131,17 @@ const RecordingDot: React.FC = () => {
   const pulse = useSharedValue(1);
   useEffect(() => {
     if (reduced) return;
-    const loop = () => {
-      pulse.value = withTiming(0.45, { duration: 720, easing: Easing.out(Easing.sin) }, () => {
-        pulse.value = withTiming(1, { duration: 720, easing: Easing.in(Easing.sin) }, () => {
-          loop();
-        });
-      });
-    };
-    loop();
+    // withRepeat+withSequence loops on the UI thread — doesn't bounce
+    // a JS callback each cycle like a recursive `loop()` would (which
+    // Reanimated 4 strict mode rejects).
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(0.45, { duration: 720, easing: Easing.out(Easing.sin) }),
+        withTiming(1, { duration: 720, easing: Easing.in(Easing.sin) }),
+      ),
+      -1,
+      false,
+    );
   }, [reduced, pulse]);
   const style = useAnimatedStyle(() => ({ opacity: pulse.value }));
   return <Animated.View style={[dotStyles.dot, style]} />;
@@ -184,17 +197,20 @@ const WaveBar: React.FC<WaveBarProps> = ({ index, volume }) => {
   useEffect(() => {
     if (reduced) return;
     // Each bar has its own phase so the row feels organic without
-    // individual wobble math per frame.
+    // individual wobble math per frame. withRepeat runs entirely on
+    // the UI thread, so no JS callback is invoked per cycle.
     const dur = 900 + (index % 4) * 140;
-    const loop = () => {
-      t.value = withTiming(1, { duration: dur / 2, easing: Easing.inOut(Easing.sin) }, () => {
-        t.value = withTiming(0, { duration: dur / 2, easing: Easing.inOut(Easing.sin) }, () => {
-          loop();
-        });
-      });
-    };
     const startDelay = (index * 70) % 900;
-    const id = setTimeout(loop, startDelay);
+    const id = setTimeout(() => {
+      t.value = withRepeat(
+        withSequence(
+          withTiming(1, { duration: dur / 2, easing: Easing.inOut(Easing.sin) }),
+          withTiming(0, { duration: dur / 2, easing: Easing.inOut(Easing.sin) }),
+        ),
+        -1,
+        false,
+      );
+    }, startDelay);
     return () => clearTimeout(id);
   }, [index, reduced, t]);
 

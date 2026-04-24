@@ -68,7 +68,7 @@ export const FirstEntryHero: React.FC<FirstEntryHeroProps> = ({
     ? `Prep for your visit with ${nextAppointment.doctorName} starts here.`
     : "Every entry you add makes your next visit stronger.";
 
-  const meta = `${format(parseISO(recording.createdAt), "d MMM Y, h:mm a")} · `;
+  const meta = `${format(parseISO(recording.createdAt), "d MMM y, h:mm a")} · `;
 
   const handleDismiss = () => {
     hapticLight();
