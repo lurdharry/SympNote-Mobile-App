@@ -6,11 +6,11 @@
     "orientation": "portrait",
     "scheme": "sympnote",
     "userInterfaceStyle": "automatic",
-    "icon": "./assets/icon-light.png",
+    "icon": "./assets/icon-white.png",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sympnote.app",
-      "icon": "./assets/icon-light.png",
+      "icon": "./assets/icon-white.png",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Sympnote uses the microphone so we can transcribe what you're saying about your symptoms.",
         "NSSpeechRecognitionUsageDescription": "Sympnote transcribes your voice on-device so your symptoms are ready to share with your doctor."
@@ -19,8 +19,8 @@
     "android": {
       "package": "com.sympnote.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon-light.png",
-        "backgroundColor": "#FFFFFF"
+        "foregroundImage": "./assets/icon-white.png",
+        "backgroundColor": "#245353"
       },
       "permissions": [
         "RECORD_AUDIO"
