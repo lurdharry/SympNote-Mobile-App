@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -95,11 +95,22 @@ const AppointmentDetail: React.FC = () => {
 
   const briefMutation = useGenerateBrief();
   const generating = briefMutation.isPending;
+  const { mutate: runBriefMutation, isPending: briefIsPending } = briefMutation;
 
   const goBack = () => {
     hapticLight();
     router.back();
   };
+
+  /**
+   * Auto-generate the brief the first time the detail screen lands
+   * without one. Guarded by a ref so an error doesn't trigger an
+   * infinite retry loop — the user retries via the menu / stale
+   * banner. Remounting the screen resets the ref so a freshly cleared
+   * brief will auto-regenerate on next open. Stale briefs are NOT
+   * auto-refreshed — that's the user's call via the banner.
+   */
+  const autoTriggeredRef = useRef(false);
 
   if (!appt) {
     return (
@@ -131,6 +142,27 @@ const AppointmentDetail: React.FC = () => {
     [appt, allRecordings, allAppointments],
   );
   const severityData = derived.severity;
+
+  const hasBrief = !!brief;
+  const sourceCount = sourceRecordings.length;
+  useEffect(() => {
+    if (!hasBrief && sourceCount > 0 && !briefIsPending && !autoTriggeredRef.current) {
+      autoTriggeredRef.current = true;
+      runBriefMutation({
+        appointment: appt,
+        sourceRecordings,
+        profile: personalization,
+      });
+    }
+  }, [
+    hasBrief,
+    sourceCount,
+    briefIsPending,
+    runBriefMutation,
+    appt,
+    sourceRecordings,
+    personalization,
+  ]);
 
   // When the appointment is in a terminal status, the badge reflects
   // that state instead of a relative-time countdown. Countdown only
