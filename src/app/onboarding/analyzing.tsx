@@ -76,7 +76,7 @@ const ScreenAnalyzing: React.FC = () => {
             <PrimaryButton
               label={ready ? "Let's go" : "Preparing…"}
               disabled={!ready}
-              onPress={() => router.push("/onboarding/first-recording")}
+              onPress={() => router.push("/onboarding/summary")}
             />
           </View>
         </SafeAreaView>
