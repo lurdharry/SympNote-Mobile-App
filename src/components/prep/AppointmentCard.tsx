@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -11,12 +12,12 @@ import {
   ArrowRight,
   Calendar,
   ChevronDown,
-  Clipboard,
   Download,
   Share as ShareIcon,
   Sparkles,
 } from 'lucide-react-native';
 import {
+  fontScale,
   makeStyles,
   moderateScale,
   scale,
@@ -29,6 +30,7 @@ import {
 import type { PrepRow } from '@/hooks/usePrepRows';
 import type { PrepSectionId } from '@/constants/prep';
 import type { AppointmentBrief } from '@/stores/types';
+import { findSpecialty } from '@/constants/specialties';
 import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { renderBrief } from '@/utils/prepBrief';
 import { exportBriefPdf } from '@/services/pdf';
@@ -94,18 +96,21 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({ row, open, onT
   const router = useRouter();
   const [section, setSection] = useState<PrepSectionId>('summary');
   const aiBrief = useAppointmentsStore((s) => s.getById(row.id)?.brief ?? null);
+  const specialty = findSpecialty(row.spec);
+  const SpecIcon = specialty.Icon;
+  const isStale = row.briefState === 'stale';
 
   const openFullBrief = () => {
     hapticLight();
     router.push(`/appointment/${row.id}`);
   };
 
-  const briefChip =
+  const briefLabel =
     row.briefState === 'none'
-      ? { label: 'Draft visit brief', tint: colors.accent, bg: colors.accent + '1A' }
-      : row.briefState === 'stale'
-        ? { label: 'New entries · Refresh brief', tint: colors.gold, bg: colors.gold + '1A' }
-        : { label: 'View full brief', tint: colors.accent, bg: colors.accent + '1A' };
+      ? 'Draft your visit brief'
+      : isStale
+        ? 'Refresh brief · new entries'
+        : 'View your visit brief';
 
   const rotate = useSharedValue(0);
   useEffect(() => {
@@ -131,70 +136,78 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({ row, open, onT
   }));
 
   return (
-    <Animated.View style={[enterStyle, { marginBottom: spacing.s3 }]}>
+    <Animated.View style={[enterStyle, { marginBottom: spacing.s4 }]}>
       <View
         style={[
           styles.card,
           { backgroundColor: colors.bgSurface, borderColor: colors.border },
-          shadows.card,
+          shadows.elevated,
         ]}
       >
-        <Pressable onPress={onToggle} style={styles.header}>
-          <View style={[styles.icon, { backgroundColor: row.color + '22' }]}>
-            <Clipboard size={20} color={row.color} strokeWidth={2} />
-          </View>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <View style={styles.headerRow}>
-              <Text
-                style={[typography.h3, { color: colors.textPrimary }]}
-                numberOfLines={1}
-              >
+        {/* Gradient hero band carries the specialty identity at a glance. */}
+        <View style={styles.hero}>
+          <LinearGradient
+            colors={specialty.grad}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View pointerEvents="none" style={styles.heroBlob} />
+          <View style={styles.heroRow}>
+            <View style={styles.specTile}>
+              <SpecIcon size={moderateScale(20)} color="#FFFFFF" strokeWidth={2.2} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.docName} numberOfLines={1}>
                 {row.doc}
               </Text>
-              <View style={[styles.countdown, { backgroundColor: row.color + '22' }]}>
-                <Text
-                  style={[
-                    typography.caption,
-                    { color: row.color, fontFamily: 'DMSans_700Bold' },
-                  ]}
-                >
-                  in {row.inDays}d
-                </Text>
-              </View>
+              <Text style={styles.specLabel} numberOfLines={1}>
+                {row.spec}
+              </Text>
             </View>
-            <Text style={[typography.body, { color: colors.textSecondary }]}>
-              {row.spec}
-            </Text>
-            <View style={styles.meta}>
-              <Calendar size={12} color={colors.textTertiary} strokeWidth={2} />
-              <Text style={[typography.label, { color: colors.textTertiary }]}>
-                {row.dateLabel} · {row.timeLabel}
+            <View style={styles.countdown}>
+              <Text style={styles.countdownNum}>{row.inDays}</Text>
+              <Text style={styles.countdownLabel}>
+                {row.inDays === 1 ? 'day' : 'days'}
               </Text>
             </View>
           </View>
+        </View>
+
+        <Pressable onPress={onToggle} style={styles.metaRow}>
+          <Calendar size={moderateScale(13)} color={colors.textTertiary} strokeWidth={2} />
+          <Text
+            style={[typography.label, { color: colors.textSecondary }]}
+            numberOfLines={1}
+          >
+            {row.dateLabel} · {row.timeLabel}
+          </Text>
+          <View style={{ flex: 1 }} />
           <Animated.View style={chevron}>
-            <ChevronDown size={18} color={colors.textTertiary} strokeWidth={2} />
+            <ChevronDown
+              size={moderateScale(16)}
+              color={colors.textTertiary}
+              strokeWidth={2}
+            />
           </Animated.View>
+        </Pressable>
+
+        <Pressable onPress={openFullBrief} style={styles.briefCTA}>
+          <LinearGradient
+            colors={isStale ? ['#F6C06A', '#D9964A'] : specialty.grad}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <Sparkles size={moderateScale(14)} color="#FFFFFF" strokeWidth={2.2} />
+          <Text style={styles.briefCTAText} numberOfLines={1}>
+            {briefLabel}
+          </Text>
+          <ArrowRight size={moderateScale(14)} color="#FFFFFF" strokeWidth={2.2} />
         </Pressable>
 
         {open && (
           <View style={[styles.body, { borderTopColor: colors.border }]}>
-            <Pressable
-              onPress={openFullBrief}
-              style={[styles.briefChip, { backgroundColor: briefChip.bg }]}
-            >
-              <Sparkles size={14} color={briefChip.tint} strokeWidth={2.2} />
-              <Text
-                style={[
-                  typography.label,
-                  styles.briefChipText,
-                  { color: briefChip.tint },
-                ]}
-              >
-                {briefChip.label}
-              </Text>
-              <ArrowRight size={14} color={briefChip.tint} strokeWidth={2.2} />
-            </Pressable>
 
             <View style={{ padding: 16 }}>
               <SectionTabs value={section} onChange={setSection} accent={row.color} />
@@ -267,57 +280,102 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({ row, open, onT
 
 const useStyles = makeStyles((theme) => ({
   card: {
-    borderRadius: theme.radius.lg,
+    borderRadius: theme.radius.xl,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: moderateScale(12),
-    padding: moderateScale(16),
+  hero: {
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: moderateScale(16),
+    overflow: 'hidden',
   },
-  icon: {
-    width: moderateScale(48),
-    height: moderateScale(48),
-    borderRadius: theme.radius.lg,
+  heroBlob: {
+    position: 'absolute',
+    right: -scale(40),
+    top: -verticalScale(40),
+    width: moderateScale(140),
+    height: moderateScale(140),
+    borderRadius: moderateScale(70),
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  heroRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(12),
+  },
+  specTile: {
+    width: moderateScale(44),
+    height: moderateScale(44),
+    borderRadius: moderateScale(14),
+    backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: moderateScale(8),
+  docName: {
+    ...theme.typography.h3,
+    fontFamily: 'Fraunces_500Medium',
+    color: '#FFFFFF',
+    fontSize: fontScale(19),
+    lineHeight: fontScale(24),
+    letterSpacing: -0.3,
+  },
+  specLabel: {
+    ...theme.typography.caption,
+    color: 'rgba(255,255,255,0.85)',
+    fontFamily: 'DMSans_500Medium',
+    marginTop: 1,
   },
   countdown: {
-    paddingHorizontal: scale(8),
-    paddingVertical: verticalScale(2),
-    borderRadius: theme.radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: moderateScale(6),
+    borderRadius: moderateScale(14),
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    minWidth: moderateScale(54),
   },
-  meta: {
+  countdownNum: {
+    fontFamily: 'Fraunces_500Medium',
+    fontSize: fontScale(22),
+    lineHeight: fontScale(24),
+    color: '#FFFFFF',
+    letterSpacing: -0.4,
+  },
+  countdownLabel: {
+    fontFamily: 'DMSans_600SemiBold',
+    fontSize: fontScale(10),
+    color: 'rgba(255,255,255,0.85)',
+    letterSpacing: 0.6,
+    marginTop: 1,
+    textTransform: 'uppercase',
+  },
+  metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: moderateScale(6),
-    marginTop: moderateScale(4),
+    gap: moderateScale(8),
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: verticalScale(12),
   },
-  body: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(251,248,242,0.4)',
-  },
-  briefChip: {
+  briefCTA: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: moderateScale(8),
     marginHorizontal: moderateScale(16),
-    marginTop: moderateScale(12),
-    paddingHorizontal: moderateScale(14),
-    paddingVertical: verticalScale(10),
+    marginBottom: moderateScale(14),
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: verticalScale(12),
     borderRadius: theme.radius.full,
+    overflow: 'hidden',
   },
-  briefChipText: {
+  briefCTAText: {
     flex: 1,
-    fontFamily: 'DMSans_600SemiBold',
+    color: '#FFFFFF',
+    fontFamily: 'DMSans_700Bold',
+    fontSize: fontScale(14),
+    letterSpacing: 0.2,
+  },
+  body: {
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   actions: {
     flexDirection: 'row',
