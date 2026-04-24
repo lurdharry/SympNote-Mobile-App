@@ -97,19 +97,30 @@ const ScreenCareTeam: React.FC = () => {
     );
   }, [activeTint, waveProgress]);
 
-  const waveClipStyle = useAnimatedStyle(() => ({
-    height: `${Math.max(0, Math.min(1, waveProgress.value)) * 100}%`,
+  // Overlay fades the new tint in on top of the base tint — drives
+  // the settled end state so the aurora ends up matching waveTint.
+  const overlayStyle = useAnimatedStyle(() => ({
+    opacity: waveProgress.value,
   }));
 
-  const glowStyle = useAnimatedStyle(() => {
-    const y = interpolate(waveProgress.value, [0, 1], [auroraHeight, 0]);
+  // Bloom — a soft vertical band of the new tint that translates up
+  // past the aurora, scaling as it goes. No hard edges anywhere; it's
+  // just gradients fading to transparent, so the eye reads it as a
+  // glow sweeping upward rather than a line.
+  const bloomStyle = useAnimatedStyle(() => {
+    const y = interpolate(
+      waveProgress.value,
+      [0, 1],
+      [auroraHeight * 0.55, -auroraHeight * 0.35],
+    );
     const o = interpolate(
       waveProgress.value,
-      [0, 0.08, 0.92, 1],
-      [0, 1, 1, 0],
+      [0, 0.2, 0.75, 1],
+      [0, 1, 0.45, 0],
     );
+    const sy = interpolate(waveProgress.value, [0, 0.5, 1], [0.55, 1.1, 1.4]);
     return {
-      transform: [{ translateY: y }],
+      transform: [{ translateY: y }, { scaleY: sy }],
       opacity: o,
     };
   });
@@ -201,39 +212,29 @@ const ScreenCareTeam: React.FC = () => {
             style={StyleSheet.absoluteFill}
           />
 
-          {/* Rising wave of the new tint. The clip grows upward
-              from the bottom; the inner gradient stays at full
-              aurora height and anchored to the bottom, so what the
-              wave reveals always matches the final state. */}
-          <Animated.View style={[styles.waveClip, waveClipStyle]}>
-            <View style={[styles.waveInner, { height: auroraHeight }]}>
-              <LinearGradient
-                colors={[waveTint + "2E", waveTint + "06"]}
-                start={{ x: 0.5, y: 0 }}
-                end={{ x: 0.5, y: 1 }}
-                style={StyleSheet.absoluteFill}
-              />
-            </View>
+          {/* New tint overlay — fades in over the base, settles the
+              aurora to its final color. */}
+          <Animated.View style={[StyleSheet.absoluteFill, overlayStyle]}>
+            <LinearGradient
+              colors={[waveTint + "1E", waveTint + "00"]}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
           </Animated.View>
 
-          {/* Glowing leading edge — a horizontal light band that
-              rides the top of the wave from bottom to top. Layered
-              halo above + bright centerline + halo below fakes a
-              soft glow without a blur shader. */}
-          <Animated.View style={[styles.glow, glowStyle]}>
+          {/* Soft bloom — a vertical glow band of the new tint,
+              transparent at both ends so it has no hard edge. It
+              translates up through the aurora while scaling, giving
+              the sense of a glow sweeping across without showing any
+              bar or line. */}
+          <Animated.View style={[styles.bloom, bloomStyle]}>
             <LinearGradient
-              colors={["transparent", waveTint + "80"]}
+              colors={["transparent", waveTint + "66", waveTint + "88", waveTint + "66", "transparent"]}
+              locations={[0, 0.3, 0.5, 0.7, 1]}
               start={{ x: 0.5, y: 0 }}
               end={{ x: 0.5, y: 1 }}
-              style={styles.glowHaloAbove}
-            />
-            <View style={[styles.glowLine, { backgroundColor: waveTint }]} />
-            <View style={styles.glowLineBright} />
-            <LinearGradient
-              colors={[waveTint + "80", "transparent"]}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-              style={styles.glowHaloBelow}
+              style={StyleSheet.absoluteFill}
             />
           </Animated.View>
         </View>
@@ -533,58 +534,12 @@ const useStyles = makeStyles((theme) => ({
     height: verticalScale(320),
     overflow: "hidden",
   },
-  waveClip: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    overflow: "hidden",
-  },
-  waveInner: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  glow: {
+  bloom: {
     position: "absolute",
     left: 0,
     right: 0,
     top: 0,
-    height: moderateScale(44),
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  glowHaloAbove: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: moderateScale(22),
-  },
-  glowLine: {
-    position: "absolute",
-    top: moderateScale(22),
-    left: 0,
-    right: 0,
-    height: 2,
-    opacity: 0.9,
-  },
-  glowLineBright: {
-    position: "absolute",
-    top: moderateScale(22),
-    left: "10%",
-    right: "10%",
-    height: 1,
-    backgroundColor: "#FFFFFF",
-    opacity: 0.9,
-  },
-  glowHaloBelow: {
-    position: "absolute",
-    top: moderateScale(24),
-    left: 0,
-    right: 0,
-    height: moderateScale(20),
+    height: verticalScale(180),
   },
   topBar: {
     paddingTop: theme.spacing.s3,
