@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -12,6 +12,7 @@ import { ExtractedPhase } from "../components/recording/ExtractedPhase";
 import { useRecordingFlow } from "../components/recording/useRecordingFlow";
 import { useProfileStore } from "../stores/useProfileStore";
 import { useRecordingsStore } from "../stores/useRecordingsStore";
+import { usePendingRecordingStore } from "../stores/usePendingRecordingStore";
 import { uuid } from "../utils/uuid";
 import { hapticHeavy, hapticLight } from "../services/haptics";
 import { Phase } from "../components/recording/types";
@@ -27,7 +28,7 @@ const RecordModal: React.FC = () => {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useStyles();
-  const { kind } = useLocalSearchParams<{ kind?: string }>();
+  const { kind, source } = useLocalSearchParams<{ kind?: string; source?: string }>();
   const flow = useRecordingFlow();
   const insets = useSafeAreaInsets();
   const careTeam = useProfileStore(
@@ -35,6 +36,23 @@ const RecordModal: React.FC = () => {
   );
 
   const presetTag = typeof kind === "string" ? kindToTag(kind) : null;
+
+  // When launched from hold-to-record on home, the draft already holds
+  // the captured transcript + duration. Hydrate the review phase once
+  // on mount and clear the draft so re-entry doesn't double-apply.
+  const hydratedRef = useRef(false);
+  useEffect(() => {
+    if (hydratedRef.current) return;
+    if (source !== "home-hold") return;
+    const draft = usePendingRecordingStore.getState().draft;
+    if (!draft) return;
+    hydratedRef.current = true;
+    flow.hydrateFromDraft({
+      transcript: draft.transcript,
+      durationSec: draft.durationSec,
+    });
+    usePendingRecordingStore.getState().clear();
+  }, [source, flow]);
 
   const [selectedClinicians, setSelectedClinicians] = useState<string[]>([]);
   const toggleClinician = useCallback((name: string) => {

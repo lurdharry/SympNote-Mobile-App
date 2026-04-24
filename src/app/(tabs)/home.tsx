@@ -1,8 +1,13 @@
-import React from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeOut,
+} from 'react-native-reanimated';
 import {
   fontScale,
   makeStyles,
@@ -12,8 +17,9 @@ import {
   useTheme,
 } from '@/theme';
 import { SceneTransition } from '@/components/navigation/SceneTransition';
-import { hapticHeavy, hapticLight } from '@/services/haptics';
+import { hapticLight } from '@/services/haptics';
 import { useHomeDashboard } from '@/hooks/useHomeDashboard';
+import { useHoldToRecord } from '@/hooks/useHoldToRecord';
 import { UpNextCard } from '@/components/home/UpNextCard';
 import { QuickLogRow } from '@/components/home/QuickLogRow';
 import { TimelineCard } from '@/components/home/TimelineCard';
@@ -22,9 +28,11 @@ import { InsightNudge } from '@/components/home/InsightNudge';
 import { FirstEntryHero } from '@/components/home/FirstEntryHero';
 import { PostVisitPrompt } from '@/components/home/PostVisitPrompt';
 import { RecordFAB } from '@/components/home/RecordFAB';
+import { HoldToRecordOverlay } from '@/components/home/HoldToRecordOverlay';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { useProfileStore } from '@/stores/useProfileStore';
+import { usePendingRecordingStore } from '@/stores/usePendingRecordingStore';
 
 const TabHome: React.FC = () => {
   const router = useRouter();
@@ -56,6 +64,45 @@ const TabHome: React.FC = () => {
     recordingsCount === 1 &&
     !!firstRecording &&
     !firstEntryHeroDismissed;
+
+  // ── Hold-to-record on the FAB ──────────────────────────────────
+  // Short-tap → hint toast ("Hold to record").
+  // Held ≥500ms → start recognition with theatrical overlay.
+  // Released with a usable transcript → store as pending draft and
+  // open /record in review phase via source=home-hold.
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showToast = useCallback((text: string) => {
+    setToast(text);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToast(null), 1800);
+  }, []);
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
+
+  const { state: holdState, handlers: holdHandlers } = useHoldToRecord({
+    holdThresholdMs: 500,
+    minCommitDurationMs: 1000,
+    onShortTap: () => {
+      hapticLight();
+      showToast('Hold to record');
+    },
+    onDiscard: (reason) => {
+      hapticLight();
+      showToast(reason === 'too-short' ? 'Hold a little longer' : "Didn't catch that");
+    },
+    onCommit: ({ transcript, durationSec }) => {
+      usePendingRecordingStore.getState().setDraft({
+        transcript,
+        durationSec,
+        createdAt: new Date().toISOString(),
+      });
+      router.push('/record?source=home-hold');
+    },
+  });
 
   return (
     <SceneTransition mode="crossfade-parallax-up">
@@ -169,11 +216,33 @@ const TabHome: React.FC = () => {
           </ScrollView>
 
           <RecordFAB
-            onPress={() => {
-              hapticHeavy();
-              router.push('/record');
-            }}
+            onPressIn={holdHandlers.onPressIn}
+            onPressOut={holdHandlers.onPressOut}
+            isRecording={holdState.isRecording}
+            volume={holdState.volume}
           />
+
+          <HoldToRecordOverlay
+            visible={holdState.isRecording}
+            liveTranscript={holdState.liveTranscript}
+            durationSec={holdState.durationSec}
+            volume={holdState.volume}
+          />
+
+          {toast && (
+            <Animated.View
+              pointerEvents="none"
+              entering={FadeIn.duration(160).easing(Easing.out(Easing.cubic))}
+              exiting={FadeOut.duration(220)}
+              style={styles.toastWrap}
+            >
+              <View style={[styles.toast, { backgroundColor: colors.textPrimary }]}>
+                <Text style={[styles.toastText, { color: colors.bgSurface }]}>
+                  {toast}
+                </Text>
+              </View>
+            </Animated.View>
+          )}
         </SafeAreaView>
       </View>
     </SceneTransition>
@@ -213,5 +282,25 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  toastWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: moderateScale(180),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toast: {
+    paddingHorizontal: moderateScale(14),
+    paddingVertical: moderateScale(8),
+    borderRadius: moderateScale(20),
+    maxWidth: '80%',
+  },
+  toastText: {
+    fontFamily: 'DMSans_600SemiBold',
+    fontSize: fontScale(12),
+    letterSpacing: 0.2,
+    textAlign: 'center',
   },
 }));

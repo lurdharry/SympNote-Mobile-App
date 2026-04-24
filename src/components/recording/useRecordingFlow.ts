@@ -34,6 +34,13 @@ export type RecordingFlow = {
   endRecording: () => Promise<void>;
   toggleRecording: () => void;
   skipToTyping: () => void;
+  /**
+   * Enter the flow with an already-captured transcript + duration
+   * (e.g. hold-to-record on home captured audio before navigating
+   * here). Jumps straight to `review` so the user can edit and hit
+   * Continue → AI.
+   */
+  hydrateFromDraft: (draft: { transcript: string; durationSec: number }) => void;
   discardAndRetry: () => void;
   processWithAI: () => Promise<void>;
   setStructuredDone: () => void;
@@ -193,6 +200,20 @@ export function useRecordingFlow(): RecordingFlow {
     setPhase("review");
   }, [resetForNewAttempt, setPhase]);
 
+  const hydrateFromDraft = useCallback(
+    (draft: { transcript: string; durationSec: number }) => {
+      stopSpeechIfActive();
+      setLiveTranscript("");
+      setStructured(null);
+      setReviewError(null);
+      setRetryInSec(0);
+      setReviewText(draft.transcript);
+      setDurationSec(draft.durationSec);
+      setPhase("review");
+    },
+    [setPhase, stopSpeechIfActive],
+  );
+
   const discardAndRetry = useCallback(() => {
     hapticLight();
     resetForNewAttempt();
@@ -252,6 +273,7 @@ export function useRecordingFlow(): RecordingFlow {
     endRecording,
     toggleRecording,
     skipToTyping,
+    hydrateFromDraft,
     discardAndRetry,
     processWithAI,
     setStructuredDone,
