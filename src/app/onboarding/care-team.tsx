@@ -1,8 +1,18 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { Easing, FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeOut,
+  interpolate,
+  LinearTransition,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { Lock, Plus, X } from "lucide-react-native";
 import {
@@ -57,6 +67,52 @@ const ScreenCareTeam: React.FC = () => {
 
   const activeSpec = QUICK_ADD_SHORTCUTS.find((s) => s.label === addingRole);
   const activeTint = activeSpec?.grad[1] ?? colors.accent;
+
+  // ── Aurora wave animation ────────────────────────────────────────
+  // When the active tint changes, a new-tint "wave" sweeps up from
+  // the bottom of the aurora to the top, led by a glowing band. The
+  // previous tint stays underneath until the wave fully covers it,
+  // at which point we promote the new tint to the steady baseline.
+  const auroraHeight = verticalScale(320);
+  const [baseTint, setBaseTint] = useState<string>(activeTint);
+  const [waveTint, setWaveTint] = useState<string>(activeTint);
+  const targetTintRef = useRef<string>(activeTint);
+  const waveProgress = useSharedValue(0);
+
+  useEffect(() => {
+    if (activeTint === targetTintRef.current) return;
+    targetTintRef.current = activeTint;
+    setWaveTint(activeTint);
+    waveProgress.value = 0;
+    waveProgress.value = withTiming(
+      1,
+      { duration: 720, easing: Easing.out(Easing.cubic) },
+      (finished) => {
+        "worklet";
+        if (finished && targetTintRef.current === activeTint) {
+          runOnJS(setBaseTint)(activeTint);
+          waveProgress.value = 0;
+        }
+      },
+    );
+  }, [activeTint, waveProgress]);
+
+  const waveClipStyle = useAnimatedStyle(() => ({
+    height: `${Math.max(0, Math.min(1, waveProgress.value)) * 100}%`,
+  }));
+
+  const glowStyle = useAnimatedStyle(() => {
+    const y = interpolate(waveProgress.value, [0, 1], [auroraHeight, 0]);
+    const o = interpolate(
+      waveProgress.value,
+      [0, 0.08, 0.92, 1],
+      [0, 1, 1, 0],
+    );
+    return {
+      transform: [{ translateY: y }],
+      opacity: o,
+    };
+  });
 
   const pickSpecialty = (spec: Specialty) => {
     hapticLight();
@@ -137,20 +193,47 @@ const ScreenCareTeam: React.FC = () => {
     <SceneTransition mode="scale-fade">
       <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
         <View pointerEvents="none" style={styles.aurora}>
-          {/* Keyed Animated.View so a specialty switch crossfades
-              the aurora between tints — reanimated keeps the old
-              layer mounted during FadeOut while the new one FadeIn. */}
-          <Animated.View
-            key={activeTint}
-            entering={FadeIn.duration(420).easing(Easing.out(Easing.cubic))}
-            exiting={FadeOut.duration(420).easing(Easing.out(Easing.cubic))}
+          {/* Baseline tint — the steady floor. */}
+          <LinearGradient
+            colors={[baseTint + "1E", baseTint + "00"]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
             style={StyleSheet.absoluteFill}
-          >
+          />
+
+          {/* Rising wave of the new tint. The clip grows upward
+              from the bottom; the inner gradient stays at full
+              aurora height and anchored to the bottom, so what the
+              wave reveals always matches the final state. */}
+          <Animated.View style={[styles.waveClip, waveClipStyle]}>
+            <View style={[styles.waveInner, { height: auroraHeight }]}>
+              <LinearGradient
+                colors={[waveTint + "2E", waveTint + "06"]}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+            </View>
+          </Animated.View>
+
+          {/* Glowing leading edge — a horizontal light band that
+              rides the top of the wave from bottom to top. Layered
+              halo above + bright centerline + halo below fakes a
+              soft glow without a blur shader. */}
+          <Animated.View style={[styles.glow, glowStyle]}>
             <LinearGradient
-              colors={[activeTint + "1E", activeTint + "00"]}
+              colors={["transparent", waveTint + "80"]}
               start={{ x: 0.5, y: 0 }}
               end={{ x: 0.5, y: 1 }}
-              style={StyleSheet.absoluteFill}
+              style={styles.glowHaloAbove}
+            />
+            <View style={[styles.glowLine, { backgroundColor: waveTint }]} />
+            <View style={styles.glowLineBright} />
+            <LinearGradient
+              colors={[waveTint + "80", "transparent"]}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={styles.glowHaloBelow}
             />
           </Animated.View>
         </View>
@@ -449,6 +532,59 @@ const useStyles = makeStyles((theme) => ({
     right: 0,
     height: verticalScale(320),
     overflow: "hidden",
+  },
+  waveClip: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    overflow: "hidden",
+  },
+  waveInner: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  glow: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    height: moderateScale(44),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  glowHaloAbove: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: moderateScale(22),
+  },
+  glowLine: {
+    position: "absolute",
+    top: moderateScale(22),
+    left: 0,
+    right: 0,
+    height: 2,
+    opacity: 0.9,
+  },
+  glowLineBright: {
+    position: "absolute",
+    top: moderateScale(22),
+    left: "10%",
+    right: "10%",
+    height: 1,
+    backgroundColor: "#FFFFFF",
+    opacity: 0.9,
+  },
+  glowHaloBelow: {
+    position: "absolute",
+    top: moderateScale(24),
+    left: 0,
+    right: 0,
+    height: moderateScale(20),
   },
   topBar: {
     paddingTop: theme.spacing.s3,
