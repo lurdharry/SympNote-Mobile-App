@@ -285,7 +285,7 @@ const ScreenCareTeam: React.FC = () => {
                 style={[
                   styles.customRow,
                   {
-                    backgroundColor: colors.bgMuted,
+                    backgroundColor: colors.bgSurface,
                     borderColor: colors.accent + "55",
                   },
                 ]}
@@ -344,7 +344,7 @@ const ScreenCareTeam: React.FC = () => {
                   >
                     <LinearGradient
                       colors={[activeTint + "1A", activeTint + "00"]}
-                      start={{ x: 0, y: 0 }}
+                      start={{ x: 1, y: 1 }}
                       end={{ x: 1, y: 1 }}
                       style={StyleSheet.absoluteFill}
                     />
@@ -534,6 +534,7 @@ const useStyles = makeStyles((theme) => ({
     paddingVertical: verticalScale(4),
     borderRadius: 9999,
     borderWidth: 1.5,
+    backgroundColor: theme.colors.bgSurface,
   },
   nameInput: {
     flex: 1,
