@@ -148,10 +148,7 @@ const ScreenCareTeam: React.FC = () => {
 
   const onContinue = () => {
     const trimmedName = nameDraft.trim();
-    const careTeam =
-      addingRole && trimmedName
-        ? [{ name: trimmedName, role: addingRole }]
-        : [];
+    const careTeam = addingRole && trimmedName ? [{ name: trimmedName, role: addingRole }] : [];
     setAnswer("careTeam", careTeam);
 
     const answers = useProfileStore.getState().onboardingAnswers;
@@ -230,7 +227,7 @@ const ScreenCareTeam: React.FC = () => {
             keyboardShouldPersistTaps="handled"
           >
             <Text style={[styles.headline, { color: colors.textPrimary }]}>
-              Who takes care{"\n"}of{" "}
+              Who takes care{"\n"}of{"  "}
               <Text style={{ fontStyle: "italic", color: colors.accent }}>you</Text>?
             </Text>
             <Text style={[styles.sub, { color: colors.textSecondary }]}>
@@ -384,23 +381,18 @@ const ScreenCareTeam: React.FC = () => {
                 </Animated.View>
               )}
             </Animated.View>
+          </ScrollView>
 
-            <View
-              style={[
-                styles.privacyRow,
-                {
-                  backgroundColor: colors.accent + "14",
-                  borderColor: colors.accent + "33",
-                },
-              ]}
-            >
+          <View style={styles.ctaSlot}>
+            <PrimaryButton label={"Continue"} onPress={onContinue} disabled={pendingNameRequired} />
+
+            <View style={styles.privacyRow}>
               <Lock size={moderateScale(14)} color={colors.accent} strokeWidth={2.4} />
               <Text
                 style={[
                   typography.caption,
                   {
                     color: colors.accent,
-                    flex: 1,
                     fontFamily: "DMSans_600SemiBold",
                   },
                 ]}
@@ -408,10 +400,6 @@ const ScreenCareTeam: React.FC = () => {
                 Private to you.
               </Text>
             </View>
-          </ScrollView>
-
-          <View style={styles.ctaSlot}>
-            <PrimaryButton label={"Continue"} onPress={onContinue} disabled={pendingNameRequired} />
           </View>
         </SafeAreaView>
       </View>
@@ -422,7 +410,10 @@ const ScreenCareTeam: React.FC = () => {
 export default ScreenCareTeam;
 
 const useStyles = makeStyles((theme) => ({
-  root: { flex: 1 },
+  root: {
+    flex: 1,
+    alignItems: "center",
+  },
   safe: { flex: 1 },
   aurora: {
     position: "absolute",
@@ -475,21 +466,21 @@ const useStyles = makeStyles((theme) => ({
   chipsWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: moderateScale(8),
+    gap: moderateScale(6),
   },
   chip: {
     flexDirection: "row",
     alignItems: "center",
     gap: moderateScale(8),
     paddingLeft: scale(8),
-    paddingRight: scale(12),
-    paddingVertical: verticalScale(7),
+    paddingRight: scale(8),
+    paddingVertical: verticalScale(5),
     borderRadius: theme.radius.full,
   },
   chipTile: {
-    width: moderateScale(22),
-    height: moderateScale(22),
-    borderRadius: moderateScale(8),
+    width: moderateScale(15),
+    height: moderateScale(15),
+    borderRadius: moderateScale(10),
     alignItems: "center",
     justifyContent: "center",
   },
@@ -551,14 +542,12 @@ const useStyles = makeStyles((theme) => ({
     fontSize: fontScale(14),
   },
   privacyRow: {
+    alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: moderateScale(8),
-    paddingHorizontal: scale(14),
-    paddingVertical: verticalScale(10),
-    borderRadius: theme.radius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-    marginTop: spacing.s6,
+    marginTop: spacing.s2,
   },
   ctaSlot: {
     paddingHorizontal: theme.spacing.s6,
