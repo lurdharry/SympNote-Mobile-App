@@ -17,9 +17,10 @@ import {
   useTheme,
 } from '@/theme';
 import { SceneTransition } from '@/components/navigation/SceneTransition';
-import { hapticLight } from '@/services/haptics';
+import { hapticHeavy, hapticLight } from '@/services/haptics';
 import { useHomeDashboard } from '@/hooks/useHomeDashboard';
 import { useHoldToRecord } from '@/hooks/useHoldToRecord';
+import { useStructureTranscript } from '@/hooks/useStructureTranscript';
 import { UpNextCard } from '@/components/home/UpNextCard';
 import { QuickLogRow } from '@/components/home/QuickLogRow';
 import { TimelineCard } from '@/components/home/TimelineCard';
@@ -28,11 +29,13 @@ import { InsightNudge } from '@/components/home/InsightNudge';
 import { FirstEntryHero } from '@/components/home/FirstEntryHero';
 import { PostVisitPrompt } from '@/components/home/PostVisitPrompt';
 import { RecordFAB } from '@/components/home/RecordFAB';
-import { HoldToRecordOverlay } from '@/components/home/HoldToRecordOverlay';
+import { HoldToRecordOverlay, HoldOverlayMode } from '@/components/home/HoldToRecordOverlay';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { useProfileStore } from '@/stores/useProfileStore';
-import { usePendingRecordingStore } from '@/stores/usePendingRecordingStore';
+import { useRecordingsStore } from '@/stores/useRecordingsStore';
+import { GeminiQuotaError } from '@/services/ai';
+import { uuid } from '@/utils/uuid';
 
 const TabHome: React.FC = () => {
   const router = useRouter();
@@ -83,6 +86,27 @@ const TabHome: React.FC = () => {
     };
   }, []);
 
+  // Post-release state — the captured transcript + duration we're
+  // reviewing. Null means no review in progress. When this is set
+  // alongside isRecording=false the overlay stays mounted in
+  // review/extracting mode instead of dismissing.
+  const [postCapture, setPostCapture] = useState<
+    { transcript: string; durationSec: number; createdAt: string } | null
+  >(null);
+  const [editValue, setEditValue] = useState('');
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [retryInSec, setRetryInSec] = useState(0);
+  const [isExtracting, setIsExtracting] = useState(false);
+
+  // Retry countdown tick for quota errors.
+  useEffect(() => {
+    if (retryInSec <= 0) return;
+    const id = setInterval(() => {
+      setRetryInSec((n) => (n <= 1 ? 0 : n - 1));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [retryInSec]);
+
   const { state: holdState, handlers: holdHandlers } = useHoldToRecord({
     holdThresholdMs: 500,
     minCommitDurationMs: 1000,
@@ -95,14 +119,73 @@ const TabHome: React.FC = () => {
       showToast(reason === 'too-short' ? 'Hold a little longer' : "Didn't catch that");
     },
     onCommit: ({ transcript, durationSec }) => {
-      usePendingRecordingStore.getState().setDraft({
-        transcript,
-        durationSec,
-        createdAt: new Date().toISOString(),
-      });
-      router.push('/record?source=home-hold');
+      // Stay on home. Transition the overlay to review mode with
+      // the captured transcript prefilled and editable.
+      setPostCapture({ transcript, durationSec, createdAt: new Date().toISOString() });
+      setEditValue(transcript);
+      setAiError(null);
+      setRetryInSec(0);
     },
   });
+
+  const structureMutation = useStructureTranscript();
+
+  const dismissOverlay = useCallback(() => {
+    setPostCapture(null);
+    setEditValue('');
+    setAiError(null);
+    setRetryInSec(0);
+    setIsExtracting(false);
+  }, []);
+
+  const onReRecord = useCallback(() => {
+    hapticLight();
+    dismissOverlay();
+  }, [dismissOverlay]);
+
+  const onSave = useCallback(() => {
+    if (!postCapture) return;
+    const text = editValue.trim();
+    if (!text) {
+      showToast("Nothing to save");
+      return;
+    }
+    setAiError(null);
+    setIsExtracting(true);
+    structureMutation.mutate(text, {
+      onSuccess: (structured) => {
+        const tags = Array.from(
+          new Set(structured.symptoms.slice(0, 2).filter(Boolean)),
+        );
+        useRecordingsStore.getState().add({
+          id: uuid(),
+          createdAt: postCapture.createdAt,
+          durationSec: postCapture.durationSec,
+          transcript: text,
+          structured,
+          tags,
+        });
+        hapticHeavy();
+        dismissOverlay();
+      },
+      onError: (e) => {
+        setIsExtracting(false);
+        if (e instanceof GeminiQuotaError) {
+          setAiError(e.message);
+          setRetryInSec(e.retryAfterSec ?? 0);
+        } else {
+          setAiError(e instanceof Error ? e.message : 'Could not structure transcript.');
+        }
+      },
+    });
+  }, [postCapture, editValue, structureMutation, showToast, dismissOverlay]);
+
+  const overlayMode: HoldOverlayMode = holdState.isRecording
+    ? 'recording'
+    : isExtracting
+      ? 'extracting'
+      : 'review';
+  const overlayVisible = holdState.isRecording || postCapture !== null;
 
   return (
     <SceneTransition mode="crossfade-parallax-up">
@@ -223,10 +306,21 @@ const TabHome: React.FC = () => {
           />
 
           <HoldToRecordOverlay
-            visible={holdState.isRecording}
+            visible={overlayVisible}
+            mode={overlayMode}
             liveTranscript={holdState.liveTranscript}
-            durationSec={holdState.durationSec}
+            durationSec={
+              holdState.isRecording
+                ? holdState.durationSec
+                : postCapture?.durationSec ?? 0
+            }
             volume={holdState.volume}
+            editValue={editValue}
+            onEditChange={setEditValue}
+            onSave={onSave}
+            onReRecord={onReRecord}
+            error={aiError}
+            retryInSec={retryInSec}
           />
 
           {toast && (
