@@ -2,9 +2,8 @@ import React, { useMemo, useState } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import DateTimePicker, {
-  DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
+import { LinearGradient } from "expo-linear-gradient";
+import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { addDays, format, setHours, setMinutes, setSeconds } from "date-fns";
 import { Calendar, Clock, Lock } from "lucide-react-native";
 import {
@@ -22,6 +21,7 @@ import { SceneTransition } from "@/components/navigation/SceneTransition";
 import { BackButton } from "@/components/ui/BackButton";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
+import { findSpecialty } from "@/constants/specialties";
 import { useProfileStore } from "@/stores/useProfileStore";
 import { useAppointmentsStore } from "@/stores/useAppointmentsStore";
 import { hapticLight, hapticSuccess } from "@/services/haptics";
@@ -56,21 +56,22 @@ const ScreenNextAppointment: React.FC = () => {
   const styles = useStyles();
   const setAnswer = useProfileStore((s) => s.setOnboardingAnswer);
 
-  // The care-team step persisted the lead clinician under
-  // onboardingAnswers.careTeam. If missing (user skipped that step),
-  // fall back to generic copy — the screen still works.
   const lead = useProfileStore((s): LeadClinician => {
     const answers = s.onboardingAnswers as Record<string, unknown>;
     const team = Array.isArray(answers.careTeam) ? (answers.careTeam as LeadClinician[]) : [];
     return team[0] ?? {};
   });
   const leadName = lead.name?.trim() || "your clinician";
+  // The hero date card's gradient shifts to the specialty of the lead
+  // clinician — subtle continuity from the previous screen. Defaults
+  // to the teal accent pair when no specialty is known.
+  const specialty = findSpecialty(lead.role);
+  const heroGrad = specialty.grad;
 
   const [when, setWhen] = useState<Date>(defaultNextAppointment);
   const [pickerMode, setPickerMode] = useState<"date" | "time" | null>(null);
 
-  const iosDateDisplay: "inline" | "spinner" =
-    pickerMode === "date" ? "inline" : "spinner";
+  const iosDateDisplay: "inline" | "spinner" = pickerMode === "date" ? "inline" : "spinner";
 
   const applyPreset = (days: number) => {
     hapticLight();
@@ -124,6 +125,16 @@ const ScreenNextAppointment: React.FC = () => {
   return (
     <SceneTransition mode="scale-fade">
       <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
+        {/* Ambient aurora — tinted by the clinician's specialty. */}
+        <View pointerEvents="none" style={styles.aurora}>
+          <LinearGradient
+            colors={[heroGrad[1] + "22", heroGrad[1] + "00"]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </View>
+
         <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
           <View style={styles.topBar}>
             <BackButton onPress={() => router.back()} />
@@ -147,32 +158,38 @@ const ScreenNextAppointment: React.FC = () => {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            <Text style={[styles.eyebrow, { color: colors.accent }]}>NEXT VISIT</Text>
             <Text style={[styles.headline, { color: colors.textPrimary }]}>
               When do you see{"\n"}
-              <Text style={{ fontStyle: "italic", color: colors.accent }}>{leadName}</Text>
-              ?
+              <Text style={{ fontStyle: "italic", color: heroGrad[1] }}>{leadName}</Text>?
             </Text>
             <Text style={[styles.sub, { color: colors.textSecondary }]}>
-              Add a date and we'll have a visit brief ready for you. Skip if
-              nothing's scheduled yet.
+              Set a date and we'll have a visit brief ready. Skip if nothing's on the calendar yet.
             </Text>
 
-            {/* Big date tile — updates live as the user picks */}
-            <View style={[styles.datePreview, { backgroundColor: colors.bgSurface, borderColor: colors.border }, shadows.card]}>
-              <Text style={[styles.previewMonth, { color: colors.accent }]}>
+            {/* Hero date card — gradient-filled, edge-to-edge. The
+                selected date is the answer, so it owns the screen. */}
+            <View style={[styles.heroCard, shadows.elevated]}>
+              <LinearGradient
+                colors={heroGrad}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <View pointerEvents="none" style={styles.heroBlob} />
+              <Text style={styles.heroMonth}>
                 {format(when, "MMM").toUpperCase()}
               </Text>
-              <Text style={[styles.previewDay, { color: colors.textPrimary }]}>
-                {format(when, "d")}
-              </Text>
-              <Text style={[styles.previewWeekday, { color: colors.textSecondary }]}>
-                {format(when, "EEEE")}
-              </Text>
-              <View style={[styles.previewDivider, { backgroundColor: colors.border }]} />
-              <Text style={[styles.previewTime, { color: colors.textPrimary }]}>
-                {format(when, "h:mm a")}
-              </Text>
+              <Text style={styles.heroDay}>{format(when, "d")}</Text>
+              <Text style={styles.heroWeekday}>{format(when, "EEEE")}</Text>
+              <View style={styles.heroTimeRow}>
+                <Clock size={moderateScale(12)} color="rgba(255,255,255,0.85)" strokeWidth={2.2} />
+                <Text style={styles.heroTime}>{format(when, "h:mm a")}</Text>
+              </View>
+              {lead.name && (
+                <View style={styles.heroBadge}>
+                  <Text style={styles.heroBadgeText}>with {lead.name}</Text>
+                </View>
+              )}
             </View>
 
             {/* Preset chips */}
@@ -186,10 +203,8 @@ const ScreenNextAppointment: React.FC = () => {
                     style={[
                       styles.presetChip,
                       {
-                        backgroundColor: active
-                          ? colors.accent + "14"
-                          : "transparent",
-                        borderColor: active ? colors.accent : colors.border,
+                        backgroundColor: active ? heroGrad[1] + "14" : colors.bgSurface,
+                        borderColor: active ? heroGrad[1] : colors.border,
                       },
                     ]}
                   >
@@ -197,8 +212,9 @@ const ScreenNextAppointment: React.FC = () => {
                       style={[
                         typography.label,
                         {
-                          color: active ? colors.accent : colors.textSecondary,
+                          color: active ? heroGrad[1] : colors.textPrimary,
                           fontFamily: "DMSans_600SemiBold",
+                          fontSize: fontScale(12),
                         },
                       ]}
                     >
@@ -209,25 +225,23 @@ const ScreenNextAppointment: React.FC = () => {
               })}
             </View>
 
-            {/* Date / Time tiles */}
             <View style={styles.tilesRow}>
               <Pressable
                 onPress={() => openPicker("date")}
                 style={[
                   styles.tile,
                   {
-                    borderColor: pickerMode === "date" ? colors.accent : colors.border,
+                    borderColor: pickerMode === "date" ? heroGrad[1] : colors.border,
                     backgroundColor: colors.bgSurface,
                   },
+                  shadows.card,
                 ]}
               >
-                <View style={[styles.tileIcon, { backgroundColor: colors.accent + "1A" }]}>
-                  <Calendar size={moderateScale(14)} color={colors.accent} strokeWidth={2.2} />
+                <View style={[styles.tileIcon, { backgroundColor: heroGrad[1] + "1A" }]}>
+                  <Calendar size={moderateScale(14)} color={heroGrad[1]} strokeWidth={2.2} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={[typography.caption, { color: colors.textTertiary }]}>
-                    Date
-                  </Text>
+                  <Text style={[typography.caption, { color: colors.textTertiary }]}>Date</Text>
                   <Text
                     style={[styles.tileValue, { color: colors.textPrimary }]}
                     numberOfLines={1}
@@ -242,18 +256,17 @@ const ScreenNextAppointment: React.FC = () => {
                 style={[
                   styles.tile,
                   {
-                    borderColor: pickerMode === "time" ? colors.accent : colors.border,
+                    borderColor: pickerMode === "time" ? heroGrad[1] : colors.border,
                     backgroundColor: colors.bgSurface,
                   },
+                  shadows.card,
                 ]}
               >
-                <View style={[styles.tileIcon, { backgroundColor: colors.accent + "1A" }]}>
-                  <Clock size={moderateScale(14)} color={colors.accent} strokeWidth={2.2} />
+                <View style={[styles.tileIcon, { backgroundColor: heroGrad[1] + "1A" }]}>
+                  <Clock size={moderateScale(14)} color={heroGrad[1]} strokeWidth={2.2} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={[typography.caption, { color: colors.textTertiary }]}>
-                    Time
-                  </Text>
+                  <Text style={[typography.caption, { color: colors.textTertiary }]}>Time</Text>
                   <Text
                     style={[styles.tileValue, { color: colors.textPrimary }]}
                     numberOfLines={1}
@@ -264,7 +277,6 @@ const ScreenNextAppointment: React.FC = () => {
               </Pressable>
             </View>
 
-            {/* Inline picker (iOS) / native dialog (Android) */}
             {pickerMode && Platform.OS === "android" && (
               <DateTimePicker
                 value={when}
@@ -283,13 +295,13 @@ const ScreenNextAppointment: React.FC = () => {
                   display={iosDateDisplay}
                   minimumDate={pickerMode === "date" ? new Date() : undefined}
                   onChange={onPickerChange}
-                  accentColor={colors.accent}
+                  accentColor={heroGrad[1]}
                 />
                 <Pressable onPress={() => setPickerMode(null)} style={styles.doneRow}>
                   <Text
                     style={[
                       typography.label,
-                      { color: colors.accent, fontFamily: "DMSans_700Bold" },
+                      { color: heroGrad[1], fontFamily: "DMSans_700Bold" },
                     ]}
                   >
                     Done
@@ -300,9 +312,7 @@ const ScreenNextAppointment: React.FC = () => {
 
             <View style={[styles.privacyRow, { backgroundColor: colors.bgMuted }]}>
               <Lock size={moderateScale(12)} color={colors.textTertiary} strokeWidth={2.2} />
-              <Text
-                style={[typography.caption, { color: colors.textTertiary, flex: 1 }]}
-              >
+              <Text style={[typography.caption, { color: colors.textTertiary, flex: 1 }]}>
                 Private to you.
               </Text>
             </View>
@@ -322,6 +332,14 @@ export default ScreenNextAppointment;
 const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },
   safe: { flex: 1 },
+  aurora: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: verticalScale(420),
+    overflow: "hidden",
+  },
   topBar: {
     paddingTop: theme.spacing.s3,
     paddingHorizontal: theme.spacing.s6,
@@ -338,57 +356,82 @@ const useStyles = makeStyles((theme) => ({
     paddingTop: theme.spacing.s5,
     paddingBottom: theme.spacing.s6,
   },
-  eyebrow: {
-    ...theme.typography.label,
-    fontFamily: "DMSans_700Bold",
-    letterSpacing: 1.2,
-  },
   headline: {
     ...theme.typography.h1,
     fontFamily: "Fraunces_500Medium",
-    letterSpacing: -0.6,
-    marginTop: moderateScale(4),
-    lineHeight: fontScale(36),
+    letterSpacing: -0.8,
+    fontSize: fontScale(34),
+    lineHeight: fontScale(40),
   },
   sub: {
     ...theme.typography.body,
-    marginTop: moderateScale(8),
+    marginTop: moderateScale(10),
     lineHeight: fontScale(22),
+    maxWidth: moderateScale(320),
   },
-  datePreview: {
+  heroCard: {
     marginTop: spacing.s6,
-    alignItems: "center",
-    paddingVertical: spacing.s5,
-    paddingHorizontal: spacing.s5,
-    borderRadius: theme.radius.xl,
-    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: spacing.s6,
+    paddingVertical: spacing.s6,
+    borderRadius: moderateScale(28),
+    overflow: "hidden",
+    alignItems: "flex-start",
   },
-  previewMonth: {
+  heroBlob: {
+    position: "absolute",
+    right: -scale(40),
+    top: -verticalScale(40),
+    width: moderateScale(180),
+    height: moderateScale(180),
+    borderRadius: moderateScale(90),
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
+  heroMonth: {
     fontFamily: "DMSans_700Bold",
     fontSize: fontScale(12),
-    letterSpacing: 2,
+    letterSpacing: 2.5,
+    color: "rgba(255,255,255,0.85)",
   },
-  previewDay: {
+  heroDay: {
     fontFamily: "Fraunces_300Light",
-    fontSize: fontScale(72),
-    lineHeight: fontScale(78),
-    letterSpacing: -2,
+    fontSize: fontScale(104),
+    lineHeight: fontScale(108),
+    letterSpacing: -4,
+    color: "#FFFFFF",
+    marginTop: moderateScale(-6),
+  },
+  heroWeekday: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: fontScale(16),
+    color: "rgba(255,255,255,0.9)",
     marginTop: moderateScale(-4),
   },
-  previewWeekday: {
-    fontFamily: "DMSans_500Medium",
-    fontSize: fontScale(14),
-    marginTop: moderateScale(-2),
+  heroTimeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(6),
+    marginTop: moderateScale(12),
   },
-  previewDivider: {
-    height: StyleSheet.hairlineWidth,
-    alignSelf: "stretch",
-    marginVertical: spacing.s3,
-  },
-  previewTime: {
+  heroTime: {
     fontFamily: "Fraunces_500Medium",
-    fontSize: fontScale(20),
+    fontSize: fontScale(18),
+    color: "#FFFFFF",
     letterSpacing: -0.3,
+  },
+  heroBadge: {
+    position: "absolute",
+    top: spacing.s5,
+    right: spacing.s5,
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(5),
+    borderRadius: 9999,
+    backgroundColor: "rgba(255,255,255,0.22)",
+  },
+  heroBadgeText: {
+    fontFamily: "DMSans_600SemiBold",
+    fontSize: fontScale(11),
+    color: "#FFFFFF",
+    letterSpacing: 0.2,
   },
   presetsRow: {
     flexDirection: "row",
@@ -398,7 +441,7 @@ const useStyles = makeStyles((theme) => ({
   },
   presetChip: {
     paddingHorizontal: scale(14),
-    paddingVertical: verticalScale(8),
+    paddingVertical: verticalScale(9),
     borderRadius: theme.radius.full,
     borderWidth: StyleSheet.hairlineWidth,
   },
@@ -414,13 +457,13 @@ const useStyles = makeStyles((theme) => ({
     gap: moderateScale(10),
     paddingHorizontal: scale(12),
     paddingVertical: verticalScale(12),
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.lg,
     borderWidth: 1.5,
   },
   tileIcon: {
-    width: moderateScale(28),
-    height: moderateScale(28),
-    borderRadius: moderateScale(8),
+    width: moderateScale(30),
+    height: moderateScale(30),
+    borderRadius: moderateScale(10),
     alignItems: "center",
     justifyContent: "center",
   },

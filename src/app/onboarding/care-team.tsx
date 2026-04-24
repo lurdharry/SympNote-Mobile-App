@@ -2,12 +2,14 @@ import React, { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { Lock, Plus, X } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
   moderateScale,
   scale,
+  shadows,
   spacing,
   typography,
   useTheme,
@@ -102,9 +104,6 @@ const ScreenCareTeam: React.FC = () => {
     const profile = buildPersonalizationProfile(answers, answers.focus, careTeamPlain);
     useProfileStore.getState().setPersonalization(profile);
 
-    // No clinician to hang an appointment on → skip the appointment
-    // step entirely. With a clinician, advance to next-appointment
-    // which reads the lead's name for contextual copy.
     if (careTeamPlain.length === 0) {
       setAnswer("nextAppointment", "none");
       router.push("/onboarding/first-recording");
@@ -114,10 +113,26 @@ const ScreenCareTeam: React.FC = () => {
   };
 
   const hasMembers = members.length > 0;
+  // Active specialty for the aurora tint. When the user picks a chip
+  // the background gradient subtly shifts to that specialty's palette
+  // — a live, colored signal that the screen is responding to them.
+  const activeSpec = QUICK_ADD_SHORTCUTS.find((s) => s.label === addingRole);
+  const auroraColor = activeSpec?.grad[1] ?? colors.accent;
 
   return (
     <SceneTransition mode="scale-fade">
       <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
+        {/* Ambient aurora — soft color wash at the top of the screen
+            that shifts with the selected specialty. Non-interactive. */}
+        <View pointerEvents="none" style={styles.aurora}>
+          <LinearGradient
+            colors={[auroraColor + "33", auroraColor + "00"]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </View>
+
         <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
           <View style={styles.topBar}>
             <BackButton onPress={() => router.back()} />
@@ -141,15 +156,15 @@ const ScreenCareTeam: React.FC = () => {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* Hero — single headline + single sub, no eyebrow. */}
+            {/* Editorial hero — "you" italicized in accent */}
             <Text style={[styles.headline, { color: colors.textPrimary }]}>
-              Who takes care{"\n"}of you?
+              Who takes care{"\n"}of{" "}
+              <Text style={{ fontStyle: "italic", color: colors.accent }}>you</Text>?
             </Text>
             <Text style={[styles.sub, { color: colors.textSecondary }]}>
               Add who you see. We'll organize your notes by clinician.
             </Text>
 
-            {/* Clinician list — only when something's been added. */}
             {hasMembers && (
               <View style={styles.list}>
                 <StaggeredList stagger={80}>
@@ -160,152 +175,115 @@ const ScreenCareTeam: React.FC = () => {
               </View>
             )}
 
-            {/* Inline add flow — capped at one clinician during
-                onboarding. Once added, the add UI hides and a hint
-                points the user to Settings for additions later.
-                Tap a chip to pick a specialty, or type a custom one;
-                a name input slides in below, submit adds and returns
-                to idle. */}
             {!hasMembers && (
-            <View style={styles.quickAddBlock}>
-              <Text style={[styles.quickAddLabel, { color: colors.textTertiary }]}>
-                Tap a specialty to add
-              </Text>
-              <View style={styles.chipsWrap}>
-                {QUICK_ADD_SHORTCUTS.map((s) => {
-                  const Icon = s.Icon;
-                  const active = addingRole === s.label;
-                  return (
-                    <Pressable
-                      key={s.id}
-                      onPress={() => pickSpecialty(s)}
-                      style={({ pressed }) => [
-                        styles.chip,
-                        {
-                          backgroundColor: active
-                            ? s.grad[1] + "14"
-                            : colors.bgSurface,
-                          borderColor:
-                            active || pressed ? s.grad[1] : colors.border,
-                          borderWidth: active ? 1.5 : StyleSheet.hairlineWidth,
-                        },
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Add ${s.label}`}
-                      accessibilityState={{ selected: active }}
-                    >
-                      <View
-                        style={[styles.chipTile, { backgroundColor: s.grad[1] + "1F" }]}
-                      >
-                        <Icon size={moderateScale(12)} color={s.grad[1]} strokeWidth={2.2} />
-                      </View>
-                      <Text
+              <View style={styles.quickAddBlock}>
+                <Text style={[styles.quickAddLabel, { color: colors.textTertiary }]}>
+                  Tap a specialty to add
+                </Text>
+                <View style={styles.chipsWrap}>
+                  {QUICK_ADD_SHORTCUTS.map((s) => {
+                    const Icon = s.Icon;
+                    const active = addingRole === s.label;
+                    return (
+                      <Pressable
+                        key={s.id}
+                        onPress={() => pickSpecialty(s)}
                         style={[
-                          typography.label,
-                          {
-                            color: active ? s.grad[1] : colors.textPrimary,
-                            fontFamily: "DMSans_600SemiBold",
-                            fontSize: fontScale(12),
+                          styles.chip,
+                          active && styles.chipActive,
+                          !active && {
+                            backgroundColor: colors.bgSurface,
+                            borderColor: colors.border,
                           },
+                          shadows.card,
                         ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Add ${s.label}`}
+                        accessibilityState={{ selected: active }}
                       >
-                        {s.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              {addingRole === null && (
-                <View style={[styles.customRow, { borderColor: colors.border }]}>
-                  <TextInput
-                    value={customDraft}
-                    onChangeText={setCustomDraft}
-                    placeholder="Or type a specialty…"
-                    placeholderTextColor={colors.textTertiary}
-                    onSubmitEditing={startCustom}
-                    returnKeyType="next"
-                    autoCapitalize="words"
-                    style={[styles.customInput, { color: colors.textPrimary }]}
-                    accessibilityLabel="Type a specialty"
-                  />
-                  <Pressable
-                    onPress={startCustom}
-                    disabled={customDraft.trim().length === 0}
-                    hitSlop={8}
-                    style={[
-                      styles.customAddBtn,
-                      {
-                        backgroundColor:
-                          customDraft.trim().length === 0 ? colors.bgMuted : colors.accent,
-                        opacity: customDraft.trim().length === 0 ? 0.7 : 1,
-                      },
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Continue with this specialty"
-                  >
-                    <Plus
-                      size={moderateScale(16)}
-                      color={
-                        customDraft.trim().length === 0
-                          ? colors.textTertiary
-                          : "#FFFFFF"
-                      }
-                      strokeWidth={2.6}
-                    />
-                  </Pressable>
+                        {/* Gradient fill when active — the chip becomes
+                            a colored pill. Otherwise a small gradient
+                            tile on the left adds color variety. */}
+                        {active && (
+                          <LinearGradient
+                            colors={s.grad}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={StyleSheet.absoluteFill}
+                          />
+                        )}
+                        {!active && (
+                          <View style={styles.chipTile}>
+                            <LinearGradient
+                              colors={s.grad}
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 1, y: 1 }}
+                              style={StyleSheet.absoluteFill}
+                            />
+                            <Icon
+                              size={moderateScale(12)}
+                              color={s.fg}
+                              strokeWidth={2.2}
+                            />
+                          </View>
+                        )}
+                        <Text
+                          style={[
+                            typography.label,
+                            {
+                              color: active ? "#FFFFFF" : colors.textPrimary,
+                              fontFamily: "DMSans_600SemiBold",
+                              fontSize: fontScale(12),
+                            },
+                          ]}
+                        >
+                          {s.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
                 </View>
-              )}
 
-              {addingRole !== null && (
-                <View style={styles.addCard}>
-                  <View style={styles.addCardHeader}>
-                    <Text style={[styles.addCardRole, { color: colors.accent }]}>
-                      {addingRole.toUpperCase()}
-                    </Text>
-                    <Pressable
-                      onPress={cancelAdd}
-                      hitSlop={10}
-                      accessibilityRole="button"
-                      accessibilityLabel="Cancel"
-                    >
-                      <X size={moderateScale(14)} color={colors.textTertiary} strokeWidth={2.2} />
-                    </Pressable>
-                  </View>
-                  <View style={[styles.customRow, { borderColor: colors.accent }]}>
+                {addingRole === null && (
+                  <View
+                    style={[
+                      styles.customRow,
+                      { backgroundColor: colors.bgSurface },
+                      shadows.card,
+                    ]}
+                  >
                     <TextInput
-                      value={nameDraft}
-                      onChangeText={setNameDraft}
-                      placeholder="Clinician's name"
+                      value={customDraft}
+                      onChangeText={setCustomDraft}
+                      placeholder="Or type a specialty…"
                       placeholderTextColor={colors.textTertiary}
-                      onSubmitEditing={commitClinician}
-                      returnKeyType="done"
+                      onSubmitEditing={startCustom}
+                      returnKeyType="next"
                       autoCapitalize="words"
-                      autoFocus
                       style={[styles.customInput, { color: colors.textPrimary }]}
-                      accessibilityLabel="Clinician's name"
+                      accessibilityLabel="Type a specialty"
                     />
                     <Pressable
-                      onPress={commitClinician}
-                      disabled={nameDraft.trim().length === 0}
+                      onPress={startCustom}
+                      disabled={customDraft.trim().length === 0}
                       hitSlop={8}
                       style={[
                         styles.customAddBtn,
                         {
                           backgroundColor:
-                            nameDraft.trim().length === 0
+                            customDraft.trim().length === 0
                               ? colors.bgMuted
                               : colors.accent,
-                          opacity: nameDraft.trim().length === 0 ? 0.7 : 1,
+                          opacity: customDraft.trim().length === 0 ? 0.7 : 1,
                         },
                       ]}
                       accessibilityRole="button"
-                      accessibilityLabel="Add clinician"
+                      accessibilityLabel="Continue with this specialty"
                     >
                       <Plus
                         size={moderateScale(16)}
                         color={
-                          nameDraft.trim().length === 0
+                          customDraft.trim().length === 0
                             ? colors.textTertiary
                             : "#FFFFFF"
                         }
@@ -313,9 +291,88 @@ const ScreenCareTeam: React.FC = () => {
                       />
                     </Pressable>
                   </View>
-                </View>
-              )}
-            </View>
+                )}
+
+                {addingRole !== null && (
+                  <View
+                    style={[
+                      styles.addCard,
+                      { backgroundColor: colors.bgSurface },
+                      shadows.elevated,
+                    ]}
+                  >
+                    <LinearGradient
+                      colors={[auroraColor + "1A", auroraColor + "00"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={StyleSheet.absoluteFill}
+                    />
+                    <View style={styles.addCardHeader}>
+                      <Text style={[styles.addCardRole, { color: auroraColor }]}>
+                        {addingRole.toUpperCase()}
+                      </Text>
+                      <Pressable
+                        onPress={cancelAdd}
+                        hitSlop={10}
+                        accessibilityRole="button"
+                        accessibilityLabel="Cancel"
+                      >
+                        <X
+                          size={moderateScale(14)}
+                          color={colors.textTertiary}
+                          strokeWidth={2.2}
+                        />
+                      </Pressable>
+                    </View>
+                    <View
+                      style={[
+                        styles.addCardInputRow,
+                        { borderColor: auroraColor + "55" },
+                      ]}
+                    >
+                      <TextInput
+                        value={nameDraft}
+                        onChangeText={setNameDraft}
+                        placeholder="Clinician's name"
+                        placeholderTextColor={colors.textTertiary}
+                        onSubmitEditing={commitClinician}
+                        returnKeyType="done"
+                        autoCapitalize="words"
+                        autoFocus
+                        style={[styles.customInput, { color: colors.textPrimary }]}
+                        accessibilityLabel="Clinician's name"
+                      />
+                      <Pressable
+                        onPress={commitClinician}
+                        disabled={nameDraft.trim().length === 0}
+                        hitSlop={8}
+                        style={[
+                          styles.customAddBtn,
+                          {
+                            backgroundColor:
+                              nameDraft.trim().length === 0
+                                ? colors.bgMuted
+                                : auroraColor,
+                            opacity: nameDraft.trim().length === 0 ? 0.7 : 1,
+                          },
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Add clinician"
+                      >
+                        <Plus
+                          size={moderateScale(16)}
+                          color={
+                            nameDraft.trim().length === 0
+                              ? colors.textTertiary
+                              : "#FFFFFF"
+                          }
+                          strokeWidth={2.6}
+                        />
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
+              </View>
             )}
 
             {hasMembers && (
@@ -330,7 +387,6 @@ const ScreenCareTeam: React.FC = () => {
               </Text>
             )}
 
-            {/* Privacy footer */}
             <View style={[styles.privacyRow, { backgroundColor: colors.bgMuted }]}>
               <Lock size={moderateScale(12)} color={colors.textTertiary} strokeWidth={2.2} />
               <Text style={[typography.caption, { color: colors.textTertiary, flex: 1 }]}>
@@ -353,6 +409,14 @@ export default ScreenCareTeam;
 const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },
   safe: { flex: 1 },
+  aurora: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: verticalScale(320),
+    overflow: "hidden",
+  },
   topBar: {
     paddingTop: theme.spacing.s3,
     paddingHorizontal: theme.spacing.s6,
@@ -372,13 +436,15 @@ const useStyles = makeStyles((theme) => ({
   headline: {
     ...theme.typography.h1,
     fontFamily: "Fraunces_500Medium",
-    letterSpacing: -0.6,
-    lineHeight: fontScale(36),
+    letterSpacing: -0.8,
+    fontSize: fontScale(34),
+    lineHeight: fontScale(40),
   },
   sub: {
     ...theme.typography.body,
-    marginTop: moderateScale(8),
+    marginTop: moderateScale(10),
     lineHeight: fontScale(22),
+    maxWidth: moderateScale(320),
   },
   list: {
     marginTop: spacing.s6,
@@ -386,7 +452,7 @@ const useStyles = makeStyles((theme) => ({
   },
   quickAddBlock: {
     marginTop: spacing.s6,
-    gap: moderateScale(8),
+    gap: moderateScale(10),
   },
   quickAddLabel: {
     ...theme.typography.label,
@@ -399,33 +465,57 @@ const useStyles = makeStyles((theme) => ({
     flexWrap: "wrap",
     gap: moderateScale(8),
   },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(8),
+    paddingLeft: moderateScale(6),
+    paddingRight: scale(14),
+    paddingVertical: verticalScale(6),
+    borderRadius: 9999,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
+  },
+  chipActive: {
+    borderColor: "transparent",
+  },
+  chipTile: {
+    width: moderateScale(26),
+    height: moderateScale(26),
+    borderRadius: moderateScale(13),
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
   customRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: moderateScale(8),
-    marginTop: moderateScale(8),
-    paddingLeft: scale(14),
+    marginTop: moderateScale(4),
+    paddingLeft: scale(16),
     paddingRight: scale(6),
-    paddingVertical: verticalScale(4),
+    paddingVertical: verticalScale(5),
     borderRadius: 9999,
-    borderWidth: StyleSheet.hairlineWidth,
   },
   customInput: {
     flex: 1,
     paddingVertical: verticalScale(6),
     fontFamily: "DMSans_400Regular",
-    fontSize: fontScale(13),
+    fontSize: fontScale(14),
   },
   customAddBtn: {
-    width: moderateScale(32),
-    height: moderateScale(32),
-    borderRadius: moderateScale(16),
+    width: moderateScale(34),
+    height: moderateScale(34),
+    borderRadius: moderateScale(17),
     alignItems: "center",
     justifyContent: "center",
   },
   addCard: {
-    marginTop: moderateScale(8),
-    gap: moderateScale(6),
+    marginTop: moderateScale(4),
+    padding: moderateScale(14),
+    borderRadius: theme.radius.xl,
+    overflow: "hidden",
+    gap: moderateScale(10),
   },
   addCardHeader: {
     flexDirection: "row",
@@ -436,27 +526,21 @@ const useStyles = makeStyles((theme) => ({
   addCardRole: {
     fontFamily: "DMSans_700Bold",
     fontSize: fontScale(10),
-    letterSpacing: 1.2,
+    letterSpacing: 1.4,
+  },
+  addCardInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(8),
+    paddingLeft: scale(14),
+    paddingRight: scale(4),
+    paddingVertical: verticalScale(4),
+    borderRadius: 9999,
+    borderWidth: 1.5,
   },
   addMoreHint: {
     marginTop: spacing.s4,
     fontStyle: "italic",
-  },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(6),
-    paddingHorizontal: scale(12),
-    paddingVertical: verticalScale(8),
-    borderRadius: theme.radius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  chipTile: {
-    width: moderateScale(20),
-    height: moderateScale(20),
-    borderRadius: moderateScale(10),
-    alignItems: "center",
-    justifyContent: "center",
   },
   privacyRow: {
     flexDirection: "row",
@@ -465,7 +549,7 @@ const useStyles = makeStyles((theme) => ({
     paddingHorizontal: scale(14),
     paddingVertical: verticalScale(10),
     borderRadius: theme.radius.full,
-    marginTop: spacing.s5,
+    marginTop: spacing.s6,
   },
   ctaSlot: {
     paddingHorizontal: theme.spacing.s6,
