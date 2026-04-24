@@ -137,12 +137,22 @@ const ScreenCareTeam: React.FC = () => {
     <SceneTransition mode="scale-fade">
       <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
         <View pointerEvents="none" style={styles.aurora}>
-          <LinearGradient
-            colors={[activeTint + "1E", activeTint + "00"]}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
+          {/* Keyed Animated.View so a specialty switch crossfades
+              the aurora between tints — reanimated keeps the old
+              layer mounted during FadeOut while the new one FadeIn. */}
+          <Animated.View
+            key={activeTint}
+            entering={FadeIn.duration(420).easing(Easing.out(Easing.cubic))}
+            exiting={FadeOut.duration(420).easing(Easing.out(Easing.cubic))}
             style={StyleSheet.absoluteFill}
-          />
+          >
+            <LinearGradient
+              colors={[activeTint + "1E", activeTint + "00"]}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
         </View>
 
         <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
@@ -292,12 +302,21 @@ const ScreenCareTeam: React.FC = () => {
                     exiting={FadeOut.duration(160)}
                     style={[styles.nameCard, shadows.card]}
                   >
-                    <LinearGradient
-                      colors={[activeTint + "1A", activeTint + "00"]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
+                    {/* Same tint crossfade as the aurora — keyed so
+                        swapping specialties re-tints the card. */}
+                    <Animated.View
+                      key={activeTint}
+                      entering={FadeIn.duration(340).easing(Easing.out(Easing.cubic))}
+                      exiting={FadeOut.duration(340).easing(Easing.out(Easing.cubic))}
                       style={StyleSheet.absoluteFill}
-                    />
+                    >
+                      <LinearGradient
+                        colors={[activeTint + "1A", activeTint + "00"]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={StyleSheet.absoluteFill}
+                      />
+                    </Animated.View>
                     <View style={styles.nameCardHeader}>
                       <Text style={[styles.nameCardRole, { color: activeTint }]}>
                         {addingRole.toUpperCase()}
