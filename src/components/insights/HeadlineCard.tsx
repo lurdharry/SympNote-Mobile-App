@@ -1,8 +1,9 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { LineChart as LineChartIcon } from 'lucide-react-native';
+import { Flame, LineChart as LineChartIcon } from 'lucide-react-native';
 import {
+  fontScale,
   makeStyles,
   moderateScale,
   scale,
@@ -16,6 +17,7 @@ import { formatTotalDuration, rangeLabel } from '@/utils/insights';
 interface HeadlineCardProps {
   range: InsightsRange;
   summary: InsightsSummary;
+  streak: number;
 }
 
 const recordingsText = (summary: InsightsSummary): string =>
@@ -26,7 +28,7 @@ const tagsText = (summary: InsightsSummary): string =>
     summary.distinctSymptoms === 1 ? '' : 's'
   } tracked · ${formatTotalDuration(summary.totalDurationSec)} recorded`;
 
-export const HeadlineCard: React.FC<HeadlineCardProps> = ({ range, summary }) => {
+export const HeadlineCard: React.FC<HeadlineCardProps> = ({ range, summary, streak }) => {
   const styles = useStyles();
 
   return (
@@ -70,6 +72,14 @@ export const HeadlineCard: React.FC<HeadlineCardProps> = ({ range, summary }) =>
             {tagsText(summary)}
           </Text>
         </View>
+        {streak > 0 && (
+          <View style={styles.streak}>
+            <Flame size={moderateScale(12)} color="#B45309" fill="#B45309" />
+            <Text style={styles.streakText}>
+              {streak}d
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -105,5 +115,21 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  streak: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(4),
+    backgroundColor: '#F6C06A',
+    paddingHorizontal: moderateScale(8),
+    paddingVertical: moderateScale(4),
+    borderRadius: 9999,
+    alignSelf: 'flex-start',
+  },
+  streakText: {
+    fontFamily: 'DMSans_700Bold',
+    fontSize: fontScale(11),
+    color: '#7C2D12',
+    letterSpacing: 0.2,
   },
 }));

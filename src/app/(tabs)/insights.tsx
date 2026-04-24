@@ -13,10 +13,13 @@ import {
 import { SceneTransition } from '@/components/navigation/SceneTransition';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { useInsightsData } from '@/hooks/useInsightsData';
+import { BodySystemBreakdownCard } from '@/components/insights/BodySystemBreakdownCard';
 import { HeadlineCard } from '@/components/insights/HeadlineCard';
 import { RangeSelector } from '@/components/insights/RangeSelector';
+import { RedFlagRollupCard } from '@/components/insights/RedFlagRollupCard';
 import { SeverityTrendCard } from '@/components/insights/SeverityTrendCard';
 import { SymptomFrequencyList } from '@/components/insights/SymptomFrequencyList';
+import { TriggerCorrelationCard } from '@/components/insights/TriggerCorrelationCard';
 import { TriggerFrequencyList } from '@/components/insights/TriggerFrequencyList';
 import { Heatmap } from '@/components/insights/Heatmap';
 import { InsightsEmpty } from '@/components/insights/InsightsEmpty';
@@ -33,6 +36,10 @@ const TabInsights: React.FC = () => {
     symptoms,
     triggers,
     severity,
+    bodySystems,
+    redFlag,
+    correlation,
+    streak,
     heatmap,
     peakLabel,
     hasEnoughData,
@@ -74,12 +81,23 @@ const TabInsights: React.FC = () => {
               />
             ) : (
               <>
-                <HeadlineCard range={range} summary={summary} />
+                <HeadlineCard range={range} summary={summary} streak={streak} />
+
+                {redFlag.concerningCount > 0 && (
+                  <RedFlagRollupCard rollup={redFlag} />
+                )}
 
                 {severity && severity.sampleCount > 0 && (
                   <View>
                     <SectionLabel label="Severity trend" />
                     <SeverityTrendCard summary={severity} />
+                  </View>
+                )}
+
+                {correlation && (
+                  <View>
+                    <SectionLabel label="Pattern" />
+                    <TriggerCorrelationCard correlation={correlation} />
                   </View>
                 )}
 
@@ -92,6 +110,13 @@ const TabInsights: React.FC = () => {
                   <View>
                     <SectionLabel label="Top triggers" />
                     <TriggerFrequencyList triggers={triggers} />
+                  </View>
+                )}
+
+                {bodySystems.length > 0 && (
+                  <View>
+                    <SectionLabel label="Body systems touched" />
+                    <BodySystemBreakdownCard slices={bodySystems} />
                   </View>
                 )}
 

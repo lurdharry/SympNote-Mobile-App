@@ -352,6 +352,152 @@ export function triggerFrequencies(
   }));
 }
 
+export type BodySystemSlice = {
+  name: string;
+  count: number;
+  pct: number;
+  color: string;
+};
+
+/**
+ * Counts entries per body-system category. Empty / "" bodySystem
+ * values are excluded — they represent "AI wasn't confident" which
+ * shouldn't count as a bucket. Returns non-empty slices ordered by
+ * frequency, with percentages out of the entries that DID have a
+ * body system classified.
+ */
+export function bodySystemBreakdown(
+  recordings: Recording[],
+): BodySystemSlice[] {
+  const counts = new Map<string, number>();
+  let classified = 0;
+  recordings.forEach((r) => {
+    const name = r.structured.bodySystem.trim();
+    if (!name) return;
+    counts.set(name, (counts.get(name) ?? 0) + 1);
+    classified += 1;
+  });
+  if (classified === 0) return [];
+
+  return orderBy(
+    Array.from(counts.entries()).map(([name, count], i) => ({
+      name,
+      count,
+      pct: Math.round((count / classified) * 100),
+      color: PALETTE[i % PALETTE.length]!,
+    })),
+    ['count'],
+    ['desc'],
+  );
+}
+
+export type RedFlagRollup = {
+  /** Recordings whose severity hit 7+ or carried an explicit red flag. */
+  concerningCount: number;
+  /** Distinct red-flag phrases observed, capped for display. */
+  flags: string[];
+};
+
+/**
+ * Count of entries in the range that either flew an explicit red flag
+ * or hit severity ≥7. Drives a safety-oriented roll-up card so the
+ * user can see "this month has a cluster of severe days" at a glance.
+ */
+export function redFlagRollup(
+  recordings: Recording[],
+  displayFlagsMax = 4,
+): RedFlagRollup {
+  const flagCounts = new Map<string, number>();
+  let concerningCount = 0;
+  recordings.forEach((r) => {
+    const hasFlag = r.structured.redFlags.length > 0;
+    const severe = r.structured.severity >= 7;
+    if (!hasFlag && !severe) return;
+    concerningCount += 1;
+    r.structured.redFlags.forEach((raw) => {
+      const name = raw.trim();
+      if (!name) return;
+      flagCounts.set(name, (flagCounts.get(name) ?? 0) + 1);
+    });
+  });
+
+  const flags = orderBy(
+    Array.from(flagCounts.entries()),
+    ([, c]) => c,
+    ['desc'],
+  )
+    .slice(0, displayFlagsMax)
+    .map(([name]) => name);
+
+  return { concerningCount, flags };
+}
+
+export type TriggerCorrelation = {
+  /** Symptom name (capitalized for display). */
+  symptom: string;
+  /** Trigger name (capitalized for display). */
+  trigger: string;
+  /** How many entries contained both this symptom and this trigger. */
+  coCount: number;
+  /** How many entries mentioned this symptom at all. */
+  symptomCount: number;
+  /** Percentage: coCount / symptomCount. */
+  pct: number;
+};
+
+const CORRELATION_MIN_SYMPTOM_COUNT = 3;
+const CORRELATION_MIN_PCT = 50;
+
+/**
+ * Finds the strongest (trigger, symptom) pairing — i.e. a trigger
+ * that shows up alongside a given symptom more than half the time,
+ * across at least three symptom entries. Returns null when no
+ * pairing clears that bar, which is the common case at small data
+ * volumes. Safety valve: we only trust pairings from the new split
+ * `triggers` field, so legacy mixed-semantics data never shows up
+ * here.
+ */
+export function topTriggerCorrelation(
+  recordings: Recording[],
+): TriggerCorrelation | null {
+  const symptomCounts = new Map<string, number>();
+  // key: `${symptom}|${trigger}`
+  const pairCounts = new Map<string, number>();
+
+  recordings.forEach((r) => {
+    const symptoms = r.structured.symptoms.map(normalize).filter(Boolean);
+    const triggers = r.structured.triggers.map(normalize).filter(Boolean);
+    symptoms.forEach((s) => {
+      symptomCounts.set(s, (symptomCounts.get(s) ?? 0) + 1);
+      triggers.forEach((t) => {
+        const key = `${s}|${t}`;
+        pairCounts.set(key, (pairCounts.get(key) ?? 0) + 1);
+      });
+    });
+  });
+
+  let best: TriggerCorrelation | null = null;
+  pairCounts.forEach((coCount, key) => {
+    const [symptom, trigger] = key.split('|');
+    if (!symptom || !trigger) return;
+    const symptomCount = symptomCounts.get(symptom) ?? 0;
+    if (symptomCount < CORRELATION_MIN_SYMPTOM_COUNT) return;
+    const pct = Math.round((coCount / symptomCount) * 100);
+    if (pct < CORRELATION_MIN_PCT) return;
+    if (!best || pct > best.pct || (pct === best.pct && coCount > best.coCount)) {
+      best = {
+        symptom: capitalize(symptom),
+        trigger: capitalize(trigger),
+        coCount,
+        symptomCount,
+        pct,
+      };
+    }
+  });
+
+  return best;
+}
+
 const HEATMAP_ROW_LABELS = ['morning', 'midday', 'afternoon', 'evening', 'night'];
 
 /** Peak row of a heatmap (morning / midday / afternoon / evening / night). */
