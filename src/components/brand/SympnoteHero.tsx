@@ -89,7 +89,7 @@ export const SympnoteHero: React.FC<Props> = ({ size = moderateScale(128) }) => 
       />
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   ring: {
