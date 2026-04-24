@@ -73,11 +73,11 @@ const RootLayout: React.FC = () => {
                 <Stack.Screen name="(tabs)" options={{ animation: "fade" }} />
                 <Stack.Screen
                   name="recording/[id]"
-                  options={{ animation: "fade", presentation: "transparentModal" }}
+                  options={{ animation: "slide_from_right" }}
                 />
                 <Stack.Screen
                   name="appointment/[id]"
-                  options={{ animation: "fade", presentation: "transparentModal" }}
+                  options={{ animation: "slide_from_right" }}
                 />
                 <Stack.Screen
                   name="settings"

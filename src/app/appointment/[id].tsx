@@ -60,7 +60,6 @@ import {
   hapticMedium,
   hapticSuccess,
 } from '@/services/haptics';
-import { useTransition } from '@/components/navigation/TransitionContext';
 import type { AppointmentBrief, AppointmentStatus } from '@/stores/types';
 import { daysUntil } from '@/utils/date';
 import {
@@ -83,7 +82,6 @@ const AppointmentDetail: React.FC = () => {
   const reopenAppointment = useAppointmentsStore((s) => s.reopenAppointment);
   const allRecordings = useRecordingsStore((s) => s.recordings);
   const personalization = useProfileStore((s) => s.personalization);
-  const { closeScene } = useTransition();
   const insets = useSafeAreaInsets();
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -91,9 +89,8 @@ const AppointmentDetail: React.FC = () => {
   const briefMutation = useGenerateBrief();
   const generating = briefMutation.isPending;
 
-  const goBack = async () => {
+  const goBack = () => {
     hapticLight();
-    await closeScene();
     router.back();
   };
 
