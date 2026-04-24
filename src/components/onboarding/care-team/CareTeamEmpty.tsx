@@ -1,7 +1,5 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Stethoscope } from 'lucide-react-native';
 import {
   fontScale,
   makeStyles,
@@ -57,16 +55,6 @@ export const CareTeamEmpty: React.FC<CareTeamEmptyProps> = ({ onPickSpecialty })
         shadows.card,
       ]}
     >
-      <View style={styles.heroTile}>
-        <LinearGradient
-          colors={['#3BA79F', '#1F504E']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-        <Stethoscope size={moderateScale(28)} color="#FFFFFF" strokeWidth={1.8} />
-      </View>
-
       <Text style={[styles.headline, { color: colors.textPrimary }]}>
         Start with who you see most.
       </Text>
@@ -120,15 +108,6 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
-  },
-  heroTile: {
-    width: moderateScale(72),
-    height: moderateScale(72),
-    borderRadius: moderateScale(20),
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.s4,
   },
   headline: {
     ...theme.typography.h3,
