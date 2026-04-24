@@ -544,14 +544,14 @@ const useStyles = makeStyles((theme) => ({
   editWrap: {
     position: "absolute",
     top: verticalScale(130),
-    bottom: verticalScale(290),
+    bottom: verticalScale(320),
     left: 0,
     right: 0,
     paddingHorizontal: spacing.s6,
   },
   clinicianWrap: {
     position: "absolute",
-    bottom: verticalScale(208),
+    bottom: verticalScale(240),
     left: 0,
     right: 0,
     gap: moderateScale(8),
