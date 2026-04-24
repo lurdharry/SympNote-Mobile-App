@@ -97,6 +97,19 @@ const TabHome: React.FC = () => {
   const [aiError, setAiError] = useState<string | null>(null);
   const [retryInSec, setRetryInSec] = useState(0);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [selectedClinicians, setSelectedClinicians] = useState<string[]>([]);
+
+  const careTeam = useProfileStore((s) => s.personalization?.careTeam ?? []);
+
+  const toggleClinician = useCallback((name: string) => {
+    setSelectedClinicians((prev) => {
+      const norm = name.trim();
+      const lower = norm.toLowerCase();
+      const hit = prev.findIndex((s) => s.trim().toLowerCase() === lower);
+      if (hit >= 0) return prev.filter((_, i) => i !== hit);
+      return [...prev, norm];
+    });
+  }, []);
 
   // Retry countdown tick for quota errors.
   useEffect(() => {
@@ -125,6 +138,7 @@ const TabHome: React.FC = () => {
       setEditValue(transcript);
       setAiError(null);
       setRetryInSec(0);
+      setSelectedClinicians([]);
     },
   });
 
@@ -136,6 +150,7 @@ const TabHome: React.FC = () => {
     setAiError(null);
     setRetryInSec(0);
     setIsExtracting(false);
+    setSelectedClinicians([]);
   }, []);
 
   const onReRecord = useCallback(() => {
@@ -164,6 +179,9 @@ const TabHome: React.FC = () => {
           transcript: text,
           structured,
           tags,
+          ...(selectedClinicians.length > 0
+            ? { clinicianNames: selectedClinicians }
+            : {}),
         });
         hapticHeavy();
         dismissOverlay();
@@ -178,7 +196,7 @@ const TabHome: React.FC = () => {
         }
       },
     });
-  }, [postCapture, editValue, structureMutation, showToast, dismissOverlay]);
+  }, [postCapture, editValue, selectedClinicians, structureMutation, showToast, dismissOverlay]);
 
   const overlayMode: HoldOverlayMode = holdState.isRecording
     ? 'recording'
@@ -321,6 +339,9 @@ const TabHome: React.FC = () => {
             onReRecord={onReRecord}
             error={aiError}
             retryInSec={retryInSec}
+            careTeam={careTeam}
+            selectedClinicians={selectedClinicians}
+            onToggleClinician={toggleClinician}
           />
 
           {toast && (

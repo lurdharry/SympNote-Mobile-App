@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -24,14 +25,18 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
+import { Check, Users } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
   moderateScale,
+  scale,
   spacing,
   verticalScale,
 } from "@/theme";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import type { Clinician } from "@/stores/types";
+import { hapticLight } from "@/services/haptics";
 
 /**
  * Three modes:
@@ -65,6 +70,11 @@ interface HoldToRecordOverlayProps {
   /** Seconds until retry is allowed — renders a countdown on the
    *  save button when > 0. */
   retryInSec?: number;
+  /** Optional clinician routing in review mode. The row hides itself
+   *  entirely when careTeam is empty. */
+  careTeam?: Clinician[];
+  selectedClinicians?: string[];
+  onToggleClinician?: (name: string) => void;
 }
 
 export const HoldToRecordOverlay: React.FC<HoldToRecordOverlayProps> = ({
@@ -79,6 +89,9 @@ export const HoldToRecordOverlay: React.FC<HoldToRecordOverlayProps> = ({
   onReRecord,
   error,
   retryInSec = 0,
+  careTeam = [],
+  selectedClinicians = [],
+  onToggleClinician,
 }) => {
   const styles = useStyles();
   const reduced = useReducedMotion();
@@ -199,6 +212,90 @@ export const HoldToRecordOverlay: React.FC<HoldToRecordOverlayProps> = ({
                 </View>
               )}
             </View>
+
+            {mode === "review" && careTeam.length > 0 && (
+              <View style={styles.clinicianWrap}>
+                <Text style={styles.clinicianLabel}>ROUTE TO</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.clinicianChips}
+                >
+                  {(() => {
+                    const generalActive = selectedClinicians.length === 0;
+                    return (
+                      <View
+                        style={[
+                          styles.chip,
+                          generalActive ? styles.chipActive : styles.chipIdle,
+                        ]}
+                      >
+                        <Users
+                          size={moderateScale(12)}
+                          color={
+                            generalActive
+                              ? "#7FE0D6"
+                              : "rgba(255,255,255,0.55)"
+                          }
+                          strokeWidth={2.2}
+                        />
+                        <Text
+                          style={[
+                            styles.chipLabel,
+                            {
+                              color: generalActive
+                                ? "#7FE0D6"
+                                : "rgba(255,255,255,0.78)",
+                            },
+                          ]}
+                        >
+                          Everyone
+                        </Text>
+                      </View>
+                    );
+                  })()}
+                  {careTeam.map((c) => {
+                    const active = selectedClinicians.some(
+                      (s) => s.trim().toLowerCase() === c.name.trim().toLowerCase(),
+                    );
+                    return (
+                      <Pressable
+                        key={`${c.name}-${c.role}`}
+                        onPress={() => {
+                          hapticLight();
+                          onToggleClinician?.(c.name);
+                        }}
+                        style={[
+                          styles.chip,
+                          active ? styles.chipActive : styles.chipIdle,
+                        ]}
+                      >
+                        {active && (
+                          <Check
+                            size={moderateScale(12)}
+                            color="#7FE0D6"
+                            strokeWidth={2.4}
+                          />
+                        )}
+                        <Text
+                          style={[
+                            styles.chipLabel,
+                            {
+                              color: active
+                                ? "#7FE0D6"
+                                : "rgba(255,255,255,0.88)",
+                            },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {c.name}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
 
             <View style={styles.actionsWrap}>
               <Pressable
@@ -447,10 +544,52 @@ const useStyles = makeStyles((theme) => ({
   editWrap: {
     position: "absolute",
     top: verticalScale(130),
-    bottom: verticalScale(200),
+    bottom: verticalScale(290),
     left: 0,
     right: 0,
     paddingHorizontal: spacing.s6,
+  },
+  clinicianWrap: {
+    position: "absolute",
+    bottom: verticalScale(208),
+    left: 0,
+    right: 0,
+    gap: moderateScale(8),
+  },
+  clinicianLabel: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: fontScale(10),
+    letterSpacing: 1.2,
+    color: "rgba(255,255,255,0.55)",
+    paddingHorizontal: spacing.s6,
+  },
+  clinicianChips: {
+    flexDirection: "row",
+    gap: moderateScale(8),
+    paddingHorizontal: spacing.s6,
+    paddingRight: scale(20),
+  },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(6),
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(7),
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  chipIdle: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderColor: "rgba(255,255,255,0.18)",
+  },
+  chipActive: {
+    backgroundColor: "rgba(127,224,214,0.16)",
+    borderColor: "#7FE0D6",
+  },
+  chipLabel: {
+    fontFamily: "DMSans_600SemiBold",
+    fontSize: fontScale(12),
+    letterSpacing: 0.2,
   },
   editCaption: {
     fontFamily: "DMSans_600SemiBold",
