@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { addDays, setHours, setMinutes, setSeconds } from "date-fns";
 import { Lock, Plus, X } from "lucide-react-native";
 import {
   fontScale,
@@ -20,11 +19,9 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { StaggeredList } from "@/components/animated/StaggeredList";
 import { ClinicianCard } from "@/components/onboarding/care-team/ClinicianCard";
 import type { Clinician } from "@/components/onboarding/care-team/ClinicianCard";
-import { AppointmentBlock } from "@/components/onboarding/care-team/AppointmentBlock";
 import { SPECIALTIES, Specialty } from "@/constants/specialties";
 import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
 import { useProfileStore } from "@/stores/useProfileStore";
-import { useAppointmentsStore } from "@/stores/useAppointmentsStore";
 import { buildPersonalizationProfile } from "@/utils/personalization";
 import { hapticLight } from "@/services/haptics";
 import { uuid } from "@/utils/uuid";
@@ -44,21 +41,6 @@ const QUICK_ADD_SHORTCUTS: Specialty[] = QUICK_ADD_IDS.map(
   (id) => SPECIALTIES.find((s) => s.id === id)!,
 );
 
-const defaultNextAppointment = (): Date => {
-  const d = addDays(new Date(), 7);
-  return setSeconds(setMinutes(setHours(d, 9), 0), 0);
-};
-
-const continueLabel = (clinicianCount: number, hasAppointment: boolean): string => {
-  if (clinicianCount === 0 && !hasAppointment) return "Skip for now";
-  const parts: string[] = [];
-  if (clinicianCount > 0) {
-    parts.push(`${clinicianCount} ${clinicianCount === 1 ? "clinician" : "clinicians"}`);
-  }
-  if (hasAppointment) parts.push("1 appointment");
-  return `Continue · ${parts.join(" and ")}`;
-};
-
 const ScreenCareTeam: React.FC = () => {
   const router = useRouter();
   const { colors } = useTheme();
@@ -73,10 +55,6 @@ const ScreenCareTeam: React.FC = () => {
    *  (if the role matches a preset). */
   const [addingRole, setAddingRole] = useState<string | null>(null);
   const [nameDraft, setNameDraft] = useState("");
-
-  const [hasAppointment, setHasAppointment] = useState(false);
-  const [nextWhen, setNextWhen] = useState<Date>(defaultNextAppointment);
-  const [pickerMode, setPickerMode] = useState<"date" | "time" | null>(null);
 
   const pickSpecialty = (spec: Specialty) => {
     hapticLight();
@@ -111,48 +89,28 @@ const ScreenCareTeam: React.FC = () => {
   };
 
   const handleRemove = (id: string) => {
-    setMembers((m) => {
-      const next = m.filter((x) => x.id !== id);
-      // If the last clinician is gone, an appointment no longer has
-      // anyone to be "with" — auto-reset so the two stay in sync.
-      if (next.length === 0) {
-        setHasAppointment(false);
-        setPickerMode(null);
-      }
-      return next;
-    });
+    setMembers((m) => m.filter((x) => x.id !== id));
   };
 
   const onContinue = () => {
     const careTeamPlain = members.map(({ name, role }) => ({ name, role }));
     setAnswer("careTeam", careTeamPlain);
-    setAnswer("nextAppointment", hasAppointment ? nextWhen.toISOString() : "none");
 
-    // The old analyzing screen was Noom-style theater sitting between
-    // setup and capture — it didn't build tension toward commerce, so
-    // we skip it and run its (trivial) real work inline here.
+    // Build personalization now so downstream screens (including
+    // next-appointment) can read the lead clinician from the profile.
     const answers = useProfileStore.getState().onboardingAnswers;
     const profile = buildPersonalizationProfile(answers, answers.focus, careTeamPlain);
     useProfileStore.getState().setPersonalization(profile);
 
-    if (hasAppointment) {
-      const lead = careTeamPlain[0];
-      useAppointmentsStore.getState().add({
-        id: uuid(),
-        title: lead ? `Visit with ${lead.name}` : "Upcoming visit",
-        doctorName: lead?.name ?? "Your clinician",
-        specialty: lead?.role ?? "General",
-        date: nextWhen.toISOString(),
-        status: 'upcoming',
-        attendedAt: null,
-        outcome: null,
-        brief: null,
-        briefGeneratedAt: null,
-        briefSourceRecordingIds: [],
-      });
+    // No clinician to hang an appointment on → skip the appointment
+    // step entirely. With a clinician, advance to next-appointment
+    // which reads the lead's name for contextual copy.
+    if (careTeamPlain.length === 0) {
+      setAnswer("nextAppointment", "none");
+      router.push("/onboarding/first-recording");
+      return;
     }
-
-    router.push("/onboarding/first-recording");
+    router.push("/onboarding/next-appointment");
   };
 
   const hasMembers = members.length > 0;
@@ -175,7 +133,7 @@ const ScreenCareTeam: React.FC = () => {
             </Pressable>
           </View>
           <View style={styles.progressSlot}>
-            <OnboardingProgress value={0.75} />
+            <OnboardingProgress value={0.65} />
           </View>
 
           <ScrollView
@@ -372,24 +330,6 @@ const ScreenCareTeam: React.FC = () => {
               </Text>
             )}
 
-            {/* Appointment module — only meaningful once there's a clinician. */}
-            {hasMembers && (
-              <View style={styles.appointmentSlot}>
-                <AppointmentBlock
-                  enabled={hasAppointment}
-                  onToggle={(v) => {
-                    setHasAppointment(v);
-                    if (!v) setPickerMode(null);
-                  }}
-                  when={nextWhen}
-                  onChange={setNextWhen}
-                  pickerMode={pickerMode}
-                  onOpenPicker={setPickerMode}
-                  onClosePicker={() => setPickerMode(null)}
-                />
-              </View>
-            )}
-
             {/* Privacy footer */}
             <View style={[styles.privacyRow, { backgroundColor: colors.bgMuted }]}>
               <Lock size={moderateScale(12)} color={colors.textTertiary} strokeWidth={2.2} />
@@ -517,9 +457,6 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: moderateScale(10),
     alignItems: "center",
     justifyContent: "center",
-  },
-  appointmentSlot: {
-    marginTop: spacing.s6,
   },
   privacyRow: {
     flexDirection: "row",
