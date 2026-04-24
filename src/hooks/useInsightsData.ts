@@ -1,16 +1,23 @@
 import { useMemo, useState } from 'react';
 import { useRecordingsStore } from '@/stores/useRecordingsStore';
 import {
+  bodySystemBreakdown,
+  BodySystemSlice,
   computeHeatmap,
+  computeStreak,
   filterByRange,
   InsightsRange,
   InsightsSummary,
   peakHeatmapRow,
+  redFlagRollup,
+  RedFlagRollup,
   severityTrend,
   SeverityTrendSummary,
   summarize,
   SymptomFrequency,
   symptomFrequencies,
+  topTriggerCorrelation,
+  TriggerCorrelation,
   TriggerFrequency,
   triggerFrequencies,
 } from '@/utils/insights';
@@ -24,6 +31,10 @@ export interface InsightsData {
   symptoms: SymptomFrequency[];
   triggers: TriggerFrequency[];
   severity: SeverityTrendSummary | null;
+  bodySystems: BodySystemSlice[];
+  redFlag: RedFlagRollup;
+  correlation: TriggerCorrelation | null;
+  streak: number;
   heatmap: number[][] | null;
   peakLabel: string | null;
   /** Total recordings the user has, regardless of range. Drives the empty state. */
@@ -52,12 +63,17 @@ export const useInsightsData = (): InsightsData => {
   const derived = useMemo(() => {
     const inRange = filterByRange(recordings, range);
     const hasEnoughData = inRange.length >= INSIGHTS_THRESHOLD;
+    const streak = computeStreak(recordings);
     if (!hasEnoughData) {
       return {
         summary: null,
         symptoms: [] as SymptomFrequency[],
         triggers: [] as TriggerFrequency[],
         severity: null as SeverityTrendSummary | null,
+        bodySystems: [] as BodySystemSlice[],
+        redFlag: { concerningCount: 0, flags: [] } as RedFlagRollup,
+        correlation: null as TriggerCorrelation | null,
+        streak,
         heatmap: null as number[][] | null,
         peakLabel: null as string | null,
         inRangeCount: inRange.length,
@@ -70,6 +86,10 @@ export const useInsightsData = (): InsightsData => {
       symptoms: symptomFrequencies(inRange, range, 4),
       triggers: triggerFrequencies(inRange, range, 4),
       severity: severityTrend(inRange, range),
+      bodySystems: bodySystemBreakdown(inRange),
+      redFlag: redFlagRollup(inRange),
+      correlation: topTriggerCorrelation(inRange),
+      streak,
       heatmap: grid,
       peakLabel: peakHeatmapRow(grid),
       inRangeCount: inRange.length,
