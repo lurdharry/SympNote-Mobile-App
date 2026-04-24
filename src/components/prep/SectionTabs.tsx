@@ -1,8 +1,8 @@
-import React from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { makeStyles, moderateScale, typography, useTheme, verticalScale } from '@/theme';
-import { PREP_SECTION_TABS, PrepSectionId } from '@/constants/prep';
-import { hapticLight } from '@/services/haptics';
+import React from "react";
+import { Pressable, Text, View } from "react-native";
+import { makeStyles, moderateScale, typography, useTheme, verticalScale } from "@/theme";
+import { PREP_SECTION_TABS, PrepSectionId } from "@/constants/prep";
+import { hapticLight } from "@/services/haptics";
 
 interface SectionTabsProps {
   value: PrepSectionId;
@@ -31,8 +31,8 @@ export const SectionTabs: React.FC<SectionTabsProps> = ({ value, onChange, accen
               style={[
                 typography.label,
                 {
-                  color: active ? '#FFFFFF' : colors.textSecondary,
-                  fontFamily: 'DMSans_600SemiBold',
+                  color: active ? "#FFFFFF" : colors.textSecondary,
+                  fontFamily: "DMSans_600SemiBold",
                 },
               ]}
             >
@@ -47,7 +47,7 @@ export const SectionTabs: React.FC<SectionTabsProps> = ({ value, onChange, accen
 
 const useStyles = makeStyles((theme) => ({
   tabs: {
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: moderateScale(4),
     borderRadius: theme.radius.full,
     gap: moderateScale(4),
@@ -56,7 +56,7 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     height: verticalScale(36),
     borderRadius: theme.radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 }));
