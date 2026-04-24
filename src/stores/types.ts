@@ -6,6 +6,13 @@ export type StructuredEntry = {
   duration: string;
   severity: number; // 0-10 (0 = patient reports no symptom)
   triggers: string[];
+  /**
+   * What the patient says makes the symptom better / relieves it. Kept
+   * separate from triggers so correlations don't conflate "coffee
+   * worsens my headache" with "coffee relieves my headache". Older
+   * recordings persisted before this split will read as an empty list.
+   */
+  relievers?: string[];
   medications: string[];
   notes: string;
   /**

@@ -15,7 +15,9 @@ import { SectionLabel } from '@/components/ui/SectionLabel';
 import { useInsightsData } from '@/hooks/useInsightsData';
 import { HeadlineCard } from '@/components/insights/HeadlineCard';
 import { RangeSelector } from '@/components/insights/RangeSelector';
+import { SeverityTrendCard } from '@/components/insights/SeverityTrendCard';
 import { SymptomFrequencyList } from '@/components/insights/SymptomFrequencyList';
+import { TriggerFrequencyList } from '@/components/insights/TriggerFrequencyList';
 import { Heatmap } from '@/components/insights/Heatmap';
 import { InsightsEmpty } from '@/components/insights/InsightsEmpty';
 
@@ -29,6 +31,8 @@ const TabInsights: React.FC = () => {
     setRange,
     summary,
     symptoms,
+    triggers,
+    severity,
     heatmap,
     peakLabel,
     hasEnoughData,
@@ -72,10 +76,24 @@ const TabInsights: React.FC = () => {
               <>
                 <HeadlineCard range={range} summary={summary} />
 
+                {severity && severity.sampleCount > 0 && (
+                  <View>
+                    <SectionLabel label="Severity trend" />
+                    <SeverityTrendCard summary={severity} />
+                  </View>
+                )}
+
                 <View>
                   <SectionLabel label="Symptom frequency" />
                   <SymptomFrequencyList symptoms={symptoms} />
                 </View>
+
+                {triggers.length > 0 && (
+                  <View>
+                    <SectionLabel label="Top triggers" />
+                    <TriggerFrequencyList triggers={triggers} />
+                  </View>
+                )}
 
                 <View>
                   <SectionLabel label="When symptoms strike" />

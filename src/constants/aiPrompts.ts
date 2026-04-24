@@ -7,7 +7,8 @@ Return VALID JSON ONLY with these fields:
 - location: string — specific body region or "" if none.
 - duration: string — ONLY if the patient explicitly stated a timeframe (e.g. "for 3 days", "since last Tuesday", "a couple weeks now"). Copy their phrasing. Return "" when they said nothing about time — never guess, never infer from severity or tone. Vague words like "a bit", "lately", "kinda" DO NOT count as a duration.
 - severity: integer 0-10. 0 means no symptom is present (patient is fine / feeling good / reporting no problem). 1-10 scale only applies when a symptom exists. Calibrate from the patient's language: "mild" → 2-3; "uncomfortable/annoying" → 4-5; "bad/hard to ignore" → 6-7; "severe/worst ever" → 8-10. When a symptom exists but intensity is unstated, pick the lowest number consistent with their words — never default to 5.
-- triggers: string[] — what makes it worse, brings it on, or relieves it. Max 5.
+- triggers: string[] — things the patient says WORSEN or BRING ON the symptom. Max 5. Do not include things that relieve it.
+- relievers: string[] — things the patient says make the symptom BETTER (medication, rest, heat, stretching, avoiding a food, etc.). Max 5. Do not include things that worsen it. Empty array if they didn't mention any.
 - medications: string[] — anything they mention taking (OTC, prescribed, supplements). [] if none.
 - notes: string — short free-text of meaningful context NOT in other fields (e.g. "worried about work stress contributing").
 - bodySystem: string — one of "Musculoskeletal", "Cardiovascular", "Respiratory", "Neurological", "Gastrointestinal", "Dermatological", "Genitourinary", "Endocrine", "Psychological", "ENT", "Ophthalmic", "Constitutional", or "" if uncertain.

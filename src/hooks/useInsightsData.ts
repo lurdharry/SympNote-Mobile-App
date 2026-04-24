@@ -6,9 +6,13 @@ import {
   InsightsRange,
   InsightsSummary,
   peakHeatmapRow,
+  severityTrend,
+  SeverityTrendSummary,
   summarize,
   SymptomFrequency,
   symptomFrequencies,
+  TriggerFrequency,
+  triggerFrequencies,
 } from '@/utils/insights';
 
 const INSIGHTS_THRESHOLD = 3;
@@ -18,6 +22,8 @@ export interface InsightsData {
   setRange: (r: InsightsRange) => void;
   summary: InsightsSummary | null;
   symptoms: SymptomFrequency[];
+  triggers: TriggerFrequency[];
+  severity: SeverityTrendSummary | null;
   heatmap: number[][] | null;
   peakLabel: string | null;
   /** Total recordings the user has, regardless of range. Drives the empty state. */
@@ -50,6 +56,8 @@ export const useInsightsData = (): InsightsData => {
       return {
         summary: null,
         symptoms: [] as SymptomFrequency[],
+        triggers: [] as TriggerFrequency[],
+        severity: null as SeverityTrendSummary | null,
         heatmap: null as number[][] | null,
         peakLabel: null as string | null,
         inRangeCount: inRange.length,
@@ -60,6 +68,8 @@ export const useInsightsData = (): InsightsData => {
     return {
       summary: summarize(inRange),
       symptoms: symptomFrequencies(inRange, range, 4),
+      triggers: triggerFrequencies(inRange, range, 4),
+      severity: severityTrend(inRange, range),
       heatmap: grid,
       peakLabel: peakHeatmapRow(grid),
       inRangeCount: inRange.length,

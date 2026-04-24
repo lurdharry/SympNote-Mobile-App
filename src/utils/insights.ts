@@ -234,6 +234,124 @@ export function topTrendingSymptom(
   return null;
 }
 
+export type SeverityPoint = {
+  /** Day index relative to the range, 0 = oldest. */
+  day: number;
+  /** Mean severity of symptom-bearing entries that day, or null if none. */
+  severity: number | null;
+  /** Number of symptom-bearing entries on that day. */
+  count: number;
+};
+
+export type SeverityTrendSummary = {
+  points: SeverityPoint[];
+  /** Simple comparison of the second half's mean vs the first half's. */
+  trend: 'up' | 'down' | 'flat';
+  /** Peak severity observed in the range (0 when none). */
+  peak: number;
+  /** Number of entries contributing to the trend (severity > 0). */
+  sampleCount: number;
+};
+
+/**
+ * Daily severity trend across the range. Entries with severity 0
+ * ("no symptom reported") are excluded — they'd drag the mean on
+ * reassuring-check-in days. Returns a per-day point array zero-filled
+ * so the chart has a stable x-axis.
+ *
+ * Trend direction compares the mean of the second half of the range
+ * against the first half. Flat when the gap is small (< 0.5).
+ */
+export function severityTrend(
+  recordings: Recording[],
+  range: InsightsRange,
+): SeverityTrendSummary {
+  const days = rangeToDays(range) ?? computeSpanDays(recordings) ?? 30;
+  const endOfToday = startOfDay(new Date());
+  const buckets: number[][] = Array.from({ length: days }, () => []);
+
+  let peak = 0;
+  recordings.forEach((r) => {
+    if (r.structured.severity <= 0) return;
+    const dayIndex = differenceInCalendarDays(endOfToday, parseISO(r.createdAt));
+    if (dayIndex < 0 || dayIndex >= days) return;
+    const bucketIndex = days - 1 - dayIndex;
+    buckets[bucketIndex]!.push(r.structured.severity);
+    if (r.structured.severity > peak) peak = r.structured.severity;
+  });
+
+  const points: SeverityPoint[] = buckets.map((entries, day) => ({
+    day,
+    severity:
+      entries.length === 0 ? null : sum(entries) / entries.length,
+    count: entries.length,
+  }));
+
+  const sampleCount = sum(buckets.map((b) => b.length));
+
+  const halfIdx = Math.floor(days / 2);
+  const firstMeanNums = buckets
+    .slice(0, halfIdx)
+    .flat();
+  const secondMeanNums = buckets.slice(halfIdx).flat();
+  const meanOf = (arr: number[]): number =>
+    arr.length === 0 ? 0 : sum(arr) / arr.length;
+  const firstMean = meanOf(firstMeanNums);
+  const secondMean = meanOf(secondMeanNums);
+  const diff = secondMean - firstMean;
+  let trend: 'up' | 'down' | 'flat';
+  if (Math.abs(diff) < 0.5) trend = 'flat';
+  else trend = diff > 0 ? 'up' : 'down';
+
+  return { points, trend, peak, sampleCount };
+}
+
+export type TriggerFrequency = {
+  name: string;
+  count: number;
+  pct: number;
+  color: string;
+};
+
+/**
+ * Top triggers across the range, aggregated from `structured.triggers`
+ * (the "worsens / brings on" side — relievers live in their own field).
+ * Returns up to `topN` by frequency.
+ */
+export function triggerFrequencies(
+  recordings: Recording[],
+  range: InsightsRange,
+  topN = 4,
+): TriggerFrequency[] {
+  const days = rangeToDays(range);
+  const cutoff =
+    days == null ? 0 : subDays(new Date(), days).getTime();
+
+  const counts = new Map<string, number>();
+  let total = 0;
+  recordings.forEach((r) => {
+    if (days != null && parseISO(r.createdAt).getTime() < cutoff) return;
+    r.structured.triggers.forEach((raw) => {
+      const name = normalize(raw);
+      if (!name) return;
+      counts.set(name, (counts.get(name) ?? 0) + 1);
+      total += 1;
+    });
+  });
+
+  const ranked = take(
+    orderBy(Array.from(counts.entries()), ([, c]) => c, ['desc']),
+    topN,
+  );
+
+  return ranked.map(([name, count], i) => ({
+    name: capitalize(name),
+    count,
+    pct: total > 0 ? Math.round((count / total) * 100) : 0,
+    color: PALETTE[i % PALETTE.length]!,
+  }));
+}
+
 const HEATMAP_ROW_LABELS = ['morning', 'midday', 'afternoon', 'evening', 'night'];
 
 /** Peak row of a heatmap (morning / midday / afternoon / evening / night). */
