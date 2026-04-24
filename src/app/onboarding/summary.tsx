@@ -23,7 +23,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
-import { ChevronDown, Clock, Mic, Pencil } from "lucide-react-native";
+import { Clock, Mic, Pencil } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
@@ -39,6 +39,7 @@ import { SceneTransition } from "@/components/navigation/SceneTransition";
 import { BackButton } from "@/components/ui/BackButton";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
+import { SympnoteSprite } from "@/components/onboarding/SympnoteSprite";
 import { HoldToRecordOverlay } from "@/components/home/HoldToRecordOverlay";
 import { useHoldToRecord } from "@/hooks/useHoldToRecord";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
@@ -317,35 +318,13 @@ interface TeachingTipProps {
 const TeachingTip: React.FC<TeachingTipProps> = ({ reduced }) => {
   const { colors } = useTheme();
   const styles = useStyles();
-  const bounce = useSharedValue(0);
-  useEffect(() => {
-    if (reduced) return;
-    bounce.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 720, easing: Easing.out(Easing.sin) }),
-        withTiming(0, { duration: 720, easing: Easing.in(Easing.sin) }),
-      ),
-      -1,
-      false,
-    );
-  }, [reduced, bounce]);
-  const bounceStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: -bounce.value * 6 }],
-    opacity: 0.65 + bounce.value * 0.35,
-  }));
   return (
     <Animated.View
       entering={FadeIn.duration(420).delay(180)}
       exiting={FadeOut.duration(180)}
       style={styles.teachingWrap}
     >
-      <Animated.View style={bounceStyle}>
-        <ChevronDown
-          size={moderateScale(22)}
-          color={colors.accent}
-          strokeWidth={2.4}
-        />
-      </Animated.View>
+      <SympnoteSprite pose="listening" reduced={reduced} size={moderateScale(140)} />
       <Text style={[styles.teachingText, { color: colors.textPrimary }]}>
         Press and hold the mic
       </Text>

@@ -28,6 +28,7 @@ import { FULL_HEADLINE } from "../../constants/onboarding";
 import { resetAppState } from "../../utils/resetApp";
 import { hapticMedium } from "../../services/haptics";
 import { SympnoteMark } from "@/components/brand/SympnoteMark";
+import { SympnoteSprite } from "../../components/onboarding/SympnoteSprite";
 
 const ScreenHook: React.FC = () => {
   const router = useRouter();
@@ -163,8 +164,11 @@ const ScreenHook: React.FC = () => {
             </Animated.View>
           </View>
 
-          {/* CTA */}
+          {/* Greeting sprite + CTA */}
           <Animated.View style={[styles.ctaArea, cta]}>
+            <View style={styles.greetingSlot}>
+              <SympnoteSprite pose="greeting" reduced={reduced} size={moderateScale(120)} />
+            </View>
             <PrimaryButton label="Get started · Free" onPress={handleGetStarted} />
           </Animated.View>
         </SafeAreaView>
@@ -274,6 +278,10 @@ const useStyles = makeStyles((theme) => ({
   ctaArea: {
     paddingHorizontal: theme.spacing.s6,
     paddingBottom: theme.spacing.s10,
+  },
+  greetingSlot: {
+    alignItems: "center",
+    marginBottom: theme.spacing.s2,
   },
   devBar: {
     paddingHorizontal: theme.spacing.s4,
