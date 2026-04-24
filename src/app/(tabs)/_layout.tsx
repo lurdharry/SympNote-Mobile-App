@@ -9,7 +9,7 @@ import {
 import { Tabs } from "expo-router";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
-import { makeStyles, moderateScale, useTheme, verticalScale } from "../../theme";
+import { makeStyles, moderateScale, spacing, useTheme, verticalScale } from "../../theme";
 import { hapticSelect } from "../../services/haptics";
 import { TABS } from "../../constants/tabs";
 import { SharedTabIndicator } from "../../components/animated/SharedTabIndicator";
@@ -83,7 +83,8 @@ const TabsLayout: React.FC = () => {
                   <SharedTabIndicator
                     count={state.routes.length}
                     activeIndex={activeIndex}
-                    containerWidth={barWidth}
+                    containerWidth={barWidth - spacing.s3 * 2}
+                    leftOffset={spacing.s3}
                     color={colors.accent}
                     height={verticalScale(2.5)}
                     widthRatio={0.35}
