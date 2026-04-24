@@ -30,7 +30,7 @@ import {
   verticalScale,
 } from "../../theme";
 import { PrimaryButton } from "../../components/ui/PrimaryButton";
-import { OrbitOrb } from "../../components/analyzing/OrbitOrb";
+import { CraftingMascot } from "../../components/onboarding/CraftingMascot";
 import { purchase, Plan } from "../../services/subscription";
 import { structureTranscript } from "../../services/ai";
 import { useProfileStore } from "../../stores/useProfileStore";
@@ -276,24 +276,12 @@ interface CraftingOverlayProps {
 
 const CraftingOverlay: React.FC<CraftingOverlayProps> = ({ reduced }) => {
   const { colors } = useTheme();
-  const progress = useSharedValue(0);
-  useEffect(() => {
-    progress.value = withTiming(1, {
-      duration: reduced ? 600 : 2400,
-      easing: Easing.out(Easing.cubic),
-    });
-  }, [progress, reduced]);
 
   return (
     <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bgPrimary }]}>
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
         <View style={craftingStyles.body}>
-          <OrbitOrb
-            ready={false}
-            reduced={reduced}
-            progress={progress}
-            completedCount={1}
-          />
+          <CraftingMascot reduced={reduced} />
           <Text
             style={[
               typography.h2,
