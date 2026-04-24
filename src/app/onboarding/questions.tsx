@@ -34,7 +34,7 @@ import {
 import { SceneTransition } from "@/components/navigation/SceneTransition";
 import { BackButton } from "@/components/ui/BackButton";
 import { ChipTray } from "@/components/onboarding/qualifier";
-import { SympnoteSprite } from "@/components/onboarding/SympnoteSprite";
+import { QuillKeeper } from "@/components/onboarding/QuillKeeper";
 import { useQualifierFlow, type QualifierAnswer } from "@/hooks/useQualifierFlow";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
@@ -96,10 +96,10 @@ const ScreenQualifier: React.FC = () => {
             {/* Mascot on a spotlit stage. */}
             <View style={styles.stage}>
               <StageSpotlight reduced={reduced} />
-              <SympnoteSprite
-                pose="greeting"
+              <QuillKeeper
                 reduced={reduced}
-                size={moderateScale(144)}
+                size={moderateScale(150)}
+                reactionKey={step}
               />
             </View>
 
