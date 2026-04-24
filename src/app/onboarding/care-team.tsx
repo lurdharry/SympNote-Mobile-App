@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { addDays, setHours, setMinutes, setSeconds } from "date-fns";
@@ -21,15 +21,28 @@ import { StaggeredList } from "@/components/animated/StaggeredList";
 import { ClinicianCard } from "@/components/onboarding/care-team/ClinicianCard";
 import type { Clinician } from "@/components/onboarding/care-team/ClinicianCard";
 import { AddClinicianSheet } from "@/components/onboarding/care-team/AddClinicianSheet";
-import { CareTeamEmpty } from "@/components/onboarding/care-team/CareTeamEmpty";
 import { AppointmentBlock } from "@/components/onboarding/care-team/AppointmentBlock";
-import { Specialty } from "@/constants/specialties";
+import { SPECIALTIES, Specialty } from "@/constants/specialties";
 import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
 import { useProfileStore } from "@/stores/useProfileStore";
 import { useAppointmentsStore } from "@/stores/useAppointmentsStore";
 import { buildPersonalizationProfile } from "@/utils/personalization";
 import { hapticLight } from "@/services/haptics";
 import { uuid } from "@/utils/uuid";
+
+const QUICK_ADD_IDS = [
+  "primary-care",
+  "cardiology",
+  "neurology",
+  "psychiatry",
+  "dermatology",
+  "ob-gyn",
+  "other",
+];
+
+const QUICK_ADD_SHORTCUTS: Specialty[] = QUICK_ADD_IDS.map(
+  (id) => SPECIALTIES.find((s) => s.id === id)!,
+);
 
 const defaultNextAppointment = (): Date => {
   const d = addDays(new Date(), 7);
@@ -143,38 +156,74 @@ const ScreenCareTeam: React.FC = () => {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* Hero */}
-            <Text style={[styles.eyebrow, { color: colors.accent }]}>YOUR CARE TEAM</Text>
+            {/* Hero — single headline + single sub, no eyebrow. */}
             <Text style={[styles.headline, { color: colors.textPrimary }]}>
               Who takes care{"\n"}of you?
             </Text>
             <Text style={[styles.sub, { color: colors.textSecondary }]}>
-              Add the doctors and specialists you see. Sympnote organizes your entries by clinician
-              so each visit prep stays relevant.
+              Add who you see. We'll organize your notes by clinician.
             </Text>
 
-            {/* Body */}
-            <View style={styles.body}>
-              {hasMembers ? (
-                <>
-                  <StaggeredList stagger={80}>
-                    {members.map((m) => (
-                      <ClinicianCard key={m.id} clinician={m} onRemove={handleRemove} />
-                    ))}
-                  </StaggeredList>
-                  <Text
-                    style={[
-                      typography.caption,
-                      styles.moreLaterHint,
-                      { color: colors.textTertiary },
-                    ]}
-                  >
-                    You can add more clinicians later in Sympnote.
-                  </Text>
-                </>
-              ) : (
-                <CareTeamEmpty onPickSpecialty={openSheet} />
-              )}
+            {/* Clinician list — only when something's been added. */}
+            {hasMembers && (
+              <View style={styles.list}>
+                <StaggeredList stagger={80}>
+                  {members.map((m) => (
+                    <ClinicianCard key={m.id} clinician={m} onRemove={handleRemove} />
+                  ))}
+                </StaggeredList>
+              </View>
+            )}
+
+            {/* Quick-add specialty strip — always visible. Label flips
+                contextually so the empty state feels inviting and the
+                populated state reads as "add another". */}
+            <View style={styles.quickAddBlock}>
+              <Text style={[styles.quickAddLabel, { color: colors.textTertiary }]}>
+                {hasMembers ? "Add another" : "Tap a specialty to add"}
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.chipsRow}
+              >
+                {QUICK_ADD_SHORTCUTS.map((s) => {
+                  const Icon = s.Icon;
+                  return (
+                    <Pressable
+                      key={s.id}
+                      onPress={() => openSheet(s)}
+                      style={({ pressed }) => [
+                        styles.chip,
+                        {
+                          backgroundColor: colors.bgSurface,
+                          borderColor: pressed ? s.grad[1] : colors.border,
+                        },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Add ${s.label}`}
+                    >
+                      <View
+                        style={[styles.chipTile, { backgroundColor: s.grad[1] + "1F" }]}
+                      >
+                        <Icon size={moderateScale(12)} color={s.grad[1]} strokeWidth={2.2} />
+                      </View>
+                      <Text
+                        style={[
+                          typography.label,
+                          {
+                            color: colors.textPrimary,
+                            fontFamily: "DMSans_600SemiBold",
+                            fontSize: fontScale(12),
+                          },
+                        ]}
+                      >
+                        {s.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
             </View>
 
             {/* Appointment module — only meaningful once there's a clinician. */}
@@ -199,7 +248,7 @@ const ScreenCareTeam: React.FC = () => {
             <View style={[styles.privacyRow, { backgroundColor: colors.bgMuted }]}>
               <Lock size={moderateScale(12)} color={colors.textTertiary} strokeWidth={2.2} />
               <Text style={[typography.caption, { color: colors.textTertiary, flex: 1 }]}>
-                Private to you. Sympnote never contacts your clinicians.
+                Private to you.
               </Text>
             </View>
           </ScrollView>
@@ -241,16 +290,10 @@ const useStyles = makeStyles((theme) => ({
     paddingTop: theme.spacing.s5,
     paddingBottom: theme.spacing.s6,
   },
-  eyebrow: {
-    ...theme.typography.label,
-    fontFamily: "DMSans_700Bold",
-    letterSpacing: 1.2,
-  },
   headline: {
     ...theme.typography.h1,
     fontFamily: "Fraunces_500Medium",
     letterSpacing: -0.6,
-    marginTop: moderateScale(4),
     lineHeight: fontScale(36),
   },
   sub: {
@@ -258,14 +301,40 @@ const useStyles = makeStyles((theme) => ({
     marginTop: moderateScale(8),
     lineHeight: fontScale(22),
   },
-  body: {
+  list: {
     marginTop: spacing.s6,
     gap: moderateScale(10),
   },
-  moreLaterHint: {
-    alignSelf: "flex-start",
-    marginTop: moderateScale(6),
-    fontStyle: "italic",
+  quickAddBlock: {
+    marginTop: spacing.s6,
+    gap: moderateScale(8),
+  },
+  quickAddLabel: {
+    ...theme.typography.label,
+    fontFamily: "DMSans_700Bold",
+    fontSize: fontScale(10),
+    letterSpacing: 1.2,
+  },
+  chipsRow: {
+    flexDirection: "row",
+    gap: moderateScale(8),
+    paddingRight: scale(4),
+  },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(6),
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(8),
+    borderRadius: theme.radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  chipTile: {
+    width: moderateScale(20),
+    height: moderateScale(20),
+    borderRadius: moderateScale(10),
+    alignItems: "center",
+    justifyContent: "center",
   },
   appointmentSlot: {
     marginTop: spacing.s6,
