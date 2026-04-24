@@ -49,6 +49,14 @@ export interface Question {
    * derivation falls back to a sensible default.
    */
   skippable?: boolean;
+  /**
+   * When true (multi-select only), an "Add your own..." text input
+   * appears below the curated chips. User-typed values become
+   * selectable chips that are saved alongside any selected presets.
+   * Use for open-ended lists where the curated set can't cover
+   * everything (e.g. conditions, medications).
+   */
+  allowCustom?: boolean;
   /** Optional hint copy shown under the assistant bubble. */
   hint?: string;
 }
@@ -86,6 +94,7 @@ export const QUESTIONS: Question[] = [
     hint: "So you don't have to re-explain your conditions at every visit. Pick any that apply, or skip if nothing fits.",
     multi: true,
     skippable: true,
+    allowCustom: true,
     options: [
       { t: 'Asthma',               v: 'asthma',          Icon: Wind,       tint: '#6CA4A0' },
       { t: 'Diabetes',             v: 'diabetes',        Icon: Droplet,    tint: '#C88A4A' },

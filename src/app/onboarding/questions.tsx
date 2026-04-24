@@ -97,6 +97,7 @@ const ScreenQualifier: React.FC = () => {
               disabled={typing}
               options={current.options ?? []}
               multi={current.multi}
+              allowCustom={current.allowCustom}
               onAnswer={answer}
               onSkip={current.skippable ? skip : undefined}
             />
