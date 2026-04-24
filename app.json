@@ -40,6 +40,19 @@
         }
       ],
       [
+        "expo-splash-screen",
+        {
+          "image": "./assets/icon.png",
+          "backgroundColor": "#245353",
+          "resizeMode": "contain",
+          "imageWidth": 220,
+          "dark": {
+            "image": "./assets/icon.png",
+            "backgroundColor": "#1B4846"
+          }
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "ios": {
