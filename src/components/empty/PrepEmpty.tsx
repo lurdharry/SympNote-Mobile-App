@@ -1,5 +1,8 @@
 import React, { useEffect } from 'react';
-import { Text } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
+import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Plus } from 'lucide-react-native';
 import { Canvas, Circle, Skia, Path } from '@shopify/react-native-skia';
 import Animated, {
   Easing,
@@ -9,8 +12,9 @@ import Animated, {
   withDelay,
   withTiming,
 } from 'react-native-reanimated';
-import { fontScale, makeStyles, moderateScale, useTheme } from '../../theme';
+import { fontScale, makeStyles, moderateScale, shadows, useTheme, verticalScale } from '../../theme';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { hapticLight } from '../../services/haptics';
 
 /**
  * Prep empty state — a minimal 5×4 calendar grid where one date gets
@@ -20,6 +24,7 @@ export const PrepEmpty: React.FC = () => {
   const { colors } = useTheme();
   const styles = useStyles();
   const reduced = useReducedMotion();
+  const router = useRouter();
 
   const cols = 5;
   const rows = 4;
@@ -101,9 +106,28 @@ export const PrepEmpty: React.FC = () => {
 
       <Text style={styles.headline}>No visits yet.</Text>
       <Text style={styles.caption}>
-        Add a doctor's appointment below and I'll start building your summary
-        as you log symptoms.
+        Add your first doctor's appointment and I'll start building your
+        summary as you log symptoms.
       </Text>
+
+      <Pressable
+        onPress={() => {
+          hapticLight();
+          router.push('/appointment-new');
+        }}
+        style={[styles.cta, shadows.accentGlow]}
+        accessibilityRole="button"
+        accessibilityLabel="Add appointment"
+      >
+        <LinearGradient
+          colors={[colors.accent, '#1F504E']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <Plus size={moderateScale(16)} color="#FFFFFF" strokeWidth={2.4} />
+        <Text style={styles.ctaLabel}>Add appointment</Text>
+      </Pressable>
     </Animated.View>
   );
 }
@@ -127,5 +151,22 @@ const useStyles = makeStyles((theme) => ({
     color: theme.colors.textTertiary,
     marginTop: theme.spacing.s2,
     textAlign: 'center',
+    paddingHorizontal: theme.spacing.s5,
+  },
+  cta: {
+    marginTop: theme.spacing.s6,
+    height: verticalScale(44),
+    paddingHorizontal: moderateScale(20),
+    borderRadius: 9999,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(8),
+    overflow: 'hidden',
+  },
+  ctaLabel: {
+    color: '#FFFFFF',
+    fontFamily: 'DMSans_700Bold',
+    fontSize: fontScale(14),
+    letterSpacing: 0.2,
   },
 }));
