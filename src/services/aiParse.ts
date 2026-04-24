@@ -50,6 +50,7 @@ export const parseStructured = (raw: string): StructuredWithSources => {
     duration: toString(parsed.duration),
     severity: toSeverity(parsed.severity),
     triggers: toStringArray(parsed.triggers),
+    relievers: toStringArray(parsed.relievers),
     medications: toStringArray(parsed.medications),
     notes: toString(parsed.notes),
     bodySystem: toString(parsed.bodySystem),

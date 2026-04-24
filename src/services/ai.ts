@@ -76,6 +76,7 @@ const FALLBACK_STRUCTURED: Omit<StructuredWithSources, 'notes'> = {
   duration: '',
   severity: 0,
   triggers: [],
+  relievers: [],
   medications: [],
   bodySystem: '',
   redFlags: [],
