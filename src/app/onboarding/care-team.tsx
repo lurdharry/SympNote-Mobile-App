@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { Lock, Plus, X } from "lucide-react-native";
+import { Lock, Plus, Search, Sparkles, X } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
@@ -28,7 +28,10 @@ import { buildPersonalizationProfile } from "@/utils/personalization";
 import { hapticLight } from "@/services/haptics";
 import { uuid } from "@/utils/uuid";
 
-const QUICK_ADD_IDS = [
+// Specialties to surface in the suggestion list. We exclude the
+// generic catch-all entries so the list shows real options; the
+// user can always use the "Use as custom" row for anything else.
+const SUGGEST_IDS = [
   "primary-care",
   "cardiology",
   "neurology",
@@ -38,8 +41,7 @@ const QUICK_ADD_IDS = [
   "orthopedics",
   "ophthalmology",
 ];
-
-const QUICK_ADD_SHORTCUTS: Specialty[] = QUICK_ADD_IDS.map(
+const SUGGEST_SPECIALTIES: Specialty[] = SUGGEST_IDS.map(
   (id) => SPECIALTIES.find((s) => s.id === id)!,
 );
 
@@ -50,28 +52,41 @@ const ScreenCareTeam: React.FC = () => {
   const setAnswer = useProfileStore((s) => s.setOnboardingAnswer);
 
   const [members, setMembers] = useState<Clinician[]>([]);
-  const [customDraft, setCustomDraft] = useState("");
+  const [query, setQuery] = useState("");
   /** Role the user is currently adding a clinician under. Null when
-   *  no add is in progress. Setting this reveals the inline name
-   *  input below the specialty grid and highlights the matching chip
-   *  (if the role matches a preset). */
+   *  no add is in progress. */
   const [addingRole, setAddingRole] = useState<string | null>(null);
   const [nameDraft, setNameDraft] = useState("");
 
+  const trimmed = query.trim();
+  const suggestions = useMemo(() => {
+    if (!trimmed) return SUGGEST_SPECIALTIES;
+    const q = trimmed.toLowerCase();
+    return SUGGEST_SPECIALTIES.filter((s) => s.label.toLowerCase().includes(q));
+  }, [trimmed]);
+  const exactHit = useMemo(
+    () =>
+      !!trimmed &&
+      SUGGEST_SPECIALTIES.some((s) => s.label.toLowerCase() === trimmed.toLowerCase()),
+    [trimmed],
+  );
+  const activeSpec = SUGGEST_SPECIALTIES.find((s) => s.label === addingRole);
+  const auroraColor = activeSpec?.grad[1] ?? colors.accent;
+
   const pickSpecialty = (spec: Specialty) => {
     hapticLight();
-    setAddingRole((prev) => (prev === spec.label ? null : spec.label));
+    setAddingRole(spec.label);
     setNameDraft("");
-    setCustomDraft("");
+    setQuery("");
   };
 
-  const startCustom = () => {
-    const role = customDraft.trim();
+  const useAsCustom = () => {
+    const role = trimmed;
     if (!role) return;
     hapticLight();
     setAddingRole(role);
     setNameDraft("");
-    setCustomDraft("");
+    setQuery("");
   };
 
   const cancelAdd = () => {
@@ -98,8 +113,6 @@ const ScreenCareTeam: React.FC = () => {
     const careTeamPlain = members.map(({ name, role }) => ({ name, role }));
     setAnswer("careTeam", careTeamPlain);
 
-    // Build personalization now so downstream screens (including
-    // next-appointment) can read the lead clinician from the profile.
     const answers = useProfileStore.getState().onboardingAnswers;
     const profile = buildPersonalizationProfile(answers, answers.focus, careTeamPlain);
     useProfileStore.getState().setPersonalization(profile);
@@ -113,20 +126,13 @@ const ScreenCareTeam: React.FC = () => {
   };
 
   const hasMembers = members.length > 0;
-  // Active specialty for the aurora tint. When the user picks a chip
-  // the background gradient subtly shifts to that specialty's palette
-  // — a live, colored signal that the screen is responding to them.
-  const activeSpec = QUICK_ADD_SHORTCUTS.find((s) => s.label === addingRole);
-  const auroraColor = activeSpec?.grad[1] ?? colors.accent;
 
   return (
     <SceneTransition mode="scale-fade">
       <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
-        {/* Ambient aurora — soft color wash at the top of the screen
-            that shifts with the selected specialty. Non-interactive. */}
         <View pointerEvents="none" style={styles.aurora}>
           <LinearGradient
-            colors={[auroraColor + "33", auroraColor + "00"]}
+            colors={[auroraColor + "22", auroraColor + "00"]}
             start={{ x: 0.5, y: 0 }}
             end={{ x: 0.5, y: 1 }}
             style={StyleSheet.absoluteFill}
@@ -156,7 +162,6 @@ const ScreenCareTeam: React.FC = () => {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* Editorial hero — "you" italicized in accent */}
             <Text style={[styles.headline, { color: colors.textPrimary }]}>
               Who takes care{"\n"}of{" "}
               <Text style={{ fontStyle: "italic", color: colors.accent }}>you</Text>?
@@ -175,65 +180,86 @@ const ScreenCareTeam: React.FC = () => {
               </View>
             )}
 
-            {!hasMembers && (
-              <View style={styles.quickAddBlock}>
-                <Text style={[styles.quickAddLabel, { color: colors.textTertiary }]}>
-                  Tap a specialty to add
-                </Text>
-                <View style={styles.chipsWrap}>
-                  {QUICK_ADD_SHORTCUTS.map((s) => {
+            {!hasMembers && addingRole === null && (
+              <>
+                {/* Command-bar style search input */}
+                <View
+                  style={[
+                    styles.searchRow,
+                    { backgroundColor: colors.bgSurface },
+                    shadows.card,
+                  ]}
+                >
+                  <Search size={moderateScale(16)} color={colors.textTertiary} strokeWidth={2.2} />
+                  <TextInput
+                    value={query}
+                    onChangeText={setQuery}
+                    placeholder="Primary care, Cardiology, or a name…"
+                    placeholderTextColor={colors.textTertiary}
+                    autoCapitalize="words"
+                    returnKeyType="next"
+                    onSubmitEditing={() => {
+                      if (suggestions.length === 1) pickSpecialty(suggestions[0]!);
+                      else if (!exactHit && trimmed) useAsCustom();
+                    }}
+                    style={[styles.searchInput, { color: colors.textPrimary }]}
+                    accessibilityLabel="Search specialty"
+                  />
+                  {query.length > 0 && (
+                    <Pressable
+                      onPress={() => setQuery("")}
+                      hitSlop={8}
+                      style={[styles.clearBtn, { backgroundColor: colors.bgMuted }]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Clear"
+                    >
+                      <X
+                        size={moderateScale(12)}
+                        color={colors.textTertiary}
+                        strokeWidth={2.4}
+                      />
+                    </Pressable>
+                  )}
+                </View>
+
+                {/* Suggestions — filtered preset specialties */}
+                <View style={styles.suggestions}>
+                  {suggestions.map((s) => {
                     const Icon = s.Icon;
-                    const active = addingRole === s.label;
                     return (
                       <Pressable
                         key={s.id}
                         onPress={() => pickSpecialty(s)}
-                        style={[
-                          styles.chip,
-                          active && styles.chipActive,
-                          !active && {
+                        style={({ pressed }) => [
+                          styles.suggestRow,
+                          {
                             backgroundColor: colors.bgSurface,
-                            borderColor: colors.border,
+                            borderColor: pressed ? s.grad[1] : colors.border,
                           },
-                          shadows.card,
                         ]}
                         accessibilityRole="button"
                         accessibilityLabel={`Add ${s.label}`}
-                        accessibilityState={{ selected: active }}
                       >
-                        {/* Gradient fill when active — the chip becomes
-                            a colored pill. Otherwise a small gradient
-                            tile on the left adds color variety. */}
-                        {active && (
+                        <View style={styles.suggestTile}>
                           <LinearGradient
                             colors={s.grad}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 1 }}
                             style={StyleSheet.absoluteFill}
                           />
-                        )}
-                        {!active && (
-                          <View style={styles.chipTile}>
-                            <LinearGradient
-                              colors={s.grad}
-                              start={{ x: 0, y: 0 }}
-                              end={{ x: 1, y: 1 }}
-                              style={StyleSheet.absoluteFill}
-                            />
-                            <Icon
-                              size={moderateScale(12)}
-                              color={s.fg}
-                              strokeWidth={2.2}
-                            />
-                          </View>
-                        )}
+                          <Icon
+                            size={moderateScale(14)}
+                            color={s.fg}
+                            strokeWidth={2.2}
+                          />
+                        </View>
                         <Text
                           style={[
-                            typography.label,
+                            typography.body,
                             {
-                              color: active ? "#FFFFFF" : colors.textPrimary,
+                              color: colors.textPrimary,
                               fontFamily: "DMSans_600SemiBold",
-                              fontSize: fontScale(12),
+                              flex: 1,
                             },
                           ]}
                         >
@@ -242,136 +268,144 @@ const ScreenCareTeam: React.FC = () => {
                       </Pressable>
                     );
                   })}
-                </View>
 
-                {addingRole === null && (
-                  <View
-                    style={[
-                      styles.customRow,
-                      { backgroundColor: colors.bgSurface },
-                      shadows.card,
-                    ]}
-                  >
-                    <TextInput
-                      value={customDraft}
-                      onChangeText={setCustomDraft}
-                      placeholder="Or type a specialty…"
-                      placeholderTextColor={colors.textTertiary}
-                      onSubmitEditing={startCustom}
-                      returnKeyType="next"
-                      autoCapitalize="words"
-                      style={[styles.customInput, { color: colors.textPrimary }]}
-                      accessibilityLabel="Type a specialty"
-                    />
+                  {/* Custom specialty escape hatch when the query doesn't
+                      match anything exactly. Always visible when the user
+                      has typed something, so they know free text works. */}
+                  {trimmed.length > 0 && !exactHit && (
                     <Pressable
-                      onPress={startCustom}
-                      disabled={customDraft.trim().length === 0}
-                      hitSlop={8}
+                      onPress={useAsCustom}
                       style={[
-                        styles.customAddBtn,
-                        {
-                          backgroundColor:
-                            customDraft.trim().length === 0
-                              ? colors.bgMuted
-                              : colors.accent,
-                          opacity: customDraft.trim().length === 0 ? 0.7 : 1,
-                        },
+                        styles.customRow,
+                        { backgroundColor: colors.accent + "10", borderColor: colors.accent },
                       ]}
                       accessibilityRole="button"
-                      accessibilityLabel="Continue with this specialty"
+                      accessibilityLabel={`Use "${trimmed}" as custom specialty`}
                     >
-                      <Plus
-                        size={moderateScale(16)}
-                        color={
-                          customDraft.trim().length === 0
-                            ? colors.textTertiary
-                            : "#FFFFFF"
-                        }
-                        strokeWidth={2.6}
-                      />
-                    </Pressable>
-                  </View>
-                )}
-
-                {addingRole !== null && (
-                  <View
-                    style={[
-                      styles.addCard,
-                      { backgroundColor: colors.bgSurface },
-                      shadows.elevated,
-                    ]}
-                  >
-                    <LinearGradient
-                      colors={[auroraColor + "1A", auroraColor + "00"]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={StyleSheet.absoluteFill}
-                    />
-                    <View style={styles.addCardHeader}>
-                      <Text style={[styles.addCardRole, { color: auroraColor }]}>
-                        {addingRole.toUpperCase()}
-                      </Text>
-                      <Pressable
-                        onPress={cancelAdd}
-                        hitSlop={10}
-                        accessibilityRole="button"
-                        accessibilityLabel="Cancel"
+                      <View
+                        style={[
+                          styles.suggestTile,
+                          { backgroundColor: colors.accent + "22" },
+                        ]}
                       >
-                        <X
+                        <Sparkles
                           size={moderateScale(14)}
-                          color={colors.textTertiary}
+                          color={colors.accent}
                           strokeWidth={2.2}
                         />
-                      </Pressable>
-                    </View>
-                    <View
-                      style={[
-                        styles.addCardInputRow,
-                        { borderColor: auroraColor + "55" },
-                      ]}
-                    >
-                      <TextInput
-                        value={nameDraft}
-                        onChangeText={setNameDraft}
-                        placeholder="Clinician's name"
-                        placeholderTextColor={colors.textTertiary}
-                        onSubmitEditing={commitClinician}
-                        returnKeyType="done"
-                        autoCapitalize="words"
-                        autoFocus
-                        style={[styles.customInput, { color: colors.textPrimary }]}
-                        accessibilityLabel="Clinician's name"
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={[
+                            typography.body,
+                            {
+                              color: colors.textPrimary,
+                              fontFamily: "DMSans_600SemiBold",
+                            },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          Use "{trimmed}"
+                        </Text>
+                        <Text
+                          style={[
+                            typography.caption,
+                            { color: colors.textTertiary },
+                          ]}
+                        >
+                          as a custom specialty
+                        </Text>
+                      </View>
+                      <Plus
+                        size={moderateScale(14)}
+                        color={colors.accent}
+                        strokeWidth={2.4}
                       />
-                      <Pressable
-                        onPress={commitClinician}
-                        disabled={nameDraft.trim().length === 0}
-                        hitSlop={8}
-                        style={[
-                          styles.customAddBtn,
-                          {
-                            backgroundColor:
-                              nameDraft.trim().length === 0
-                                ? colors.bgMuted
-                                : auroraColor,
-                            opacity: nameDraft.trim().length === 0 ? 0.7 : 1,
-                          },
-                        ]}
-                        accessibilityRole="button"
-                        accessibilityLabel="Add clinician"
-                      >
-                        <Plus
-                          size={moderateScale(16)}
-                          color={
-                            nameDraft.trim().length === 0
-                              ? colors.textTertiary
-                              : "#FFFFFF"
-                          }
-                          strokeWidth={2.6}
-                        />
-                      </Pressable>
-                    </View>
-                  </View>
-                )}
+                    </Pressable>
+                  )}
+                </View>
+              </>
+            )}
+
+            {/* Name-entry card, appears once a specialty has been
+                chosen (either from the suggestion list or custom). */}
+            {!hasMembers && addingRole !== null && (
+              <View
+                style={[
+                  styles.addCard,
+                  { backgroundColor: colors.bgSurface },
+                  shadows.elevated,
+                ]}
+              >
+                <LinearGradient
+                  colors={[auroraColor + "1A", auroraColor + "00"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                />
+                <View style={styles.addCardHeader}>
+                  <Text style={[styles.addCardRole, { color: auroraColor }]}>
+                    {addingRole.toUpperCase()}
+                  </Text>
+                  <Pressable
+                    onPress={cancelAdd}
+                    hitSlop={10}
+                    accessibilityRole="button"
+                    accessibilityLabel="Cancel"
+                  >
+                    <X
+                      size={moderateScale(14)}
+                      color={colors.textTertiary}
+                      strokeWidth={2.2}
+                    />
+                  </Pressable>
+                </View>
+                <View
+                  style={[
+                    styles.addCardInputRow,
+                    { borderColor: auroraColor + "55" },
+                  ]}
+                >
+                  <TextInput
+                    value={nameDraft}
+                    onChangeText={setNameDraft}
+                    placeholder="Clinician's name"
+                    placeholderTextColor={colors.textTertiary}
+                    onSubmitEditing={commitClinician}
+                    returnKeyType="done"
+                    autoCapitalize="words"
+                    autoFocus
+                    style={[styles.addCardInput, { color: colors.textPrimary }]}
+                    accessibilityLabel="Clinician's name"
+                  />
+                  <Pressable
+                    onPress={commitClinician}
+                    disabled={nameDraft.trim().length === 0}
+                    hitSlop={8}
+                    style={[
+                      styles.addCardBtn,
+                      {
+                        backgroundColor:
+                          nameDraft.trim().length === 0
+                            ? colors.bgMuted
+                            : auroraColor,
+                        opacity: nameDraft.trim().length === 0 ? 0.7 : 1,
+                      },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Add clinician"
+                  >
+                    <Plus
+                      size={moderateScale(16)}
+                      color={
+                        nameDraft.trim().length === 0
+                          ? colors.textTertiary
+                          : "#FFFFFF"
+                      }
+                      strokeWidth={2.6}
+                    />
+                  </Pressable>
+                </View>
               </View>
             )}
 
@@ -437,12 +471,12 @@ const useStyles = makeStyles((theme) => ({
     ...theme.typography.h1,
     fontFamily: "Fraunces_500Medium",
     letterSpacing: -0.8,
-    fontSize: fontScale(34),
-    lineHeight: fontScale(40),
+    fontSize: fontScale(30),
+    lineHeight: fontScale(36),
   },
   sub: {
     ...theme.typography.body,
-    marginTop: moderateScale(10),
+    marginTop: moderateScale(8),
     lineHeight: fontScale(22),
     maxWidth: moderateScale(320),
   },
@@ -450,39 +484,45 @@ const useStyles = makeStyles((theme) => ({
     marginTop: spacing.s6,
     gap: moderateScale(10),
   },
-  quickAddBlock: {
-    marginTop: spacing.s6,
-    gap: moderateScale(10),
-  },
-  quickAddLabel: {
-    ...theme.typography.label,
-    fontFamily: "DMSans_700Bold",
-    fontSize: fontScale(10),
-    letterSpacing: 1.2,
-  },
-  chipsWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: moderateScale(8),
-  },
-  chip: {
+  searchRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: moderateScale(8),
-    paddingLeft: moderateScale(6),
-    paddingRight: scale(14),
-    paddingVertical: verticalScale(6),
+    gap: moderateScale(10),
+    marginTop: spacing.s5,
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(4),
     borderRadius: 9999,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: verticalScale(10),
+    fontFamily: "DMSans_500Medium",
+    fontSize: fontScale(15),
+  },
+  clearBtn: {
+    width: moderateScale(22),
+    height: moderateScale(22),
+    borderRadius: moderateScale(11),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  suggestions: {
+    marginTop: spacing.s4,
+    gap: moderateScale(8),
+  },
+  suggestRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(12),
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(11),
+    borderRadius: theme.radius.md,
     borderWidth: StyleSheet.hairlineWidth,
-    overflow: "hidden",
   },
-  chipActive: {
-    borderColor: "transparent",
-  },
-  chipTile: {
-    width: moderateScale(26),
-    height: moderateScale(26),
-    borderRadius: moderateScale(13),
+  suggestTile: {
+    width: moderateScale(32),
+    height: moderateScale(32),
+    borderRadius: moderateScale(11),
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -490,28 +530,15 @@ const useStyles = makeStyles((theme) => ({
   customRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: moderateScale(8),
-    marginTop: moderateScale(4),
-    paddingLeft: scale(16),
-    paddingRight: scale(6),
-    paddingVertical: verticalScale(5),
-    borderRadius: 9999,
-  },
-  customInput: {
-    flex: 1,
-    paddingVertical: verticalScale(6),
-    fontFamily: "DMSans_400Regular",
-    fontSize: fontScale(14),
-  },
-  customAddBtn: {
-    width: moderateScale(34),
-    height: moderateScale(34),
-    borderRadius: moderateScale(17),
-    alignItems: "center",
-    justifyContent: "center",
+    gap: moderateScale(12),
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(11),
+    borderRadius: theme.radius.md,
+    borderWidth: 1.5,
+    borderStyle: "dashed",
   },
   addCard: {
-    marginTop: moderateScale(4),
+    marginTop: spacing.s5,
     padding: moderateScale(14),
     borderRadius: theme.radius.xl,
     overflow: "hidden",
@@ -537,6 +564,19 @@ const useStyles = makeStyles((theme) => ({
     paddingVertical: verticalScale(4),
     borderRadius: 9999,
     borderWidth: 1.5,
+  },
+  addCardInput: {
+    flex: 1,
+    paddingVertical: verticalScale(6),
+    fontFamily: "DMSans_500Medium",
+    fontSize: fontScale(14),
+  },
+  addCardBtn: {
+    width: moderateScale(34),
+    height: moderateScale(34),
+    borderRadius: moderateScale(17),
+    alignItems: "center",
+    justifyContent: "center",
   },
   addMoreHint: {
     marginTop: spacing.s4,

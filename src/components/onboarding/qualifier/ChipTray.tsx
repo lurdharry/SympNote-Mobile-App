@@ -199,9 +199,7 @@ export const ChipTray: React.FC<ChipTrayProps> = ({
               accessibilityRole="button"
               accessibilityLabel="Skip"
             >
-              <Text style={[styles.skipBtnLabel, { color: colors.textPrimary }]}>
-                Skip
-              </Text>
+              <Text style={[styles.skipBtnLabel, { color: colors.textPrimary }]}>Skip</Text>
             </Pressable>
           )}
           <Pressable
@@ -296,11 +294,7 @@ const Chip: React.FC<ChipProps> = ({ option, index, disabled, selected, onPress 
       >
         {Icon && (
           <View style={[styles.iconTile, { backgroundColor: tint + "22" }]}>
-            {selected ? (
-              <Check size={moderateScale(12)} color={tint} strokeWidth={2.6} />
-            ) : (
-              <Icon size={moderateScale(12)} color={tint} strokeWidth={2.4} />
-            )}
+            <Icon size={moderateScale(12)} color={tint} strokeWidth={2.4} />
           </View>
         )}
         <Text style={styles.label}>{option.t}</Text>
@@ -360,6 +354,7 @@ const useStyles = makeStyles((theme) => ({
     paddingVertical: verticalScale(4),
     borderRadius: theme.radius.full,
     borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: "white",
   },
   customInput: {
     flex: 1,

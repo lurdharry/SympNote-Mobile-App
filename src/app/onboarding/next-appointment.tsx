@@ -5,7 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { addDays, format, setHours, setMinutes, setSeconds } from "date-fns";
-import { Calendar, Clock, Lock } from "lucide-react-native";
+import { Calendar, ChevronUp, Clock, Lock } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
@@ -62,11 +62,8 @@ const ScreenNextAppointment: React.FC = () => {
     return team[0] ?? {};
   });
   const leadName = lead.name?.trim() || "your clinician";
-  // The hero date card's gradient shifts to the specialty of the lead
-  // clinician — subtle continuity from the previous screen. Defaults
-  // to the teal accent pair when no specialty is known.
   const specialty = findSpecialty(lead.role);
-  const heroGrad = specialty.grad;
+  const heroTint = specialty.grad[1];
 
   const [when, setWhen] = useState<Date>(defaultNextAppointment);
   const [pickerMode, setPickerMode] = useState<"date" | "time" | null>(null);
@@ -78,10 +75,9 @@ const ScreenNextAppointment: React.FC = () => {
     const target = addDays(new Date(), days);
     target.setHours(when.getHours(), when.getMinutes(), 0, 0);
     setWhen(target);
-    setPickerMode(null);
   };
 
-  const openPicker = (mode: "date" | "time") => {
+  const togglePicker = (mode: "date" | "time") => {
     hapticLight();
     setPickerMode((prev) => (prev === mode ? null : mode));
   };
@@ -122,13 +118,28 @@ const ScreenNextAppointment: React.FC = () => {
     return hit?.days ?? null;
   }, [when]);
 
+  const renderCollapsedChip = (mode: "date" | "time") => (
+    <Pressable
+      onPress={() => togglePicker(mode)}
+      style={[styles.collapsedChip, { backgroundColor: colors.bgSurface, borderColor: colors.border }]}
+    >
+      {mode === "date" ? (
+        <Calendar size={moderateScale(12)} color={colors.textTertiary} strokeWidth={2} />
+      ) : (
+        <Clock size={moderateScale(12)} color={colors.textTertiary} strokeWidth={2} />
+      )}
+      <Text style={[styles.collapsedChipText, { color: colors.textSecondary }]} numberOfLines={1}>
+        {mode === "date" ? format(when, "EEE, MMM d") : format(when, "h:mm a")}
+      </Text>
+    </Pressable>
+  );
+
   return (
     <SceneTransition mode="scale-fade">
       <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
-        {/* Ambient aurora — tinted by the clinician's specialty. */}
         <View pointerEvents="none" style={styles.aurora}>
           <LinearGradient
-            colors={[heroGrad[1] + "22", heroGrad[1] + "00"]}
+            colors={[heroTint + "22", heroTint + "00"]}
             start={{ x: 0.5, y: 0 }}
             end={{ x: 0.5, y: 1 }}
             style={StyleSheet.absoluteFill}
@@ -160,36 +171,24 @@ const ScreenNextAppointment: React.FC = () => {
           >
             <Text style={[styles.headline, { color: colors.textPrimary }]}>
               When do you see{"\n"}
-              <Text style={{ fontStyle: "italic", color: heroGrad[1] }}>{leadName}</Text>?
+              <Text style={{ fontStyle: "italic", color: heroTint }}>{leadName}</Text>?
             </Text>
             <Text style={[styles.sub, { color: colors.textSecondary }]}>
               Set a date and we'll have a visit brief ready. Skip if nothing's on the calendar yet.
             </Text>
 
-            {/* Hero date card — gradient-filled, edge-to-edge. The
-                selected date is the answer, so it owns the screen. */}
-            <View style={[styles.heroCard, shadows.elevated]}>
+            {/* Compact single-line hero — the chosen date as a live value */}
+            <View style={[styles.hero, shadows.card]}>
               <LinearGradient
-                colors={heroGrad}
+                colors={specialty.grad}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={StyleSheet.absoluteFill}
               />
-              <View pointerEvents="none" style={styles.heroBlob} />
-              <Text style={styles.heroMonth}>
-                {format(when, "MMM").toUpperCase()}
+              <Text style={styles.heroText}>
+                {format(when, "MMM d").toUpperCase()} · {format(when, "h:mm a")}
               </Text>
-              <Text style={styles.heroDay}>{format(when, "d")}</Text>
-              <Text style={styles.heroWeekday}>{format(when, "EEEE")}</Text>
-              <View style={styles.heroTimeRow}>
-                <Clock size={moderateScale(12)} color="rgba(255,255,255,0.85)" strokeWidth={2.2} />
-                <Text style={styles.heroTime}>{format(when, "h:mm a")}</Text>
-              </View>
-              {lead.name && (
-                <View style={styles.heroBadge}>
-                  <Text style={styles.heroBadgeText}>with {lead.name}</Text>
-                </View>
-              )}
+              {lead.name && <Text style={styles.heroSub}>with {lead.name}</Text>}
             </View>
 
             {/* Preset chips */}
@@ -203,8 +202,8 @@ const ScreenNextAppointment: React.FC = () => {
                     style={[
                       styles.presetChip,
                       {
-                        backgroundColor: active ? heroGrad[1] + "14" : colors.bgSurface,
-                        borderColor: active ? heroGrad[1] : colors.border,
+                        backgroundColor: active ? heroTint + "14" : colors.bgSurface,
+                        borderColor: active ? heroTint : colors.border,
                       },
                     ]}
                   >
@@ -212,7 +211,7 @@ const ScreenNextAppointment: React.FC = () => {
                       style={[
                         typography.label,
                         {
-                          color: active ? heroGrad[1] : colors.textPrimary,
+                          color: active ? heroTint : colors.textPrimary,
                           fontFamily: "DMSans_600SemiBold",
                           fontSize: fontScale(12),
                         },
@@ -225,88 +224,113 @@ const ScreenNextAppointment: React.FC = () => {
               })}
             </View>
 
-            <View style={styles.tilesRow}>
-              <Pressable
-                onPress={() => openPicker("date")}
-                style={[
-                  styles.tile,
-                  {
-                    borderColor: pickerMode === "date" ? heroGrad[1] : colors.border,
-                    backgroundColor: colors.bgSurface,
-                  },
-                  shadows.card,
-                ]}
-              >
-                <View style={[styles.tileIcon, { backgroundColor: heroGrad[1] + "1A" }]}>
-                  <Calendar size={moderateScale(14)} color={heroGrad[1]} strokeWidth={2.2} />
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={[typography.caption, { color: colors.textTertiary }]}>Date</Text>
-                  <Text
-                    style={[styles.tileValue, { color: colors.textPrimary }]}
-                    numberOfLines={1}
-                  >
-                    {format(when, "EEE, MMM d")}
-                  </Text>
-                </View>
-              </Pressable>
-
-              <Pressable
-                onPress={() => openPicker("time")}
-                style={[
-                  styles.tile,
-                  {
-                    borderColor: pickerMode === "time" ? heroGrad[1] : colors.border,
-                    backgroundColor: colors.bgSurface,
-                  },
-                  shadows.card,
-                ]}
-              >
-                <View style={[styles.tileIcon, { backgroundColor: heroGrad[1] + "1A" }]}>
-                  <Clock size={moderateScale(14)} color={heroGrad[1]} strokeWidth={2.2} />
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={[typography.caption, { color: colors.textTertiary }]}>Time</Text>
-                  <Text
-                    style={[styles.tileValue, { color: colors.textPrimary }]}
-                    numberOfLines={1}
-                  >
-                    {format(when, "h:mm a")}
-                  </Text>
-                </View>
-              </Pressable>
-            </View>
-
-            {pickerMode && Platform.OS === "android" && (
-              <DateTimePicker
-                value={when}
-                mode={pickerMode}
-                display="default"
-                minimumDate={pickerMode === "date" ? new Date() : undefined}
-                onChange={onPickerChange}
-              />
+            {/* Stepped tiles — default: two side-by-side. When one is
+                tapped, it expands full-width and shows its picker
+                inline, bounded by a clear container + Done button.
+                The other tile collapses to a small chip beside it. */}
+            {pickerMode === null && (
+              <View style={styles.tilesRow}>
+                <TilePressable
+                  mode="date"
+                  label="Date"
+                  value={format(when, "EEE, MMM d")}
+                  Icon={Calendar}
+                  tint={heroTint}
+                  onPress={() => togglePicker("date")}
+                />
+                <TilePressable
+                  mode="time"
+                  label="Time"
+                  value={format(when, "h:mm a")}
+                  Icon={Clock}
+                  tint={heroTint}
+                  onPress={() => togglePicker("time")}
+                />
+              </View>
             )}
 
-            {pickerMode && Platform.OS === "ios" && (
-              <View style={[styles.inlinePicker, { borderTopColor: colors.border }]}>
-                <DateTimePicker
-                  value={when}
-                  mode={pickerMode}
-                  display={iosDateDisplay}
-                  minimumDate={pickerMode === "date" ? new Date() : undefined}
-                  onChange={onPickerChange}
-                  accentColor={heroGrad[1]}
-                />
-                <Pressable onPress={() => setPickerMode(null)} style={styles.doneRow}>
-                  <Text
-                    style={[
-                      typography.label,
-                      { color: heroGrad[1], fontFamily: "DMSans_700Bold" },
-                    ]}
+            {pickerMode !== null && (
+              <View style={styles.steppedArea}>
+                {/* Expanded tile with inline picker + always-visible Done */}
+                <View
+                  style={[
+                    styles.expanded,
+                    { backgroundColor: colors.bgSurface, borderColor: heroTint },
+                    shadows.card,
+                  ]}
+                >
+                  <View style={styles.expandedHeader}>
+                    <View style={[styles.tileIcon, { backgroundColor: heroTint + "1A" }]}>
+                      {pickerMode === "date" ? (
+                        <Calendar size={moderateScale(14)} color={heroTint} strokeWidth={2.2} />
+                      ) : (
+                        <Clock size={moderateScale(14)} color={heroTint} strokeWidth={2.2} />
+                      )}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[typography.caption, { color: colors.textTertiary }]}>
+                        {pickerMode === "date" ? "Pick a date" : "Pick a time"}
+                      </Text>
+                      <Text
+                        style={[styles.expandedValue, { color: colors.textPrimary }]}
+                        numberOfLines={1}
+                      >
+                        {pickerMode === "date"
+                          ? format(when, "EEE, MMM d")
+                          : format(when, "h:mm a")}
+                      </Text>
+                    </View>
+                    <Pressable
+                      onPress={() => setPickerMode(null)}
+                      hitSlop={10}
+                      style={[styles.collapseBtn, { backgroundColor: colors.bgMuted }]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Collapse"
+                    >
+                      <ChevronUp
+                        size={moderateScale(14)}
+                        color={colors.textSecondary}
+                        strokeWidth={2.2}
+                      />
+                    </Pressable>
+                  </View>
+
+                  <View style={[styles.expandedDivider, { backgroundColor: colors.border }]} />
+
+                  <View style={styles.pickerWrap}>
+                    {Platform.OS === "android" && (
+                      <DateTimePicker
+                        value={when}
+                        mode={pickerMode}
+                        display="default"
+                        minimumDate={pickerMode === "date" ? new Date() : undefined}
+                        onChange={onPickerChange}
+                      />
+                    )}
+                    {Platform.OS === "ios" && (
+                      <DateTimePicker
+                        value={when}
+                        mode={pickerMode}
+                        display={iosDateDisplay}
+                        minimumDate={pickerMode === "date" ? new Date() : undefined}
+                        onChange={onPickerChange}
+                        accentColor={heroTint}
+                      />
+                    )}
+                  </View>
+
+                  <Pressable
+                    onPress={() => setPickerMode(null)}
+                    style={[styles.doneBtn, { backgroundColor: heroTint }]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Done"
                   >
-                    Done
-                  </Text>
-                </Pressable>
+                    <Text style={styles.doneBtnText}>Done</Text>
+                  </Pressable>
+                </View>
+
+                {/* Small swap chip for the other picker */}
+                {renderCollapsedChip(pickerMode === "date" ? "time" : "date")}
               </View>
             )}
 
@@ -327,6 +351,42 @@ const ScreenNextAppointment: React.FC = () => {
   );
 };
 
+// ─── Tile pressable ────────────────────────────────────────────────────
+
+interface TilePressableProps {
+  mode: "date" | "time";
+  label: string;
+  value: string;
+  Icon: typeof Calendar;
+  tint: string;
+  onPress: () => void;
+}
+
+const TilePressable: React.FC<TilePressableProps> = ({ label, value, Icon, tint, onPress }) => {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.tile,
+        { backgroundColor: colors.bgSurface, borderColor: colors.border },
+        shadows.card,
+      ]}
+    >
+      <View style={[styles.tileIcon, { backgroundColor: tint + "1A" }]}>
+        <Icon size={moderateScale(14)} color={tint} strokeWidth={2.2} />
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={[typography.caption, { color: colors.textTertiary }]}>{label}</Text>
+        <Text style={[styles.tileValue, { color: colors.textPrimary }]} numberOfLines={1}>
+          {value}
+        </Text>
+      </View>
+    </Pressable>
+  );
+};
+
 export default ScreenNextAppointment;
 
 const useStyles = makeStyles((theme) => ({
@@ -337,7 +397,7 @@ const useStyles = makeStyles((theme) => ({
     top: 0,
     left: 0,
     right: 0,
-    height: verticalScale(420),
+    height: verticalScale(300),
     overflow: "hidden",
   },
   topBar: {
@@ -360,78 +420,33 @@ const useStyles = makeStyles((theme) => ({
     ...theme.typography.h1,
     fontFamily: "Fraunces_500Medium",
     letterSpacing: -0.8,
-    fontSize: fontScale(34),
-    lineHeight: fontScale(40),
+    fontSize: fontScale(30),
+    lineHeight: fontScale(36),
   },
   sub: {
     ...theme.typography.body,
-    marginTop: moderateScale(10),
+    marginTop: moderateScale(8),
     lineHeight: fontScale(22),
     maxWidth: moderateScale(320),
   },
-  heroCard: {
-    marginTop: spacing.s6,
-    paddingHorizontal: spacing.s6,
-    paddingVertical: spacing.s6,
-    borderRadius: moderateScale(28),
+  hero: {
+    marginTop: spacing.s5,
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(14),
+    borderRadius: theme.radius.lg,
     overflow: "hidden",
-    alignItems: "flex-start",
   },
-  heroBlob: {
-    position: "absolute",
-    right: -scale(40),
-    top: -verticalScale(40),
-    width: moderateScale(180),
-    height: moderateScale(180),
-    borderRadius: moderateScale(90),
-    backgroundColor: "rgba(255,255,255,0.12)",
-  },
-  heroMonth: {
-    fontFamily: "DMSans_700Bold",
-    fontSize: fontScale(12),
-    letterSpacing: 2.5,
-    color: "rgba(255,255,255,0.85)",
-  },
-  heroDay: {
-    fontFamily: "Fraunces_300Light",
-    fontSize: fontScale(104),
-    lineHeight: fontScale(108),
-    letterSpacing: -4,
-    color: "#FFFFFF",
-    marginTop: moderateScale(-6),
-  },
-  heroWeekday: {
-    fontFamily: "DMSans_500Medium",
-    fontSize: fontScale(16),
-    color: "rgba(255,255,255,0.9)",
-    marginTop: moderateScale(-4),
-  },
-  heroTimeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(6),
-    marginTop: moderateScale(12),
-  },
-  heroTime: {
+  heroText: {
     fontFamily: "Fraunces_500Medium",
-    fontSize: fontScale(18),
+    fontSize: fontScale(22),
     color: "#FFFFFF",
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
-  heroBadge: {
-    position: "absolute",
-    top: spacing.s5,
-    right: spacing.s5,
-    paddingHorizontal: scale(10),
-    paddingVertical: verticalScale(5),
-    borderRadius: 9999,
-    backgroundColor: "rgba(255,255,255,0.22)",
-  },
-  heroBadgeText: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: fontScale(11),
-    color: "#FFFFFF",
-    letterSpacing: 0.2,
+  heroSub: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: fontScale(12),
+    color: "rgba(255,255,255,0.85)",
+    marginTop: 2,
   },
   presetsRow: {
     flexDirection: "row",
@@ -458,7 +473,7 @@ const useStyles = makeStyles((theme) => ({
     paddingHorizontal: scale(12),
     paddingVertical: verticalScale(12),
     borderRadius: theme.radius.lg,
-    borderWidth: 1.5,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   tileIcon: {
     width: moderateScale(30),
@@ -472,14 +487,69 @@ const useStyles = makeStyles((theme) => ({
     fontFamily: "DMSans_600SemiBold",
     marginTop: 1,
   },
-  inlinePicker: {
-    marginTop: spacing.s3,
-    paddingTop: spacing.s2,
-    borderTopWidth: StyleSheet.hairlineWidth,
+  steppedArea: {
+    marginTop: spacing.s4,
+    gap: moderateScale(10),
   },
-  doneRow: {
-    alignItems: "flex-end",
+  expanded: {
+    borderRadius: theme.radius.xl,
+    borderWidth: 1.5,
+    paddingHorizontal: moderateScale(14),
+    paddingTop: moderateScale(14),
+    paddingBottom: moderateScale(10),
+  },
+  expandedHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(10),
+    marginBottom: moderateScale(10),
+  },
+  expandedValue: {
+    ...theme.typography.body,
+    fontFamily: "DMSans_600SemiBold",
+    marginTop: 1,
+  },
+  expandedDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginBottom: moderateScale(6),
+  },
+  pickerWrap: {
+    alignItems: "center",
+    marginBottom: moderateScale(6),
+  },
+  collapseBtn: {
+    width: moderateScale(28),
+    height: moderateScale(28),
+    borderRadius: moderateScale(14),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  doneBtn: {
+    alignSelf: "stretch",
+    paddingVertical: verticalScale(12),
+    borderRadius: theme.radius.full,
+    alignItems: "center",
+    marginTop: moderateScale(4),
+  },
+  doneBtnText: {
+    color: "#FFFFFF",
+    fontFamily: "DMSans_700Bold",
+    fontSize: fontScale(14),
+    letterSpacing: 0.2,
+  },
+  collapsedChip: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(6),
+    paddingHorizontal: scale(12),
     paddingVertical: verticalScale(8),
+    borderRadius: theme.radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  collapsedChipText: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: fontScale(12),
   },
   privacyRow: {
     flexDirection: "row",
