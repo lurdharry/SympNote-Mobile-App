@@ -297,7 +297,7 @@ const HoldButton: React.FC<HoldButtonProps> = ({
         style={styles.holdButton}
       >
         <LinearGradient
-          colors={isRecording ? ["#F6C06A", "#E07A5F"] : ["#4DB8B0", "#2C6E6B"]}
+          colors={["#4DB8B0", "#2C6E6B"]}
           start={{ x: 0.3, y: 0.3 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}

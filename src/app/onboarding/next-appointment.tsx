@@ -122,7 +122,7 @@ const ScreenNextAppointment: React.FC = () => {
   const onSkip = () => {
     hapticLight();
     setAnswer("nextAppointment", "none");
-    router.push("/onboarding/first-recording");
+    router.push("/onboarding/summary");
   };
 
   const onSave = () => {
@@ -141,7 +141,7 @@ const ScreenNextAppointment: React.FC = () => {
       briefGeneratedAt: null,
       briefSourceRecordingIds: [],
     });
-    router.push("/onboarding/first-recording");
+    router.push("/onboarding/summary");
   };
 
   const activePresetDays = useMemo(() => {

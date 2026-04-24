@@ -157,7 +157,7 @@ const ScreenCareTeam: React.FC = () => {
 
     if (careTeam.length === 0) {
       setAnswer("nextAppointment", "none");
-      router.push("/onboarding/first-recording");
+      router.push("/onboarding/summary");
       return;
     }
     router.push("/onboarding/next-appointment");
