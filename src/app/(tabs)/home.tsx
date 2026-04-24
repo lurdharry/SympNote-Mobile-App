@@ -35,7 +35,14 @@ import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { useProfileStore } from '@/stores/useProfileStore';
 import { useRecordingsStore } from '@/stores/useRecordingsStore';
 import { GeminiQuotaError } from '@/services/ai';
+import type { Clinician } from '@/stores/types';
 import { uuid } from '@/utils/uuid';
+
+// Module-level frozen fallback so the careTeam selector returns a
+// stable reference when personalization is null. Without this, the
+// `?? []` inline returns a fresh array each call and Zustand's
+// snapshot comparison loops forever.
+const EMPTY_CARETEAM: readonly Clinician[] = Object.freeze([]);
 
 const TabHome: React.FC = () => {
   const router = useRouter();
@@ -99,7 +106,9 @@ const TabHome: React.FC = () => {
   const [isExtracting, setIsExtracting] = useState(false);
   const [selectedClinicians, setSelectedClinicians] = useState<string[]>([]);
 
-  const careTeam = useProfileStore((s) => s.personalization?.careTeam ?? []);
+  const careTeam = useProfileStore(
+    (s) => s.personalization?.careTeam ?? EMPTY_CARETEAM,
+  ) as Clinician[];
 
   const toggleClinician = useCallback((name: string) => {
     setSelectedClinicians((prev) => {
