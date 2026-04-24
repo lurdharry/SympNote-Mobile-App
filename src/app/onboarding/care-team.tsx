@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { addDays, setHours, setMinutes, setSeconds } from "date-fns";
-import { Lock } from "lucide-react-native";
+import { Lock, Plus } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
@@ -37,7 +37,8 @@ const QUICK_ADD_IDS = [
   "psychiatry",
   "dermatology",
   "ob-gyn",
-  "other",
+  "orthopedics",
+  "ophthalmology",
 ];
 
 const QUICK_ADD_SHORTCUTS: Specialty[] = QUICK_ADD_IDS.map(
@@ -175,18 +176,15 @@ const ScreenCareTeam: React.FC = () => {
               </View>
             )}
 
-            {/* Quick-add specialty strip — always visible. Label flips
-                contextually so the empty state feels inviting and the
-                populated state reads as "add another". */}
+            {/* Quick-add specialty grid — all specialties visible at
+                once in a flex-wrap. Label flips contextually. A dashed
+                "Other" chip at the end opens the add sheet without a
+                preset so users can type a specialty that isn't here. */}
             <View style={styles.quickAddBlock}>
               <Text style={[styles.quickAddLabel, { color: colors.textTertiary }]}>
                 {hasMembers ? "Add another" : "Tap a specialty to add"}
               </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.chipsRow}
-              >
+              <View style={styles.chipsWrap}>
                 {QUICK_ADD_SHORTCUTS.map((s) => {
                   const Icon = s.Icon;
                   return (
@@ -223,7 +221,42 @@ const ScreenCareTeam: React.FC = () => {
                     </Pressable>
                   );
                 })}
-              </ScrollView>
+                <Pressable
+                  onPress={() => openSheet()}
+                  style={({ pressed }) => [
+                    styles.chip,
+                    styles.otherChip,
+                    {
+                      backgroundColor: "transparent",
+                      borderColor: pressed ? colors.accent : colors.border,
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add other specialty"
+                >
+                  <View
+                    style={[styles.chipTile, { backgroundColor: colors.bgMuted }]}
+                  >
+                    <Plus
+                      size={moderateScale(12)}
+                      color={colors.textSecondary}
+                      strokeWidth={2.4}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      typography.label,
+                      {
+                        color: colors.textSecondary,
+                        fontFamily: "DMSans_600SemiBold",
+                        fontSize: fontScale(12),
+                      },
+                    ]}
+                  >
+                    Other
+                  </Text>
+                </Pressable>
+              </View>
             </View>
 
             {/* Appointment module — only meaningful once there's a clinician. */}
@@ -315,10 +348,14 @@ const useStyles = makeStyles((theme) => ({
     fontSize: fontScale(10),
     letterSpacing: 1.2,
   },
-  chipsRow: {
+  chipsWrap: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: moderateScale(8),
-    paddingRight: scale(4),
+  },
+  otherChip: {
+    borderStyle: "dashed",
+    borderWidth: 1.2,
   },
   chip: {
     flexDirection: "row",
