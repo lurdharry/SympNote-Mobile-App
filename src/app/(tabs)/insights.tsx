@@ -15,6 +15,8 @@ import { SectionLabel } from '@/components/ui/SectionLabel';
 import { useInsightsData } from '@/hooks/useInsightsData';
 import { BodySystemBreakdownCard } from '@/components/insights/BodySystemBreakdownCard';
 import { HeadlineCard } from '@/components/insights/HeadlineCard';
+import { PeriodCompareCard } from '@/components/insights/PeriodCompareCard';
+import { PostVisitOutcomeCard } from '@/components/insights/PostVisitOutcomeCard';
 import { RangeSelector } from '@/components/insights/RangeSelector';
 import { RedFlagRollupCard } from '@/components/insights/RedFlagRollupCard';
 import { SeverityTrendCard } from '@/components/insights/SeverityTrendCard';
@@ -39,6 +41,8 @@ const TabInsights: React.FC = () => {
     bodySystems,
     redFlag,
     correlation,
+    comparison,
+    postVisit,
     streak,
     heatmap,
     peakLabel,
@@ -83,8 +87,19 @@ const TabInsights: React.FC = () => {
               <>
                 <HeadlineCard range={range} summary={summary} streak={streak} />
 
+                {comparison && (
+                  <PeriodCompareCard comparison={comparison} />
+                )}
+
                 {redFlag.concerningCount > 0 && (
                   <RedFlagRollupCard rollup={redFlag} />
+                )}
+
+                {postVisit && (
+                  <View>
+                    <SectionLabel label="Post-visit" />
+                    <PostVisitOutcomeCard outcome={postVisit} />
+                  </View>
                 )}
 
                 {severity && severity.sampleCount > 0 && (

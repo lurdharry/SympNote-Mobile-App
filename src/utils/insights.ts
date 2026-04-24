@@ -432,6 +432,149 @@ export function redFlagRollup(
   return { concerningCount, flags };
 }
 
+export type PeriodComparison = {
+  /** Entries in the current range. */
+  current: number;
+  /** Entries in the immediately prior range of the same length. */
+  prior: number;
+  /** Direction relative to prior. */
+  direction: 'up' | 'down' | 'flat';
+  /** Absolute delta, current minus prior. */
+  delta: number;
+  /** Human-readable label for the range, e.g. "this week" / "last 30 days". */
+  currentLabel: string;
+  priorLabel: string;
+};
+
+/**
+ * Compare entry count in the current range vs the immediately-prior
+ * window of the same length. Returns null for "All" (no meaningful
+ * prior to compare against). Flat when the delta is within ±1 to
+ * avoid noise-driven direction flips.
+ */
+export function periodComparison(
+  recordings: Recording[],
+  range: InsightsRange,
+): PeriodComparison | null {
+  const days = rangeToDays(range);
+  if (days == null) return null;
+
+  const now = Date.now();
+  const priorCutoff = subDays(new Date(), days * 2).getTime();
+  const currentCutoff = subDays(new Date(), days).getTime();
+
+  let current = 0;
+  let prior = 0;
+  recordings.forEach((r) => {
+    const t = parseISO(r.createdAt).getTime();
+    if (t > now) return;
+    if (t >= currentCutoff) current += 1;
+    else if (t >= priorCutoff) prior += 1;
+  });
+
+  const delta = current - prior;
+  let direction: PeriodComparison['direction'];
+  if (Math.abs(delta) <= 1) direction = 'flat';
+  else direction = delta > 0 ? 'up' : 'down';
+
+  const currentLabel =
+    range === '7d'
+      ? 'this week'
+      : range === '30d'
+        ? 'last 30 days'
+        : 'last 90 days';
+  const priorLabel =
+    range === '7d'
+      ? 'last week'
+      : range === '30d'
+        ? 'the 30 before'
+        : 'the 90 before';
+
+  return { current, prior, direction, delta, currentLabel, priorLabel };
+}
+
+export type PostVisitOutcome = {
+  /** Display name of the doctor (or "your last visit" if missing). */
+  doctor: string;
+  /** ISO timestamp the visit was marked attended. */
+  attendedAt: string;
+  /** Mean severity in the window before the visit. */
+  beforeMean: number;
+  /** Mean severity in the window after the visit. */
+  afterMean: number;
+  /** Number of symptom-bearing entries before. */
+  beforeCount: number;
+  /** Number of symptom-bearing entries after. */
+  afterCount: number;
+  /** Direction of change. */
+  direction: 'better' | 'worse' | 'flat';
+};
+
+const POST_VISIT_WINDOW_DAYS = 14;
+const POST_VISIT_MIN_PER_SIDE = 2;
+const POST_VISIT_FLAT_THRESHOLD = 0.5;
+
+/**
+ * Compare mean severity in a 14-day window before a recently attended
+ * visit against the 14-day window after it. Returns null when there
+ * aren't enough symptom-bearing entries on each side (at least 2) or
+ * when the patient has no attended visits. Scopes to the most recent
+ * attended visit whose post-window has started to accumulate data.
+ */
+export function postVisitOutcome(
+  recordings: Recording[],
+  appointments: { status: string; attendedAt: string | null; doctorName: string }[],
+): PostVisitOutcome | null {
+  const attended = appointments
+    .filter((a) => a.status === 'attended' && a.attendedAt)
+    .map((a) => ({
+      doctor: a.doctorName || 'your last visit',
+      attendedAt: a.attendedAt as string,
+      ms: parseISO(a.attendedAt as string).getTime(),
+    }))
+    .sort((a, b) => b.ms - a.ms);
+
+  if (attended.length === 0) return null;
+
+  const windowMs = POST_VISIT_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+
+  for (const visit of attended) {
+    const beforeStart = visit.ms - windowMs;
+    const afterEnd = visit.ms + windowMs;
+
+    const before: number[] = [];
+    const after: number[] = [];
+    recordings.forEach((r) => {
+      if (r.structured.severity <= 0) return;
+      const t = parseISO(r.createdAt).getTime();
+      if (t >= beforeStart && t < visit.ms) before.push(r.structured.severity);
+      else if (t >= visit.ms && t <= afterEnd) after.push(r.structured.severity);
+    });
+
+    if (before.length < POST_VISIT_MIN_PER_SIDE) continue;
+    if (after.length < POST_VISIT_MIN_PER_SIDE) continue;
+
+    const beforeMean = sum(before) / before.length;
+    const afterMean = sum(after) / after.length;
+    const diff = afterMean - beforeMean;
+    let direction: PostVisitOutcome['direction'];
+    if (Math.abs(diff) < POST_VISIT_FLAT_THRESHOLD) direction = 'flat';
+    else direction = diff < 0 ? 'better' : 'worse';
+
+    return {
+      doctor: visit.doctor,
+      attendedAt: visit.attendedAt,
+      beforeMean,
+      afterMean,
+      beforeCount: before.length,
+      afterCount: after.length,
+      direction,
+    };
+  }
+
+  return null;
+}
+
 export type TriggerCorrelation = {
   /** Symptom name (capitalized for display). */
   symptom: string;
