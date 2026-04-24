@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { useRecordingsStore } from '@/stores/useRecordingsStore';
 import {
   bodySystemBreakdown,
@@ -9,6 +10,10 @@ import {
   InsightsRange,
   InsightsSummary,
   peakHeatmapRow,
+  periodComparison,
+  PeriodComparison,
+  postVisitOutcome,
+  PostVisitOutcome,
   redFlagRollup,
   RedFlagRollup,
   severityTrend,
@@ -34,6 +39,8 @@ export interface InsightsData {
   bodySystems: BodySystemSlice[];
   redFlag: RedFlagRollup;
   correlation: TriggerCorrelation | null;
+  comparison: PeriodComparison | null;
+  postVisit: PostVisitOutcome | null;
   streak: number;
   heatmap: number[][] | null;
   peakLabel: string | null;
@@ -59,11 +66,14 @@ export interface InsightsData {
 export const useInsightsData = (): InsightsData => {
   const [range, setRange] = useState<InsightsRange>('30d');
   const recordings = useRecordingsStore((s) => s.recordings);
+  const appointments = useAppointmentsStore((s) => s.appointments);
 
   const derived = useMemo(() => {
     const inRange = filterByRange(recordings, range);
     const hasEnoughData = inRange.length >= INSIGHTS_THRESHOLD;
     const streak = computeStreak(recordings);
+    const comparison = periodComparison(recordings, range);
+    const postVisit = postVisitOutcome(recordings, appointments);
     if (!hasEnoughData) {
       return {
         summary: null,
@@ -73,6 +83,8 @@ export const useInsightsData = (): InsightsData => {
         bodySystems: [] as BodySystemSlice[],
         redFlag: { concerningCount: 0, flags: [] } as RedFlagRollup,
         correlation: null as TriggerCorrelation | null,
+        comparison,
+        postVisit,
         streak,
         heatmap: null as number[][] | null,
         peakLabel: null as string | null,
@@ -89,13 +101,15 @@ export const useInsightsData = (): InsightsData => {
       bodySystems: bodySystemBreakdown(inRange),
       redFlag: redFlagRollup(inRange),
       correlation: topTriggerCorrelation(inRange),
+      comparison,
+      postVisit,
       streak,
       heatmap: grid,
       peakLabel: peakHeatmapRow(grid),
       inRangeCount: inRange.length,
       hasEnoughData: true,
     };
-  }, [recordings, range]);
+  }, [recordings, appointments, range]);
 
   return {
     range,
