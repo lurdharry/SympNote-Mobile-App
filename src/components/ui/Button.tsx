@@ -82,7 +82,7 @@ export const Button: React.FC<Props> = ({
       </View>
     </BreathingButton>
   );
-}
+};
 
 const useStyles = makeStyles((theme) => ({
   btn: {
