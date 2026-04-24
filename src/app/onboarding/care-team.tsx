@@ -76,21 +76,31 @@ const ScreenCareTeam: React.FC = () => {
   const auroraHeight = verticalScale(320);
   const [baseTint, setBaseTint] = useState<string>(activeTint);
   const [waveTint, setWaveTint] = useState<string>(activeTint);
-  const targetTintRef = useRef<string>(activeTint);
+  const mountedRef = useRef(false);
   const waveProgress = useSharedValue(0);
 
   useEffect(() => {
-    if (activeTint === targetTintRef.current) return;
-    targetTintRef.current = activeTint;
+    // Skip the very first effect run — the aurora already renders at
+    // the initial tint, no reason to play an entrance animation.
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
     setWaveTint(activeTint);
+    // Capture as a local so the completion worklet closes over the
+    // string value and doesn't have to reach into a ref that JS is
+    // still mutating.
+    const targetTint = activeTint;
     waveProgress.value = 0;
     waveProgress.value = withTiming(
       1,
       { duration: 720, easing: Easing.out(Easing.cubic) },
       (finished) => {
         "worklet";
-        if (finished && targetTintRef.current === activeTint) {
-          runOnJS(setBaseTint)(activeTint);
+        // `finished` is false when a newer withTiming call supersedes
+        // this one, so stale callbacks skip the baseline promotion.
+        if (finished) {
+          runOnJS(setBaseTint)(targetTint);
           waveProgress.value = 0;
         }
       },
