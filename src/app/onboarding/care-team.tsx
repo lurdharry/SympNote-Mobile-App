@@ -29,15 +29,11 @@ import {
 import { SceneTransition } from "@/components/navigation/SceneTransition";
 import { BackButton } from "@/components/ui/BackButton";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
-import { StaggeredList } from "@/components/animated/StaggeredList";
-import { ClinicianCard } from "@/components/onboarding/care-team/ClinicianCard";
-import type { Clinician } from "@/components/onboarding/care-team/ClinicianCard";
 import { SPECIALTIES, Specialty } from "@/constants/specialties";
 import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
 import { useProfileStore } from "@/stores/useProfileStore";
 import { buildPersonalizationProfile } from "@/utils/personalization";
 import { hapticLight } from "@/services/haptics";
-import { uuid } from "@/utils/uuid";
 
 const QUICK_ADD_IDS = [
   "primary-care",
@@ -60,10 +56,11 @@ const ScreenCareTeam: React.FC = () => {
   const styles = useStyles();
   const setAnswer = useProfileStore((s) => s.setOnboardingAnswer);
 
-  const [members, setMembers] = useState<Clinician[]>([]);
-  const [customDraft, setCustomDraft] = useState("");
+  // Onboarding care-team only takes one clinician; anything more is
+  // a Settings concern. Held as flat fields rather than an array.
   const [addingRole, setAddingRole] = useState<string | null>(null);
   const [nameDraft, setNameDraft] = useState("");
+  const [customDraft, setCustomDraft] = useState("");
 
   const activeSpec = QUICK_ADD_SHORTCUTS.find((s) => s.label === addingRole);
   const activeTint = activeSpec?.grad[1] ?? colors.accent;
@@ -118,16 +115,8 @@ const ScreenCareTeam: React.FC = () => {
   // just gradients fading to transparent, so the eye reads it as a
   // glow sweeping upward rather than a line.
   const bloomStyle = useAnimatedStyle(() => {
-    const y = interpolate(
-      waveProgress.value,
-      [0, 1],
-      [auroraHeight * 0.55, -auroraHeight * 0.35],
-    );
-    const o = interpolate(
-      waveProgress.value,
-      [0, 0.2, 0.75, 1],
-      [0, 1, 0.45, 0],
-    );
+    const y = interpolate(waveProgress.value, [0, 1], [auroraHeight * 0.55, -auroraHeight * 0.35]);
+    const o = interpolate(waveProgress.value, [0, 0.2, 0.75, 1], [0, 1, 0.45, 0]);
     const sy = interpolate(waveProgress.value, [0, 0.5, 1], [0.55, 1.1, 1.4]);
     return {
       transform: [{ translateY: y }, { scaleY: sy }],
@@ -157,46 +146,19 @@ const ScreenCareTeam: React.FC = () => {
     setNameDraft("");
   };
 
-  const commitClinician = (): boolean => {
-    if (!addingRole) return false;
-    const name = nameDraft.trim();
-    if (!name) return false;
-    hapticLight();
-    setMembers((m) => [...m, { id: uuid(), name, role: addingRole }]);
-    setAddingRole(null);
-    setNameDraft("");
-    return true;
-  };
-
-  const handleRemove = (id: string) => {
-    setMembers((m) => m.filter((x) => x.id !== id));
-  };
-
   const onContinue = () => {
-    // If the user typed a name but didn't tap the +, still commit it
-    // so we don't silently drop the clinician and skip the appointment
-    // step. No-op when nothing's pending.
-    let team = members;
-    if (addingRole && nameDraft.trim()) {
-      const committed: Clinician = {
-        id: uuid(),
-        name: nameDraft.trim(),
-        role: addingRole,
-      };
-      team = [...members, committed];
-      setMembers(team);
-      setAddingRole(null);
-      setNameDraft("");
-    }
-
-    const careTeamPlain = team.map(({ name, role }) => ({ name, role }));
-    setAnswer("careTeam", careTeamPlain);
+    const trimmedName = nameDraft.trim();
+    const careTeam =
+      addingRole && trimmedName
+        ? [{ name: trimmedName, role: addingRole }]
+        : [];
+    setAnswer("careTeam", careTeam);
 
     const answers = useProfileStore.getState().onboardingAnswers;
-    const profile = buildPersonalizationProfile(answers, answers.focus, careTeamPlain);
+    const profile = buildPersonalizationProfile(answers, answers.focus, careTeam);
     useProfileStore.getState().setPersonalization(profile);
 
-    if (careTeamPlain.length === 0) {
+    if (careTeam.length === 0) {
       setAnswer("nextAppointment", "none");
       router.push("/onboarding/first-recording");
       return;
@@ -204,10 +166,9 @@ const ScreenCareTeam: React.FC = () => {
     router.push("/onboarding/next-appointment");
   };
 
-  const hasMembers = members.length > 0;
   // Disable Continue when a specialty is picked but the clinician's
-  // name is still empty — otherwise the user would think they'd
-  // added someone and land on next-appointment with nothing set.
+  // name is still empty — otherwise the user would advance with half
+  // a selection.
   const pendingNameRequired = addingRole !== null && nameDraft.trim().length === 0;
 
   return (
@@ -240,7 +201,13 @@ const ScreenCareTeam: React.FC = () => {
               bar or line. */}
           <Animated.View style={[styles.bloom, bloomStyle]}>
             <LinearGradient
-              colors={["transparent", waveTint + "66", waveTint + "88", waveTint + "66", "transparent"]}
+              colors={[
+                "transparent",
+                waveTint + "66",
+                waveTint + "88",
+                waveTint + "66",
+                "transparent",
+              ]}
               locations={[0, 0.3, 0.5, 0.7, 1]}
               start={{ x: 0.5, y: 0 }}
               end={{ x: 0.5, y: 1 }}
@@ -270,228 +237,153 @@ const ScreenCareTeam: React.FC = () => {
               Tap a specialty to add. We'll organize your notes by clinician.
             </Text>
 
-            {hasMembers && (
-              <View style={styles.list}>
-                <StaggeredList stagger={80}>
-                  {members.map((m) => (
-                    <ClinicianCard key={m.id} clinician={m} onRemove={handleRemove} />
-                  ))}
-                </StaggeredList>
-              </View>
-            )}
-
-            {!hasMembers && (
-              <Animated.View
-                layout={LinearTransition.duration(220).easing(Easing.out(Easing.cubic))}
-                style={styles.addBlock}
-              >
-                <View style={styles.chipsWrap}>
-                  {QUICK_ADD_SHORTCUTS.map((s) => {
-                    const Icon = s.Icon;
-                    const active = addingRole === s.label;
-                    return (
-                      <Pressable
-                        key={s.id}
-                        onPress={() => pickSpecialty(s)}
-                        style={({ pressed }) => [
-                          styles.chip,
+            <Animated.View
+              layout={LinearTransition.duration(220).easing(Easing.out(Easing.cubic))}
+              style={styles.addBlock}
+            >
+              <View style={styles.chipsWrap}>
+                {QUICK_ADD_SHORTCUTS.map((s) => {
+                  const Icon = s.Icon;
+                  const active = addingRole === s.label;
+                  return (
+                    <Pressable
+                      key={s.id}
+                      onPress={() => pickSpecialty(s)}
+                      style={({ pressed }) => [
+                        styles.chip,
+                        {
+                          backgroundColor: active ? s.grad[1] + "14" : colors.bgSurface,
+                          borderColor: active || pressed ? s.grad[1] : colors.border,
+                          borderWidth: active ? 1.5 : StyleSheet.hairlineWidth,
+                        },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Add ${s.label}`}
+                      accessibilityState={{ selected: active }}
+                    >
+                      <View style={[styles.chipTile, { backgroundColor: s.grad[1] + "1F" }]}>
+                        <Icon size={moderateScale(12)} color={s.grad[1]} strokeWidth={2.2} />
+                      </View>
+                      <Text
+                        style={[
+                          typography.label,
                           {
-                            backgroundColor: active
-                              ? s.grad[1] + "14"
-                              : colors.bgSurface,
-                            borderColor:
-                              active || pressed ? s.grad[1] : colors.border,
-                            borderWidth: active ? 1.5 : StyleSheet.hairlineWidth,
+                            color: active ? s.grad[1] : colors.textPrimary,
+                            fontFamily: "DMSans_600SemiBold",
+                            fontSize: fontScale(12),
                           },
                         ]}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Add ${s.label}`}
-                        accessibilityState={{ selected: active }}
                       >
-                        <View
-                          style={[styles.chipTile, { backgroundColor: s.grad[1] + "1F" }]}
-                        >
-                          <Icon
-                            size={moderateScale(12)}
-                            color={s.grad[1]}
-                            strokeWidth={2.2}
-                          />
-                        </View>
-                        <Text
-                          style={[
-                            typography.label,
-                            {
-                              color: active ? s.grad[1] : colors.textPrimary,
-                              fontFamily: "DMSans_600SemiBold",
-                              fontSize: fontScale(12),
-                            },
-                          ]}
-                        >
-                          {s.label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
+                        {s.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
 
-                {/* Custom specialty row — always visible so the grid
+              {/* Custom specialty row — always visible so the grid
                     doesn't feel like a closed list. Typing here and
                     submitting treats the text as a custom role. */}
-                <View
+              <View
+                style={[
+                  styles.customRow,
+                  {
+                    backgroundColor: colors.bgMuted,
+                    borderColor: colors.accent + "55",
+                  },
+                ]}
+              >
+                <TextInput
+                  value={customDraft}
+                  onChangeText={setCustomDraft}
+                  placeholder="Or type a specialty…"
+                  placeholderTextColor={colors.textTertiary}
+                  onSubmitEditing={startCustom}
+                  returnKeyType="next"
+                  autoCapitalize="words"
+                  style={[styles.customInput, { color: colors.textPrimary }]}
+                  accessibilityLabel="Type a specialty"
+                />
+                <Pressable
+                  onPress={startCustom}
+                  disabled={customDraft.trim().length === 0}
+                  hitSlop={8}
                   style={[
-                    styles.customRow,
+                    styles.customAddBtn,
                     {
-                      backgroundColor: colors.bgMuted,
-                      borderColor: colors.accent + "55",
+                      backgroundColor:
+                        customDraft.trim().length === 0 ? colors.bgMuted : colors.accent,
+                      opacity: customDraft.trim().length === 0 ? 0.7 : 1,
                     },
                   ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Continue with this specialty"
                 >
-                  <TextInput
-                    value={customDraft}
-                    onChangeText={setCustomDraft}
-                    placeholder="Or type a specialty…"
-                    placeholderTextColor={colors.textTertiary}
-                    onSubmitEditing={startCustom}
-                    returnKeyType="next"
-                    autoCapitalize="words"
-                    style={[styles.customInput, { color: colors.textPrimary }]}
-                    accessibilityLabel="Type a specialty"
+                  <Plus
+                    size={moderateScale(16)}
+                    color={customDraft.trim().length === 0 ? colors.textTertiary : "#FFFFFF"}
+                    strokeWidth={2.6}
                   />
-                  <Pressable
-                    onPress={startCustom}
-                    disabled={customDraft.trim().length === 0}
-                    hitSlop={8}
-                    style={[
-                      styles.customAddBtn,
-                      {
-                        backgroundColor:
-                          customDraft.trim().length === 0
-                            ? colors.bgMuted
-                            : colors.accent,
-                        opacity: customDraft.trim().length === 0 ? 0.7 : 1,
-                      },
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Continue with this specialty"
-                  >
-                    <Plus
-                      size={moderateScale(16)}
-                      color={
-                        customDraft.trim().length === 0
-                          ? colors.textTertiary
-                          : "#FFFFFF"
-                      }
-                      strokeWidth={2.6}
-                    />
-                  </Pressable>
-                </View>
+                </Pressable>
+              </View>
 
-                {/* Name input — slides in below the chip grid when a
+              {/* Name input — slides in below the chip grid when a
                     specialty is selected, without hiding the grid so
                     the user can swap specialty without losing their
                     place. */}
-                {addingRole !== null && (
-                  <Animated.View
-                    entering={FadeIn.duration(220)}
-                    exiting={FadeOut.duration(160)}
-                    style={[styles.nameCard, shadows.card]}
-                  >
-                    {/* Same tint crossfade as the aurora — keyed so
+              {addingRole !== null && (
+                <Animated.View
+                  entering={FadeIn.duration(220)}
+                  exiting={FadeOut.duration(160)}
+                  style={[styles.nameCard, shadows.card]}
+                >
+                  {/* Same tint crossfade as the aurora — keyed so
                         swapping specialties re-tints the card. */}
-                    <Animated.View
-                      key={activeTint}
-                      entering={FadeIn.duration(340).easing(Easing.out(Easing.cubic))}
-                      exiting={FadeOut.duration(340).easing(Easing.out(Easing.cubic))}
+                  <Animated.View
+                    key={activeTint}
+                    entering={FadeIn.duration(340).easing(Easing.out(Easing.cubic))}
+                    exiting={FadeOut.duration(340).easing(Easing.out(Easing.cubic))}
+                    style={StyleSheet.absoluteFill}
+                  >
+                    <LinearGradient
+                      colors={[activeTint + "1A", activeTint + "00"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
                       style={StyleSheet.absoluteFill}
-                    >
-                      <LinearGradient
-                        colors={[activeTint + "1A", activeTint + "00"]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={StyleSheet.absoluteFill}
-                      />
-                    </Animated.View>
-                    <View style={styles.nameCardHeader}>
-                      <Text style={[styles.nameCardRole, { color: activeTint }]}>
-                        {addingRole.toUpperCase()}
-                      </Text>
-                      <Pressable
-                        onPress={cancelAdd}
-                        hitSlop={10}
-                        accessibilityRole="button"
-                        accessibilityLabel="Cancel"
-                      >
-                        <X
-                          size={moderateScale(14)}
-                          color={colors.textTertiary}
-                          strokeWidth={2.2}
-                        />
-                      </Pressable>
-                    </View>
-                    <View
-                      style={[
-                        styles.nameInputRow,
-                        { borderColor: activeTint + "66" },
-                      ]}
-                    >
-                      <TextInput
-                        value={nameDraft}
-                        onChangeText={setNameDraft}
-                        placeholder="Clinician's name"
-                        placeholderTextColor={colors.textTertiary}
-                        onSubmitEditing={() => {
-                          commitClinician();
-                        }}
-                        returnKeyType="done"
-                        autoCapitalize="words"
-                        autoFocus
-                        style={[styles.nameInput, { color: colors.textPrimary }]}
-                        accessibilityLabel="Clinician's name"
-                      />
-                      <Pressable
-                        onPress={commitClinician}
-                        disabled={nameDraft.trim().length === 0}
-                        hitSlop={8}
-                        style={[
-                          styles.nameAddBtn,
-                          {
-                            backgroundColor:
-                              nameDraft.trim().length === 0
-                                ? colors.bgMuted
-                                : activeTint,
-                            opacity: nameDraft.trim().length === 0 ? 0.7 : 1,
-                          },
-                        ]}
-                        accessibilityRole="button"
-                        accessibilityLabel="Add clinician"
-                      >
-                        <Plus
-                          size={moderateScale(16)}
-                          color={
-                            nameDraft.trim().length === 0
-                              ? colors.textTertiary
-                              : "#FFFFFF"
-                          }
-                          strokeWidth={2.6}
-                        />
-                      </Pressable>
-                    </View>
+                    />
                   </Animated.View>
-                )}
-              </Animated.View>
-            )}
-
-            {hasMembers && (
-              <Text
-                style={[
-                  typography.caption,
-                  styles.addMoreHint,
-                  { color: colors.textTertiary },
-                ]}
-              >
-                You can add more clinicians later in Settings.
-              </Text>
-            )}
+                  <View style={styles.nameCardHeader}>
+                    <Text style={[styles.nameCardRole, { color: activeTint }]}>
+                      {addingRole.toUpperCase()}
+                    </Text>
+                    <Pressable
+                      onPress={cancelAdd}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel="Cancel"
+                    >
+                      <X size={moderateScale(14)} color={colors.textTertiary} strokeWidth={2.2} />
+                    </Pressable>
+                  </View>
+                  <View style={[styles.nameInputRow, { borderColor: activeTint + "66" }]}>
+                    <TextInput
+                      value={nameDraft}
+                      onChangeText={setNameDraft}
+                      placeholder="Clinician's name"
+                      placeholderTextColor={colors.textTertiary}
+                      onSubmitEditing={() => {
+                        if (!pendingNameRequired) onContinue();
+                      }}
+                      returnKeyType="done"
+                      autoCapitalize="words"
+                      autoFocus
+                      style={[styles.nameInput, { color: colors.textPrimary }]}
+                      accessibilityLabel="Clinician's name"
+                    />
+                  </View>
+                </Animated.View>
+              )}
+            </Animated.View>
 
             <View
               style={[
@@ -519,11 +411,7 @@ const ScreenCareTeam: React.FC = () => {
           </ScrollView>
 
           <View style={styles.ctaSlot}>
-            <PrimaryButton
-              label={"Continue"}
-              onPress={onContinue}
-              disabled={pendingNameRequired}
-            />
+            <PrimaryButton label={"Continue"} onPress={onContinue} disabled={pendingNameRequired} />
           </View>
         </SafeAreaView>
       </View>
@@ -579,10 +467,6 @@ const useStyles = makeStyles((theme) => ({
     marginTop: moderateScale(8),
     lineHeight: fontScale(22),
     maxWidth: moderateScale(320),
-  },
-  list: {
-    marginTop: spacing.s6,
-    gap: moderateScale(10),
   },
   addBlock: {
     marginTop: spacing.s6,
@@ -665,17 +549,6 @@ const useStyles = makeStyles((theme) => ({
     paddingVertical: verticalScale(6),
     fontFamily: "DMSans_500Medium",
     fontSize: fontScale(14),
-  },
-  nameAddBtn: {
-    width: moderateScale(34),
-    height: moderateScale(34),
-    borderRadius: moderateScale(17),
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addMoreHint: {
-    marginTop: spacing.s4,
-    fontStyle: "italic",
   },
   privacyRow: {
     flexDirection: "row",
