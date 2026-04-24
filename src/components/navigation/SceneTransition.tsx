@@ -83,7 +83,19 @@ export const SceneTransition: React.FC<Props> = ({
       }
     };
     const id = setTimeout(run, enterDelay);
-    return () => clearTimeout(id);
+    // JS-side failsafe: if the worklet never runs (rare, but it has
+    // been observed on some tab-switch paths leaving the screen
+    // fully transparent), force final values after a generous delay.
+    const safety = setTimeout(() => {
+      opacity.value = 1;
+      scale.value = 1;
+      translateY.value = 0;
+      translateX.value = 0;
+    }, enterDelay + 1200);
+    return () => {
+      clearTimeout(id);
+      clearTimeout(safety);
+    };
   }, [reduced, mode, enterDelay, opacity, scale, translateY, translateX]);
 
   const style$ = useAnimatedStyle(() => ({

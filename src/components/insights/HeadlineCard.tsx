@@ -80,6 +80,9 @@ const useStyles = makeStyles((theme) => ({
     padding: moderateScale(16),
     borderRadius: theme.radius.lg,
     overflow: 'hidden',
+    // Fallback color behind the LinearGradient so the card is never
+    // fully transparent if the gradient layer fails to render.
+    backgroundColor: '#2C6E6B',
   },
   blob: {
     position: 'absolute',
