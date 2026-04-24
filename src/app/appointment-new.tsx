@@ -1,16 +1,10 @@
-import React, { useMemo, useState } from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  ScrollView,
-} from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { addDays, setHours, setMinutes, setSeconds } from 'date-fns';
-import { Check, Lock, Plus } from 'lucide-react-native';
+import React, { useMemo, useState } from "react";
+import { Pressable, StyleSheet, Text, View, ScrollView } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import { addDays, setHours, setMinutes, setSeconds } from "date-fns";
+import { Check, Lock, Plus } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
@@ -21,27 +15,24 @@ import {
   typography,
   useTheme,
   verticalScale,
-} from '@/theme';
-import { BackButton } from '@/components/ui/BackButton';
-import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { StaggeredList } from '@/components/animated/StaggeredList';
-import { AddClinicianSheet } from '@/components/onboarding/care-team/AddClinicianSheet';
-import { AppointmentBlock } from '@/components/onboarding/care-team/AppointmentBlock';
-import { findSpecialty, type Specialty } from '@/constants/specialties';
-import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
-import { useProfileStore } from '@/stores/useProfileStore';
-import { hapticLight, hapticSuccess } from '@/services/haptics';
-import { uuid } from '@/utils/uuid';
-import type { Clinician as StoreClinician } from '@/stores/types';
+} from "@/theme";
+import { BackButton } from "@/components/ui/BackButton";
+import { PrimaryButton } from "@/components/ui/PrimaryButton";
+import { StaggeredList } from "@/components/animated/StaggeredList";
+import { AddClinicianSheet } from "@/components/onboarding/care-team/AddClinicianSheet";
+import { AppointmentBlock } from "@/components/onboarding/care-team/AppointmentBlock";
+import { findSpecialty, type Specialty } from "@/constants/specialties";
+import { useAppointmentsStore } from "@/stores/useAppointmentsStore";
+import { useProfileStore } from "@/stores/useProfileStore";
+import { hapticLight, hapticSuccess } from "@/services/haptics";
+import { uuid } from "@/utils/uuid";
+import type { Clinician as StoreClinician } from "@/stores/types";
 
 const DEFAULT_TIME = { hours: 9, minutes: 0 };
 
 const defaultDate = (): Date => {
   const d = addDays(new Date(), 1);
-  return setSeconds(
-    setMinutes(setHours(d, DEFAULT_TIME.hours), DEFAULT_TIME.minutes),
-    0,
-  );
+  return setSeconds(setMinutes(setHours(d, DEFAULT_TIME.hours), DEFAULT_TIME.minutes), 0);
 };
 
 const AppointmentNew: React.FC = () => {
@@ -50,14 +41,10 @@ const AppointmentNew: React.FC = () => {
   const { colors } = useTheme();
   const styles = useStyles();
 
-  const careTeam = useProfileStore(
-    (s) => s.personalization?.careTeam ?? [],
-  );
+  const careTeam = useProfileStore((s) => s.personalization?.careTeam ?? []);
   const addClinicianToStore = useProfileStore((s) => s.addClinician);
 
-  const existing = useAppointmentsStore((s) =>
-    editId ? s.getById(editId) : undefined,
-  );
+  const existing = useAppointmentsStore((s) => (editId ? s.getById(editId) : undefined));
   const isEdit = !!existing;
 
   const initial = useMemo(() => {
@@ -68,13 +55,13 @@ const AppointmentNew: React.FC = () => {
         when: new Date(existing.date),
       };
     }
-    return { doctor: '', specialty: '', when: defaultDate() };
+    return { doctor: "", specialty: "", when: defaultDate() };
   }, [existing]);
 
   const [doctorName, setDoctorName] = useState(initial.doctor);
   const [specialty, setSpecialty] = useState(initial.specialty);
   const [when, setWhen] = useState<Date>(initial.when);
-  const [pickerMode, setPickerMode] = useState<'date' | 'time' | null>(null);
+  const [pickerMode, setPickerMode] = useState<"date" | "time" | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [appointmentEnabled, setAppointmentEnabled] = useState(true);
 
@@ -96,7 +83,7 @@ const AppointmentNew: React.FC = () => {
   const save = () => {
     if (!canSave) return;
     const trimmedDoc = doctorName.trim();
-    const trimmedSpec = specialty.trim() || 'General';
+    const trimmedSpec = specialty.trim() || "General";
     const title = `${trimmedSpec} with ${trimmedDoc}`;
     if (isEdit && existing) {
       useAppointmentsStore.getState().update(existing.id, {
@@ -112,7 +99,7 @@ const AppointmentNew: React.FC = () => {
         doctorName: trimmedDoc,
         specialty: trimmedSpec,
         date: when.toISOString(),
-        status: 'upcoming',
+        status: "upcoming",
         attendedAt: null,
         outcome: null,
         brief: null,
@@ -124,12 +111,11 @@ const AppointmentNew: React.FC = () => {
     router.back();
   };
 
-  const iosDateDisplay: 'inline' | 'spinner' =
-    pickerMode === 'date' ? 'inline' : 'spinner';
+  const iosDateDisplay: "inline" | "spinner" = pickerMode === "date" ? "inline" : "spinner";
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <View style={styles.topBar}>
           <BackButton onPress={() => router.back()} />
           <View style={{ width: moderateScale(40) }} />
@@ -141,15 +127,15 @@ const AppointmentNew: React.FC = () => {
           keyboardShouldPersistTaps="handled"
         >
           <Text style={[styles.eyebrow, { color: colors.accent }]}>
-            {isEdit ? 'EDIT VISIT' : 'UPCOMING VISIT'}
+            {isEdit ? "EDIT VISIT" : "UPCOMING VISIT"}
           </Text>
           <Text style={[styles.headline, { color: colors.textPrimary }]}>
-            {isEdit ? `Edit your\nvisit details` : `Who are you\nseeing?`}
+            {isEdit ? `Edit your visit details` : `Who are you seeing?`}
           </Text>
           <Text style={[styles.sub, { color: colors.textSecondary }]}>
             {isEdit
-              ? 'Update the clinician or reschedule.'
-              : 'Pick from your care team or add someone new. Sympnote will prep a tailored brief for this visit.'}
+              ? "Update the clinician or reschedule."
+              : "Pick from your care team or add someone new. Sympnote will prep a tailored brief for this visit."}
           </Text>
 
           <View style={styles.body}>
@@ -182,14 +168,8 @@ const AppointmentNew: React.FC = () => {
           </View>
 
           <View style={[styles.privacyRow, { backgroundColor: colors.bgMuted }]}>
-            <Lock
-              size={moderateScale(12)}
-              color={colors.textTertiary}
-              strokeWidth={2.2}
-            />
-            <Text
-              style={[typography.caption, { color: colors.textTertiary, flex: 1 }]}
-            >
+            <Lock size={moderateScale(12)} color={colors.textTertiary} strokeWidth={2.2} />
+            <Text style={[typography.caption, { color: colors.textTertiary, flex: 1 }]}>
               Private to you. Sympnote never contacts your clinicians.
             </Text>
           </View>
@@ -202,18 +182,18 @@ const AppointmentNew: React.FC = () => {
                 typography.caption,
                 {
                   color: colors.textTertiary,
-                  textAlign: 'center',
+                  textAlign: "center",
                   marginBottom: spacing.s2,
                 },
               ]}
             >
               {!doctorName.trim()
-                ? 'Pick a clinician to continue'
-                : 'Turn on the appointment to continue'}
+                ? "Pick a clinician to continue"
+                : "Turn on the appointment to continue"}
             </Text>
           )}
           <PrimaryButton
-            label={isEdit ? 'Save changes' : 'Add appointment'}
+            label={isEdit ? "Save changes" : "Add appointment"}
             onPress={save}
             disabled={!canSave}
           />
@@ -275,10 +255,7 @@ const SelectableClinicianRow: React.FC<SelectableClinicianRowProps> = ({
 
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text
-          style={[
-            typography.h3,
-            { color: colors.textPrimary, fontFamily: 'DMSans_600SemiBold' },
-          ]}
+          style={[typography.h3, { color: colors.textPrimary, fontFamily: "DMSans_600SemiBold" }]}
           numberOfLines={1}
         >
           {clinician.name}
@@ -295,14 +272,12 @@ const SelectableClinicianRow: React.FC<SelectableClinicianRowProps> = ({
         style={[
           styles.checkSlot,
           {
-            backgroundColor: selected ? colors.accent : 'transparent',
+            backgroundColor: selected ? colors.accent : "transparent",
             borderColor: selected ? colors.accent : colors.border,
           },
         ]}
       >
-        {selected && (
-          <Check size={moderateScale(14)} color="#FFFFFF" strokeWidth={2.5} />
-        )}
+        {selected && <Check size={moderateScale(14)} color="#FFFFFF" strokeWidth={2.5} />}
       </View>
     </Pressable>
   );
@@ -318,26 +293,18 @@ const AddClinicianRow: React.FC<{ onPress: () => void }> = ({ onPress }) => {
   return (
     <Pressable
       onPress={onPress}
-      style={[
-        styles.addRow,
-        { borderColor: colors.border, backgroundColor: colors.bgSurface },
-      ]}
+      style={[styles.addRow, { borderColor: colors.border, backgroundColor: colors.bgSurface }]}
     >
       <View style={[styles.addIconTile, { backgroundColor: colors.bgMuted }]}>
         <Plus size={moderateScale(18)} color={colors.accent} strokeWidth={2.4} />
       </View>
       <View style={{ flex: 1 }}>
         <Text
-          style={[
-            typography.h3,
-            { color: colors.textPrimary, fontFamily: 'DMSans_600SemiBold' },
-          ]}
+          style={[typography.h3, { color: colors.textPrimary, fontFamily: "DMSans_600SemiBold" }]}
         >
           Add someone new
         </Text>
-        <Text
-          style={[typography.caption, { color: colors.textTertiary, marginTop: 1 }]}
-        >
+        <Text style={[typography.caption, { color: colors.textTertiary, marginTop: 1 }]}>
           Pick specialty, enter their name.
         </Text>
       </View>
@@ -353,9 +320,9 @@ const useStyles = makeStyles((theme) => ({
   topBar: {
     paddingTop: theme.spacing.s3,
     paddingHorizontal: theme.spacing.s6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   content: {
     paddingHorizontal: theme.spacing.s6,
@@ -364,12 +331,12 @@ const useStyles = makeStyles((theme) => ({
   },
   eyebrow: {
     ...theme.typography.label,
-    fontFamily: 'DMSans_700Bold',
+    fontFamily: "DMSans_700Bold",
     letterSpacing: 1.2,
   },
   headline: {
     ...theme.typography.h1,
-    fontFamily: 'Fraunces_500Medium',
+    fontFamily: "Fraunces_500Medium",
     letterSpacing: -0.6,
     marginTop: moderateScale(4),
     lineHeight: fontScale(36),
@@ -384,8 +351,8 @@ const useStyles = makeStyles((theme) => ({
     gap: moderateScale(10),
   },
   cardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: moderateScale(12),
     padding: moderateScale(12),
     paddingRight: moderateScale(12),
@@ -395,40 +362,40 @@ const useStyles = makeStyles((theme) => ({
     width: moderateScale(44),
     height: moderateScale(44),
     borderRadius: moderateScale(12),
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
   },
   checkSlot: {
     width: moderateScale(24),
     height: moderateScale(24),
     borderRadius: moderateScale(12),
     borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   addRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: moderateScale(12),
     padding: moderateScale(12),
     borderRadius: theme.radius.lg,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
     borderWidth: 1.5,
   },
   addIconTile: {
     width: moderateScale(44),
     height: moderateScale(44),
     borderRadius: moderateScale(12),
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   appointmentSlot: {
     marginTop: spacing.s6,
   },
   privacyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: moderateScale(8),
     paddingHorizontal: scale(14),
     paddingVertical: verticalScale(10),
