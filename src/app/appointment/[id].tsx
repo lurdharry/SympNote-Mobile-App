@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -53,7 +53,7 @@ import { usePrepQuestions } from '@/hooks/usePrepQuestions';
 import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { useRecordingsStore } from '@/stores/useRecordingsStore';
 import { useProfileStore } from '@/stores/useProfileStore';
-import { useGenerateBrief } from '@/hooks/useGenerateBrief';
+import { useAppointmentBrief } from '@/hooks/useAppointmentBrief';
 import {
   briefSourceWindowLabel,
   isBriefStale,
@@ -93,24 +93,34 @@ const AppointmentDetail: React.FC = () => {
 
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const briefMutation = useGenerateBrief();
-  const generating = briefMutation.isPending;
-  const { mutate: runBriefMutation, isPending: briefIsPending } = briefMutation;
-
   const goBack = () => {
     hapticLight();
     router.back();
   };
 
-  /**
-   * Auto-generate the brief the first time the detail screen lands
-   * without one. Guarded by a ref so an error doesn't trigger an
-   * infinite retry loop — the user retries via the menu / stale
-   * banner. Remounting the screen resets the ref so a freshly cleared
-   * brief will auto-regenerate on next open. Stale briefs are NOT
-   * auto-refreshed — that's the user's call via the banner.
-   */
-  const autoTriggeredRef = useRef(false);
+  // All hooks below run with appt possibly undefined — React's rules
+  // forbid hook calls after the early-return, so computations that
+  // need appt use nullable fallbacks and the query hook disables
+  // itself when the appointment can't be found.
+  const sourceRecordings = appt
+    ? recordingsForAppointmentBrief(appt, allRecordings, allAppointments)
+    : [];
+  const sourceWindowLabel = appt
+    ? briefSourceWindowLabel(appt, allAppointments)
+    : '';
+  const derived = useMemo(
+    () =>
+      appt
+        ? deriveAppointmentBrief(appt, allRecordings, allAppointments)
+        : { concerns: [], timeline: '', severity: [], meds: [] },
+    [appt, allRecordings, allAppointments],
+  );
+
+  const briefQuery = useAppointmentBrief({
+    appointment: appt,
+    sourceRecordings,
+    profile: personalization,
+  });
 
   if (!appt) {
     return (
@@ -126,43 +136,13 @@ const AppointmentDetail: React.FC = () => {
     );
   }
 
-  const sourceRecordings = recordingsForAppointmentBrief(
-    appt,
-    allRecordings,
-    allAppointments,
-  );
-  const sourceWindowLabel = briefSourceWindowLabel(appt, allAppointments);
+  const brief = briefQuery.data ?? null;
   const stale = isBriefStale(appt, allRecordings);
-  const brief = appt.brief;
   const days = daysUntil(appt.date);
   const specialty = findSpecialty(appt.specialty);
   const SpecIcon = specialty.Icon;
-  const derived = useMemo(
-    () => deriveAppointmentBrief(appt, allRecordings, allAppointments),
-    [appt, allRecordings, allAppointments],
-  );
   const severityData = derived.severity;
-
-  const hasBrief = !!brief;
-  const sourceCount = sourceRecordings.length;
-  useEffect(() => {
-    if (!hasBrief && sourceCount > 0 && !briefIsPending && !autoTriggeredRef.current) {
-      autoTriggeredRef.current = true;
-      runBriefMutation({
-        appointment: appt,
-        sourceRecordings,
-        profile: personalization,
-      });
-    }
-  }, [
-    hasBrief,
-    sourceCount,
-    briefIsPending,
-    runBriefMutation,
-    appt,
-    sourceRecordings,
-    personalization,
-  ]);
+  const generating = briefQuery.isFetching;
 
   // When the appointment is in a terminal status, the badge reflects
   // that state instead of a relative-time countdown. Countdown only
@@ -184,7 +164,7 @@ const AppointmentDetail: React.FC = () => {
     return { label, tint };
   })();
 
-  const generate = () => {
+  const generate = async () => {
     if (sourceRecordings.length === 0) {
       Alert.alert(
         'No entries yet',
@@ -194,13 +174,12 @@ const AppointmentDetail: React.FC = () => {
       return;
     }
     hapticMedium();
-    briefMutation.mutate(
-      { appointment: appt, sourceRecordings, profile: personalization },
-      {
-        onSuccess: () => hapticSuccess(),
-        onError: (e) => Alert.alert('Brief failed', String(e)),
-      },
-    );
+    const result = await briefQuery.refetch();
+    if (result.isError) {
+      Alert.alert('Brief failed', String(result.error));
+    } else if (result.isSuccess) {
+      hapticSuccess();
+    }
   };
 
   const copy = async () => {
