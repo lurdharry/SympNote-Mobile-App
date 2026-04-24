@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { addDays, setHours, setMinutes, setSeconds } from "date-fns";
@@ -69,6 +69,8 @@ const ScreenCareTeam: React.FC = () => {
   const [members, setMembers] = useState<Clinician[]>([]);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetSeed, setSheetSeed] = useState<Specialty | null>(null);
+  const [customRoleSeed, setCustomRoleSeed] = useState<string>("");
+  const [customDraft, setCustomDraft] = useState("");
 
   const [hasAppointment, setHasAppointment] = useState(false);
   const [nextWhen, setNextWhen] = useState<Date>(defaultNextAppointment);
@@ -77,7 +79,18 @@ const ScreenCareTeam: React.FC = () => {
   const openSheet = (preset?: Specialty) => {
     hapticLight();
     setSheetSeed(preset ?? null);
+    setCustomRoleSeed("");
     setSheetOpen(true);
+  };
+
+  const openSheetWithCustomRole = () => {
+    const role = customDraft.trim();
+    if (!role) return;
+    hapticLight();
+    setSheetSeed(null);
+    setCustomRoleSeed(role);
+    setSheetOpen(true);
+    setCustomDraft("");
   };
 
   const handleAdd = (value: { name: string; role: string }) => {
@@ -221,40 +234,44 @@ const ScreenCareTeam: React.FC = () => {
                     </Pressable>
                   );
                 })}
+              </View>
+
+              <View style={[styles.customRow, { borderColor: colors.border }]}>
+                <TextInput
+                  value={customDraft}
+                  onChangeText={setCustomDraft}
+                  placeholder="Or type a specialty…"
+                  placeholderTextColor={colors.textTertiary}
+                  onSubmitEditing={openSheetWithCustomRole}
+                  returnKeyType="next"
+                  autoCapitalize="words"
+                  style={[styles.customInput, { color: colors.textPrimary }]}
+                  accessibilityLabel="Type a specialty"
+                />
                 <Pressable
-                  onPress={() => openSheet()}
-                  style={({ pressed }) => [
-                    styles.chip,
-                    styles.otherChip,
+                  onPress={openSheetWithCustomRole}
+                  disabled={customDraft.trim().length === 0}
+                  hitSlop={8}
+                  style={[
+                    styles.customAddBtn,
                     {
-                      backgroundColor: "transparent",
-                      borderColor: pressed ? colors.accent : colors.border,
+                      backgroundColor:
+                        customDraft.trim().length === 0 ? colors.bgMuted : colors.accent,
+                      opacity: customDraft.trim().length === 0 ? 0.7 : 1,
                     },
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel="Add other specialty"
+                  accessibilityLabel="Add this specialty"
                 >
-                  <View
-                    style={[styles.chipTile, { backgroundColor: colors.bgMuted }]}
-                  >
-                    <Plus
-                      size={moderateScale(12)}
-                      color={colors.textSecondary}
-                      strokeWidth={2.4}
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      typography.label,
-                      {
-                        color: colors.textSecondary,
-                        fontFamily: "DMSans_600SemiBold",
-                        fontSize: fontScale(12),
-                      },
-                    ]}
-                  >
-                    Other
-                  </Text>
+                  <Plus
+                    size={moderateScale(16)}
+                    color={
+                      customDraft.trim().length === 0
+                        ? colors.textTertiary
+                        : "#FFFFFF"
+                    }
+                    strokeWidth={2.6}
+                  />
                 </Pressable>
               </View>
             </View>
@@ -294,6 +311,7 @@ const ScreenCareTeam: React.FC = () => {
         <AddClinicianSheet
           visible={sheetOpen}
           initialSpecialty={sheetSeed}
+          initialCustomRole={customRoleSeed}
           onClose={() => setSheetOpen(false)}
           onAdd={handleAdd}
         />
@@ -353,9 +371,29 @@ const useStyles = makeStyles((theme) => ({
     flexWrap: "wrap",
     gap: moderateScale(8),
   },
-  otherChip: {
-    borderStyle: "dashed",
-    borderWidth: 1.2,
+  customRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(8),
+    marginTop: moderateScale(8),
+    paddingLeft: scale(14),
+    paddingRight: scale(6),
+    paddingVertical: verticalScale(4),
+    borderRadius: 9999,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  customInput: {
+    flex: 1,
+    paddingVertical: verticalScale(6),
+    fontFamily: "DMSans_400Regular",
+    fontSize: fontScale(13),
+  },
+  customAddBtn: {
+    width: moderateScale(32),
+    height: moderateScale(32),
+    borderRadius: moderateScale(16),
+    alignItems: "center",
+    justifyContent: "center",
   },
   chip: {
     flexDirection: "row",

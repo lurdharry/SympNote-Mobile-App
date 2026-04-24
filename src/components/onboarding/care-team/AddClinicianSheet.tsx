@@ -1,16 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { X as XIcon } from 'lucide-react-native';
+import React, { useEffect, useState } from "react";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import { X as XIcon } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
@@ -21,9 +13,9 @@ import {
   typography,
   useTheme,
   verticalScale,
-} from '@/theme';
-import { SPECIALTIES, Specialty } from '@/constants/specialties';
-import { hapticLight, hapticSuccess } from '@/services/haptics';
+} from "@/theme";
+import { SPECIALTIES, Specialty } from "@/constants/specialties";
+import { hapticLight, hapticSuccess } from "@/services/haptics";
 
 interface AddClinicianSheetProps {
   visible: boolean;
@@ -32,6 +24,13 @@ interface AddClinicianSheetProps {
    * the empty-state shortcut chips skip the picker for the user.
    */
   initialSpecialty?: Specialty | null;
+  /**
+   * When provided AND no `initialSpecialty` is set, the sheet lands on
+   * the "other" specialty with this string pre-populated in the custom
+   * role input. Path used when the care-team screen has the user type
+   * a specialty inline before opening the sheet.
+   */
+  initialCustomRole?: string;
   /**
    * When provided, the sheet is in edit mode: fields pre-populate from
    * the existing clinician, header copy flips to "Edit clinician", and
@@ -45,6 +44,8 @@ interface AddClinicianSheetProps {
 }
 
 const DEFAULT_SPECIALTY = SPECIALTIES[0]!;
+const OTHER_SPECIALTY =
+  SPECIALTIES.find((s) => s.id === "other") ?? DEFAULT_SPECIALTY;
 
 /**
  * Match an arbitrary role string back to a Specialty so the picker
@@ -54,12 +55,13 @@ const DEFAULT_SPECIALTY = SPECIALTIES[0]!;
 const matchSpecialty = (role: string): Specialty => {
   const target = role.trim().toLowerCase();
   const hit = SPECIALTIES.find((s) => s.label.toLowerCase() === target);
-  return hit ?? SPECIALTIES.find((s) => s.id === 'other')! ?? DEFAULT_SPECIALTY;
+  return hit ?? SPECIALTIES.find((s) => s.id === "other")! ?? DEFAULT_SPECIALTY;
 };
 
 export const AddClinicianSheet: React.FC<AddClinicianSheetProps> = ({
   visible,
   initialSpecialty,
+  initialCustomRole,
   initialValue,
   onClose,
   onAdd,
@@ -69,11 +71,21 @@ export const AddClinicianSheet: React.FC<AddClinicianSheetProps> = ({
   const styles = useStyles();
   const isEdit = !!initialValue;
 
-  const [picked, setPicked] = useState<Specialty>(
-    initialSpecialty ?? DEFAULT_SPECIALTY,
-  );
-  const [name, setName] = useState('');
-  const [customRole, setCustomRole] = useState('');
+  // Initial specialty rules:
+  //  - Explicit initialSpecialty wins.
+  //  - No preset + initialCustomRole → "other" with the custom role
+  //    pre-filled (the care-team screen's inline-input path).
+  //  - No preset, no custom role → leave empty/"other" so the picker
+  //    forces the user to choose. Never silently pre-select Primary
+  //    care, which was the old bug.
+  const resolveInitialPicked = (): Specialty => {
+    if (initialSpecialty) return initialSpecialty;
+    return OTHER_SPECIALTY;
+  };
+
+  const [picked, setPicked] = useState<Specialty>(resolveInitialPicked());
+  const [name, setName] = useState("");
+  const [customRole, setCustomRole] = useState(initialCustomRole ?? "");
 
   useEffect(() => {
     if (!visible) return;
@@ -81,15 +93,20 @@ export const AddClinicianSheet: React.FC<AddClinicianSheetProps> = ({
       const matched = matchSpecialty(initialValue.role);
       setPicked(matched);
       setName(initialValue.name);
-      setCustomRole(matched.id === 'other' ? initialValue.role : '');
+      setCustomRole(matched.id === "other" ? initialValue.role : "");
+    } else if (initialSpecialty) {
+      setPicked(initialSpecialty);
+      setName("");
+      setCustomRole("");
     } else {
-      setPicked(initialSpecialty ?? DEFAULT_SPECIALTY);
-      setName('');
-      setCustomRole('');
+      // No preset — land on "other" so the custom role input shows.
+      setPicked(OTHER_SPECIALTY);
+      setName("");
+      setCustomRole(initialCustomRole ?? "");
     }
-  }, [visible, initialSpecialty, initialValue]);
+  }, [visible, initialSpecialty, initialCustomRole, initialValue]);
 
-  const isOther = picked.id === 'other';
+  const isOther = picked.id === "other";
   const role = isOther ? customRole.trim() : picked.label;
   const canAdd = name.trim().length > 0 && role.length > 0;
 
@@ -119,7 +136,7 @@ export const AddClinicianSheet: React.FC<AddClinicianSheetProps> = ({
     >
       <SafeAreaView
         style={{ flex: 1, backgroundColor: colors.bgPrimary }}
-        edges={['top', 'bottom']}
+        edges={["top", "bottom"]}
       >
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <Pressable
@@ -132,7 +149,7 @@ export const AddClinicianSheet: React.FC<AddClinicianSheetProps> = ({
             <XIcon size={moderateScale(18)} color={colors.textPrimary} strokeWidth={2} />
           </Pressable>
           <Text style={[typography.h3, { color: colors.textPrimary, flex: 1 }]}>
-            {isEdit ? 'Edit clinician' : 'Add a clinician'}
+            {isEdit ? "Edit clinician" : "Add a clinician"}
           </Text>
         </View>
 
@@ -153,19 +170,14 @@ export const AddClinicianSheet: React.FC<AddClinicianSheetProps> = ({
               <picked.Icon size={moderateScale(28)} color={picked.fg} strokeWidth={2} />
             </View>
             <Text
-              style={[
-                typography.caption,
-                { color: colors.textTertiary, marginTop: spacing.s2 },
-              ]}
+              style={[typography.caption, { color: colors.textTertiary, marginTop: spacing.s2 }]}
             >
               {picked.label}
             </Text>
           </View>
 
           {/* Specialty picker */}
-          <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>
-            SPECIALTY
-          </Text>
+          <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>SPECIALTY</Text>
           <View style={styles.chipsRow}>
             {SPECIALTIES.map((s) => {
               const active = picked.id === s.id;
@@ -185,8 +197,8 @@ export const AddClinicianSheet: React.FC<AddClinicianSheetProps> = ({
                     style={[
                       typography.label,
                       {
-                        color: active ? '#FFFFFF' : colors.textPrimary,
-                        fontFamily: 'DMSans_600SemiBold',
+                        color: active ? "#FFFFFF" : colors.textPrimary,
+                        fontFamily: "DMSans_600SemiBold",
                       },
                     ]}
                   >
@@ -200,12 +212,9 @@ export const AddClinicianSheet: React.FC<AddClinicianSheetProps> = ({
           {isOther && (
             <>
               <Text
-                style={[
-                  styles.sectionLabel,
-                  { color: colors.textTertiary, marginTop: spacing.s5 },
-                ]}
+                style={[styles.sectionLabel, { color: colors.textTertiary, marginTop: spacing.s5 }]}
               >
-                CUSTOM SPECIALTY
+                SPECIALTY
               </Text>
               <View
                 style={[
@@ -227,10 +236,7 @@ export const AddClinicianSheet: React.FC<AddClinicianSheetProps> = ({
           )}
 
           <Text
-            style={[
-              styles.sectionLabel,
-              { color: colors.textTertiary, marginTop: spacing.s5 },
-            ]}
+            style={[styles.sectionLabel, { color: colors.textTertiary, marginTop: spacing.s5 }]}
           >
             CLINICIAN NAME
           </Text>
@@ -263,9 +269,7 @@ export const AddClinicianSheet: React.FC<AddClinicianSheetProps> = ({
               shadows.accentGlow,
             ]}
           >
-            <Text style={styles.addLabel}>
-              {isEdit ? 'Save changes' : 'Add clinician'}
-            </Text>
+            <Text style={styles.addLabel}>{isEdit ? "Save changes" : "Add clinician"}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -278,8 +282,8 @@ const useStyles = makeStyles((theme) => ({
     paddingHorizontal: spacing.s6,
     paddingTop: spacing.s3,
     paddingBottom: spacing.s3,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: moderateScale(12),
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
@@ -287,8 +291,8 @@ const useStyles = makeStyles((theme) => ({
     width: moderateScale(36),
     height: moderateScale(36),
     borderRadius: moderateScale(18),
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   content: {
     paddingHorizontal: spacing.s6,
@@ -296,26 +300,26 @@ const useStyles = makeStyles((theme) => ({
     paddingBottom: spacing.s8,
   },
   previewWrap: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: spacing.s5,
   },
   previewTile: {
     width: moderateScale(72),
     height: moderateScale(72),
     borderRadius: moderateScale(20),
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
   },
   sectionLabel: {
     ...theme.typography.label,
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: "DMSans_600SemiBold",
     letterSpacing: 0.4,
     marginBottom: spacing.s2,
   },
   chipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: moderateScale(8),
   },
   chip: {
@@ -339,12 +343,12 @@ const useStyles = makeStyles((theme) => ({
   addBtn: {
     height: verticalScale(52),
     borderRadius: theme.radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   addLabel: {
-    color: '#FFFFFF',
-    fontFamily: 'DMSans_600SemiBold',
+    color: "#FFFFFF",
+    fontFamily: "DMSans_600SemiBold",
     fontSize: fontScale(15),
     letterSpacing: -0.1,
   },
