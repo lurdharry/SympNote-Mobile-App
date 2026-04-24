@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -29,12 +29,14 @@ import {
 } from '@/theme';
 import type { PrepRow } from '@/hooks/usePrepRows';
 import type { AppointmentBrief } from '@/stores/types';
+import type { PrepSectionId } from '@/constants/prep';
 import { findSpecialty } from '@/constants/specialties';
 import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { renderBrief } from '@/utils/prepBrief';
 import { exportBriefPdf } from '@/services/pdf';
 import { hapticLight } from '@/services/haptics';
 import { ConcernRow } from './ConcernRow';
+import { SectionTabs } from './SectionTabs';
 import { SeverityChart } from './SeverityChart';
 import { QuestionsSection } from './QuestionsSection';
 import { MedsSection } from './MedsSection';
@@ -95,15 +97,9 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({ row, open, onT
   const aiBrief = useAppointmentsStore((s) => s.getById(row.id)?.brief ?? null);
   const specialty = findSpecialty(row.spec);
   const SpecIcon = specialty.Icon;
+  const [section, setSection] = useState<PrepSectionId>('summary');
 
   const { concerns, timeline, severity, questions, meds } = row.content;
-  const hasConcerns = concerns.length > 0;
-  const hasTimeline = !!timeline;
-  const hasSeverity = severity.length > 0;
-  const hasQuestions = questions.length > 0;
-  const hasMeds = meds.length > 0;
-  const hasAnyContent =
-    hasConcerns || hasTimeline || hasSeverity || hasQuestions || hasMeds;
   const isStale = row.briefState === 'stale';
 
   const openFullBrief = () => {
@@ -214,103 +210,86 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({ row, open, onT
 
         {open && (
           <View style={[styles.body, { borderTopColor: colors.border }]}>
-            {!hasAnyContent && (
-              <Text
-                style={[
-                  typography.body,
-                  {
-                    color: colors.textTertiary,
-                    textAlign: 'center',
-                    paddingVertical: spacing.s6,
-                    paddingHorizontal: spacing.s5,
-                    lineHeight: fontScale(20),
-                  },
-                ]}
-              >
-                Log entries leading up to this visit and they'll be summarized here.
-              </Text>
-            )}
-
-            {hasConcerns && (
-              <View style={styles.section}>
-                <SectionHeader label="Top concerns" count={concerns.length} />
-                <View style={{ gap: moderateScale(8) }}>
-                  {concerns.map((c, i) => (
-                    <ConcernRow key={`${i}-${c.t}`} concern={c} accent={row.color} />
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {hasTimeline && (
-              <View
-                style={[
-                  styles.section,
-                  { borderTopWidth: hasConcerns ? StyleSheet.hairlineWidth : 0, borderTopColor: colors.border },
-                ]}
-              >
-                <SectionHeader label="Timeline" />
-                <Text
-                  style={[
-                    typography.body,
-                    { color: colors.textPrimary, lineHeight: fontScale(20) },
-                  ]}
-                >
-                  {timeline}
-                </Text>
-              </View>
-            )}
-
-            {hasSeverity && (
-              <View
-                style={[
-                  styles.section,
-                  {
-                    borderTopWidth:
-                      hasConcerns || hasTimeline ? StyleSheet.hairlineWidth : 0,
-                    borderTopColor: colors.border,
-                  },
-                ]}
-              >
-                <SectionHeader label="Severity" />
-                <SeverityChart data={severity} accent={row.color} />
-              </View>
-            )}
-
-            <View
-              style={[
-                styles.section,
-                {
-                  borderTopWidth:
-                    hasConcerns || hasTimeline || hasSeverity
-                      ? StyleSheet.hairlineWidth
-                      : 0,
-                  borderTopColor: colors.border,
-                },
-              ]}
-            >
-              <SectionHeader
-                label="Questions to ask"
-                count={questions.length || undefined}
-              />
-              <QuestionsSection
-                questions={questions}
+            <View style={styles.tabsSlot}>
+              <SectionTabs
+                value={section}
+                onChange={setSection}
                 accent={row.color}
-                appointmentId={row.id}
               />
             </View>
-
-            {hasMeds && (
-              <View
-                style={[
-                  styles.section,
-                  { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
-                ]}
-              >
-                <SectionHeader label="Medications" count={meds.length} />
+            <View style={styles.tabContent}>
+              {section === 'summary' && (
+                <>
+                  {concerns.length === 0 && !timeline ? (
+                    <Text
+                      style={[
+                        typography.body,
+                        {
+                          color: colors.textTertiary,
+                          textAlign: 'center',
+                          paddingVertical: spacing.s6,
+                          lineHeight: fontScale(20),
+                        },
+                      ]}
+                    >
+                      Log entries leading up to this visit and they'll be
+                      summarized here.
+                    </Text>
+                  ) : (
+                    <View style={{ gap: moderateScale(8) }}>
+                      {concerns.map((c, i) => (
+                        <ConcernRow
+                          key={`${i}-${c.t}`}
+                          concern={c}
+                          accent={row.color}
+                        />
+                      ))}
+                      {!!timeline && (
+                        <View style={{ marginTop: moderateScale(6) }}>
+                          <Text
+                            style={[
+                              typography.label,
+                              {
+                                color: colors.textTertiary,
+                                fontFamily: 'DMSans_700Bold',
+                                letterSpacing: 1,
+                                marginBottom: 4,
+                              },
+                            ]}
+                          >
+                            TIMELINE
+                          </Text>
+                          <Text
+                            style={[
+                              typography.body,
+                              {
+                                color: colors.textPrimary,
+                                lineHeight: fontScale(20),
+                              },
+                            ]}
+                          >
+                            {timeline}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+                </>
+              )}
+              {section === 'chart' && (
+                <SeverityChart data={severity} accent={row.color} />
+              )}
+              {section === 'questions' && (
+                <QuestionsSection
+                  questions={questions}
+                  accent={row.color}
+                  appointmentId={row.id}
+                />
+              )}
+              {section === 'meds' && (
                 <MedsSection meds={meds} accent={row.color} />
-              </View>
-            )}
+              )}
+            </View>
 
             <View
               style={[styles.actions, { borderTopColor: colors.border }]}
@@ -347,63 +326,6 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({ row, open, onT
         )}
       </View>
     </Animated.View>
-  );
-};
-
-// ─── SectionHeader ────────────────────────────────────────────────────────
-// Small uppercase label + optional count chip used by every stacked section
-// inside the expanded card body.
-
-interface SectionHeaderProps {
-  label: string;
-  count?: number;
-}
-
-const SectionHeader: React.FC<SectionHeaderProps> = ({ label, count }) => {
-  const { colors } = useTheme();
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: moderateScale(6),
-        marginBottom: moderateScale(10),
-      }}
-    >
-      <Text
-        style={{
-          fontFamily: 'DMSans_700Bold',
-          fontSize: fontScale(10),
-          letterSpacing: 1,
-          color: colors.textTertiary,
-        }}
-      >
-        {label.toUpperCase()}
-      </Text>
-      {typeof count === 'number' && count > 0 && (
-        <View
-          style={{
-            paddingHorizontal: moderateScale(6),
-            height: moderateScale(16),
-            borderRadius: moderateScale(8),
-            backgroundColor: colors.bgMuted,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text
-            style={{
-              fontFamily: 'DMSans_700Bold',
-              fontSize: fontScale(9),
-              color: colors.textTertiary,
-              letterSpacing: 0.4,
-            }}
-          >
-            {count}
-          </Text>
-        </View>
-      )}
-    </View>
   );
 };
 
@@ -506,7 +428,11 @@ const useStyles = makeStyles((theme) => ({
   body: {
     borderTopWidth: StyleSheet.hairlineWidth,
   },
-  section: {
+  tabsSlot: {
+    paddingHorizontal: moderateScale(16),
+    paddingTop: moderateScale(14),
+  },
+  tabContent: {
     paddingHorizontal: moderateScale(16),
     paddingVertical: moderateScale(14),
   },
