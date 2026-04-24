@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { X as XIcon } from 'lucide-react-native';
 import {
   fontScale,
@@ -9,6 +10,7 @@ import {
   typography,
   useTheme,
 } from '@/theme';
+import { findSpecialty } from '@/constants/specialties';
 import { hapticLight } from '@/services/haptics';
 
 export interface Clinician {
@@ -28,6 +30,8 @@ export const ClinicianCard: React.FC<ClinicianCardProps> = ({
 }) => {
   const { colors } = useTheme();
   const styles = useStyles();
+  const specialty = findSpecialty(clinician.role);
+  const Icon = specialty.Icon;
 
   const handleRemove = () => {
     hapticLight();
@@ -42,6 +46,16 @@ export const ClinicianCard: React.FC<ClinicianCardProps> = ({
         shadows.card,
       ]}
     >
+      <View style={styles.tile}>
+        <LinearGradient
+          colors={specialty.grad}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <Icon size={moderateScale(20)} color={specialty.fg} strokeWidth={2} />
+      </View>
+
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text
           style={[
@@ -82,6 +96,14 @@ const useStyles = makeStyles((theme) => ({
     paddingRight: moderateScale(10),
     borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
+  },
+  tile: {
+    width: moderateScale(44),
+    height: moderateScale(44),
+    borderRadius: moderateScale(12),
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   role: {
     ...theme.typography.caption,
