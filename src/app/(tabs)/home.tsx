@@ -29,14 +29,12 @@ import { InsightNudge } from '@/components/home/InsightNudge';
 import { FirstEntryHero } from '@/components/home/FirstEntryHero';
 import { PostVisitPrompt } from '@/components/home/PostVisitPrompt';
 import { RecordFAB } from '@/components/home/RecordFAB';
-import { HoldToRecordOverlay } from '@/components/home/HoldToRecordOverlay';
-import { HoldReviewSheet, HoldReviewStatus } from '@/components/home/HoldReviewSheet';
+import { HoldToRecordOverlay, HoldOverlayMode } from '@/components/home/HoldToRecordOverlay';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { useProfileStore } from '@/stores/useProfileStore';
 import { useRecordingsStore } from '@/stores/useRecordingsStore';
 import { GeminiQuotaError } from '@/services/ai';
-import type { StructuredWithSources } from '@/services/ai';
 import { uuid } from '@/utils/uuid';
 
 const TabHome: React.FC = () => {
@@ -88,21 +86,17 @@ const TabHome: React.FC = () => {
     };
   }, []);
 
-  // Post-release review state. Null = no sheet open.
+  // Post-release state — the captured transcript + duration we're
+  // reviewing. Null means no review in progress. When this is set
+  // alongside isRecording=false the overlay stays mounted in
+  // review/extracting mode instead of dismissing.
   const [postCapture, setPostCapture] = useState<
     { transcript: string; durationSec: number; createdAt: string } | null
   >(null);
   const [editValue, setEditValue] = useState('');
-  // Last completed AI analysis — remembered with its input so we can
-  // tell if the user's current editValue is stale vs. it.
-  const [aiResult, setAiResult] = useState<
-    { text: string; structured: StructuredWithSources } | null
-  >(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [retryInSec, setRetryInSec] = useState(0);
-  const [saving, setSaving] = useState(false);
-
-  const structureMutation = useStructureTranscript();
+  const [isExtracting, setIsExtracting] = useState(false);
 
   // Retry countdown tick for quota errors.
   useEffect(() => {
@@ -112,26 +106,6 @@ const TabHome: React.FC = () => {
     }, 1000);
     return () => clearInterval(id);
   }, [retryInSec]);
-
-  const runAnalysis = useCallback(
-    (text: string) => {
-      setAiError(null);
-      structureMutation.mutate(text, {
-        onSuccess: (structured) => {
-          setAiResult({ text, structured });
-        },
-        onError: (e) => {
-          if (e instanceof GeminiQuotaError) {
-            setAiError(e.message);
-            setRetryInSec(e.retryAfterSec ?? 0);
-          } else {
-            setAiError(e instanceof Error ? e.message : 'Could not structure transcript.');
-          }
-        },
-      });
-    },
-    [structureMutation],
-  );
 
   const { state: holdState, handlers: holdHandlers } = useHoldToRecord({
     holdThresholdMs: 500,
@@ -145,97 +119,57 @@ const TabHome: React.FC = () => {
       showToast(reason === 'too-short' ? 'Hold a little longer' : "Didn't catch that");
     },
     onCommit: ({ transcript, durationSec }) => {
-      // Open the review sheet; AI kicks off ambiently in the effect
-      // below the moment `postCapture` is set.
+      // Stay on home. Transition the overlay to review mode with
+      // the captured transcript prefilled and editable.
       setPostCapture({ transcript, durationSec, createdAt: new Date().toISOString() });
       setEditValue(transcript);
-      setAiResult(null);
       setAiError(null);
       setRetryInSec(0);
-      setSaving(false);
     },
   });
 
-  // Ambient analysis: kicks the moment the sheet opens, so by the
-  // time the user finishes reading the transcript the structured
-  // result is usually ready and Save is instant.
-  useEffect(() => {
-    if (!postCapture) return;
-    if (aiResult?.text === postCapture.transcript) return;
-    runAnalysis(postCapture.transcript);
-    // Intentionally only watch the initial transcript — edits are
-    // handled by the debounced effect below.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [postCapture?.transcript]);
+  const structureMutation = useStructureTranscript();
 
-  // Debounced re-analysis on edit: when the user types, re-kick AI
-  // after 800ms of quiet so Save stays fresh without hammering the
-  // endpoint on every keystroke.
-  useEffect(() => {
-    if (!postCapture) return;
-    const text = editValue.trim();
-    if (!text) return;
-    if (aiResult?.text === text) return;
-    if (text === postCapture.transcript) return;
-    const id = setTimeout(() => runAnalysis(text), 800);
-    return () => clearTimeout(id);
-  }, [editValue, postCapture, aiResult, runAnalysis]);
-
-  const dismissSheet = useCallback(() => {
+  const dismissOverlay = useCallback(() => {
     setPostCapture(null);
     setEditValue('');
-    setAiResult(null);
     setAiError(null);
     setRetryInSec(0);
-    setSaving(false);
+    setIsExtracting(false);
   }, []);
-
-  const commitRecording = useCallback(
-    (text: string, structured: StructuredWithSources, createdAt: string, durationSec: number) => {
-      const tags = Array.from(
-        new Set(structured.symptoms.slice(0, 2).filter(Boolean)),
-      );
-      useRecordingsStore.getState().add({
-        id: uuid(),
-        createdAt,
-        durationSec,
-        transcript: text,
-        structured,
-        tags,
-      });
-      hapticHeavy();
-      dismissSheet();
-    },
-    [dismissSheet],
-  );
 
   const onReRecord = useCallback(() => {
     hapticLight();
-    dismissSheet();
-  }, [dismissSheet]);
+    dismissOverlay();
+  }, [dismissOverlay]);
 
   const onSave = useCallback(() => {
     if (!postCapture) return;
     const text = editValue.trim();
     if (!text) {
-      showToast('Nothing to save');
+      showToast("Nothing to save");
       return;
     }
-    // Fresh analysis already available for this exact text — commit
-    // immediately, no spinner needed.
-    if (aiResult?.text === text) {
-      commitRecording(text, aiResult.structured, postCapture.createdAt, postCapture.durationSec);
-      return;
-    }
-    // Otherwise kick (or wait for) analysis, then commit.
-    setSaving(true);
+    setAiError(null);
+    setIsExtracting(true);
     structureMutation.mutate(text, {
       onSuccess: (structured) => {
-        setAiResult({ text, structured });
-        commitRecording(text, structured, postCapture.createdAt, postCapture.durationSec);
+        const tags = Array.from(
+          new Set(structured.symptoms.slice(0, 2).filter(Boolean)),
+        );
+        useRecordingsStore.getState().add({
+          id: uuid(),
+          createdAt: postCapture.createdAt,
+          durationSec: postCapture.durationSec,
+          transcript: text,
+          structured,
+          tags,
+        });
+        hapticHeavy();
+        dismissOverlay();
       },
       onError: (e) => {
-        setSaving(false);
+        setIsExtracting(false);
         if (e instanceof GeminiQuotaError) {
           setAiError(e.message);
           setRetryInSec(e.retryAfterSec ?? 0);
@@ -244,18 +178,14 @@ const TabHome: React.FC = () => {
         }
       },
     });
-  }, [postCapture, editValue, aiResult, structureMutation, showToast, commitRecording]);
+  }, [postCapture, editValue, structureMutation, showToast, dismissOverlay]);
 
-  const sheetVisible = !!postCapture && !holdState.isRecording;
-  const sheetStatus: HoldReviewStatus = saving
-    ? 'saving'
-    : aiError
-      ? 'error'
-      : structureMutation.isPending
-        ? 'analyzing'
-        : aiResult?.text === editValue.trim()
-          ? 'ready'
-          : 'analyzing';
+  const overlayMode: HoldOverlayMode = holdState.isRecording
+    ? 'recording'
+    : isExtracting
+      ? 'extracting'
+      : 'review';
+  const overlayVisible = holdState.isRecording || postCapture !== null;
 
   return (
     <SceneTransition mode="crossfade-parallax-up">
@@ -376,21 +306,19 @@ const TabHome: React.FC = () => {
           />
 
           <HoldToRecordOverlay
-            visible={holdState.isRecording}
+            visible={overlayVisible}
+            mode={overlayMode}
             liveTranscript={holdState.liveTranscript}
-            durationSec={holdState.durationSec}
+            durationSec={
+              holdState.isRecording
+                ? holdState.durationSec
+                : postCapture?.durationSec ?? 0
+            }
             volume={holdState.volume}
-          />
-
-          <HoldReviewSheet
-            visible={sheetVisible}
-            durationSec={postCapture?.durationSec ?? 0}
             editValue={editValue}
             onEditChange={setEditValue}
-            status={sheetStatus}
             onSave={onSave}
             onReRecord={onReRecord}
-            onClose={onReRecord}
             error={aiError}
             retryInSec={retryInSec}
           />

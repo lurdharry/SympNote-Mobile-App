@@ -1,8 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import Animated, {
   Easing,
   Extrapolation,
+  FadeIn,
+  FadeOut,
   interpolate,
   SharedValue,
   useAnimatedStyle,
@@ -23,30 +34,58 @@ import {
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 /**
- * Full-screen overlay shown while the user is actively holding the
- * FAB and recording. Glass blur backdrop, live transcript in serif,
- * a horizontal waveform at the bottom, and a "release to save" hint.
- * Post-release review lives in HoldReviewSheet, not here.
+ * Three modes:
+ *  - `recording`   — mic is live; waveform + "release to save" hint
+ *  - `review`      — transcript editable, Save / Re-record actions
+ *  - `extracting`  — AI running; spinner + gentle reassurance
+ * The overlay never unmounts between modes (unless the user cancels);
+ * content fades between them so the whole post-release ritual feels
+ * like one continuous surface.
  */
+export type HoldOverlayMode = "recording" | "review" | "extracting";
+
 interface HoldToRecordOverlayProps {
   visible: boolean;
+  mode: HoldOverlayMode;
+  /** Live interim transcript (recording mode) or locked transcript
+   *  (review/extracting). */
   liveTranscript: string;
+  /** Seconds elapsed — either live while recording, or the captured
+   *  duration afterwards. */
   durationSec: number;
   volume: SharedValue<number>;
+  /** Editable value used by the review-mode TextInput. */
+  editValue?: string;
+  onEditChange?: (next: string) => void;
+  onSave?: () => void;
+  onReRecord?: () => void;
+  /** Error message to show in review mode (AI failure). Caller owns
+   *  dismissing it on the next try. */
+  error?: string | null;
+  /** Seconds until retry is allowed — renders a countdown on the
+   *  save button when > 0. */
+  retryInSec?: number;
 }
 
 export const HoldToRecordOverlay: React.FC<HoldToRecordOverlayProps> = ({
   visible,
+  mode,
   liveTranscript,
   durationSec,
   volume,
+  editValue,
+  onEditChange,
+  onSave,
+  onReRecord,
+  error,
+  retryInSec = 0,
 }) => {
   const styles = useStyles();
   const reduced = useReducedMotion();
 
   const progress = useSharedValue(0);
   const [mounted, setMounted] = useState(visible);
-  const exitDuration = reduced ? 100 : 200;
+  const exitDuration = reduced ? 100 : 240;
 
   useEffect(() => {
     if (visible) {
@@ -67,51 +106,135 @@ export const HoldToRecordOverlay: React.FC<HoldToRecordOverlayProps> = ({
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: interpolate(progress.value, [0, 1], [0, 1], Extrapolation.CLAMP),
   }));
+
   const timerStyle = useAnimatedStyle(() => ({
     opacity: interpolate(progress.value, [0, 0.4, 1], [0, 0, 1]),
     transform: [{ translateY: interpolate(progress.value, [0, 1], [-12, 0]) }],
   }));
-  const transcriptStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 0.5, 1], [0, 0, 1]),
-    transform: [{ translateY: interpolate(progress.value, [0, 1], [28, 0]) }],
-  }));
-  const waveformStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 0.6, 1], [0, 0, 1]),
-    transform: [{ translateY: interpolate(progress.value, [0, 1], [40, 0]) }],
-  }));
-  const hintStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 0.8, 1], [0, 0, 1]),
-  }));
 
   if (!mounted) return null;
 
+  const blocked = retryInSec > 0;
+  const saveLabel = blocked
+    ? `Try again in ${retryInSec}s`
+    : mode === "extracting"
+      ? "Analyzing…"
+      : "Save";
+
   return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+    <View pointerEvents={visible ? "auto" : "none"} style={StyleSheet.absoluteFill}>
       <Animated.View style={[StyleSheet.absoluteFill, backdropStyle]}>
         <BlurView intensity={reduced ? 30 : 80} tint="dark" style={StyleSheet.absoluteFill} />
         <View style={styles.tint} />
       </Animated.View>
 
-      <Animated.View style={[styles.timerWrap, timerStyle]}>
+      {/* Timer pill — consistent across modes; only the label content
+          swaps (live duration vs. captured duration). */}
+      <Animated.View style={[styles.timerWrap, timerStyle]} pointerEvents="none">
         <View style={styles.timerPill}>
-          <RecordingDot />
-          <Text style={styles.timerText}>{formatDuration(durationSec)}</Text>
+          {mode === "recording" ? (
+            <RecordingDot />
+          ) : (
+            <View style={styles.capturedDot} />
+          )}
+          <Text style={styles.timerText}>
+            {mode === "recording"
+              ? formatDuration(durationSec)
+              : `${formatDuration(durationSec)} captured`}
+          </Text>
         </View>
       </Animated.View>
 
-      <Animated.View style={[styles.transcriptWrap, transcriptStyle]}>
-        <Text style={styles.transcript} numberOfLines={5}>
-          {liveTranscript || "Listening…"}
-        </Text>
-      </Animated.View>
+      {/* Mode-specific body */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.flex}
+      >
+        {mode === "recording" && (
+          <Animated.View
+            key="recording"
+            entering={FadeIn.duration(220)}
+            exiting={FadeOut.duration(160)}
+            style={styles.flex}
+            pointerEvents="none"
+          >
+            <View style={styles.transcriptWrap}>
+              <Text style={styles.transcript} numberOfLines={5}>
+                {liveTranscript || "Listening…"}
+              </Text>
+            </View>
+            <View style={styles.waveformWrap}>
+              <Waveform volume={volume} />
+            </View>
+            <View style={styles.hintWrap}>
+              <Text style={styles.hintText}>Release to save</Text>
+            </View>
+          </Animated.View>
+        )}
 
-      <Animated.View style={[styles.waveformWrap, waveformStyle]}>
-        <Waveform volume={volume} />
-      </Animated.View>
+        {(mode === "review" || mode === "extracting") && (
+          <Animated.View
+            key="review"
+            entering={FadeIn.duration(260)}
+            exiting={FadeOut.duration(180)}
+            style={styles.flex}
+          >
+            <View style={styles.editWrap}>
+              <Text style={styles.editCaption}>Check what we heard — tap to edit</Text>
+              <TextInput
+                value={editValue ?? liveTranscript}
+                onChangeText={onEditChange}
+                multiline
+                scrollEnabled
+                textAlignVertical="top"
+                editable={mode === "review"}
+                style={styles.editInput}
+                placeholder="Your words will appear here…"
+                placeholderTextColor="rgba(255,255,255,0.45)"
+              />
+              {error && mode === "review" && (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorLabel}>Couldn't process that</Text>
+                  <Text style={styles.errorBody}>{error}</Text>
+                </View>
+              )}
+            </View>
 
-      <Animated.View style={[styles.hintWrap, hintStyle]}>
-        <Text style={styles.hintText}>Release to save</Text>
-      </Animated.View>
+            <View style={styles.actionsWrap}>
+              <Pressable
+                onPress={onSave}
+                disabled={mode === "extracting" || blocked}
+                style={({ pressed }) => [
+                  styles.saveBtn,
+                  {
+                    opacity: mode === "extracting" || blocked ? 0.7 : pressed ? 0.88 : 1,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={saveLabel}
+              >
+                {mode === "extracting" ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.saveLabel}>{saveLabel}</Text>
+                )}
+              </Pressable>
+              <Pressable
+                onPress={onReRecord}
+                disabled={mode === "extracting"}
+                style={({ pressed }) => [
+                  styles.secondaryBtn,
+                  { opacity: mode === "extracting" ? 0.4 : pressed ? 0.7 : 1 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Re-record"
+              >
+                <Text style={styles.secondaryLabel}>Re-record</Text>
+              </Pressable>
+            </View>
+          </Animated.View>
+        )}
+      </KeyboardAvoidingView>
     </View>
   );
 };
@@ -145,7 +268,7 @@ const dotStyles = StyleSheet.create({
   },
 });
 
-// ── Horizontal waveform ───────────────────────────────────────────
+// ── Waveform ────────────────────────────────────────────────────────
 
 const BAR_COUNT = 28;
 
@@ -178,6 +301,7 @@ interface WaveBarProps {
 const WaveBar: React.FC<WaveBarProps> = ({ index, volume }) => {
   const reduced = useReducedMotion();
   const t = useSharedValue(0);
+
   useEffect(() => {
     if (reduced) return;
     const dur = 900 + (index % 4) * 140;
@@ -241,7 +365,8 @@ const formatDuration = (s: number): string => {
   return `${m}:${r.toString().padStart(2, "0")}`;
 };
 
-const useStyles = makeStyles(() => ({
+const useStyles = makeStyles((theme) => ({
+  flex: { flex: 1 },
   tint: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(8, 14, 14, 0.42)",
@@ -252,6 +377,7 @@ const useStyles = makeStyles(() => ({
     left: 0,
     right: 0,
     alignItems: "center",
+    zIndex: 2,
   },
   timerPill: {
     flexDirection: "row",
@@ -264,12 +390,19 @@ const useStyles = makeStyles(() => ({
     borderColor: "rgba(255,255,255,0.18)",
     backgroundColor: "rgba(255,255,255,0.06)",
   },
+  capturedDot: {
+    width: moderateScale(7),
+    height: moderateScale(7),
+    borderRadius: moderateScale(4),
+    backgroundColor: "#6FBDB6",
+  },
   timerText: {
     fontFamily: "DMSans_600SemiBold",
     fontSize: fontScale(12),
     letterSpacing: 0.8,
     color: "rgba(255,255,255,0.92)",
   },
+  // ── Recording mode
   transcriptWrap: {
     position: "absolute",
     top: "28%",
@@ -309,5 +442,96 @@ const useStyles = makeStyles(() => ({
     letterSpacing: 1.4,
     textTransform: "uppercase",
     color: "rgba(255,255,255,0.65)",
+  },
+  // ── Review / extracting modes
+  editWrap: {
+    position: "absolute",
+    top: verticalScale(130),
+    bottom: verticalScale(200),
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.s6,
+  },
+  editCaption: {
+    fontFamily: "DMSans_600SemiBold",
+    fontSize: fontScale(11),
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.55)",
+    textAlign: "center",
+    marginBottom: verticalScale(12),
+  },
+  editInput: {
+    flex: 1,
+    fontFamily: "Fraunces_400Regular",
+    fontSize: fontScale(20),
+    lineHeight: fontScale(30),
+    letterSpacing: -0.3,
+    color: "rgba(255,255,255,0.96)",
+    textAlign: "center",
+    padding: 0,
+    margin: 0,
+  },
+  errorBox: {
+    marginTop: verticalScale(12),
+    padding: moderateScale(12),
+    borderRadius: theme.radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(240,120,95,0.55)",
+    backgroundColor: "rgba(240,120,95,0.14)",
+  },
+  errorLabel: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: fontScale(11),
+    letterSpacing: 0.8,
+    color: "#F4A99A",
+    textTransform: "uppercase",
+  },
+  errorBody: {
+    marginTop: 3,
+    fontFamily: "DMSans_500Medium",
+    fontSize: fontScale(13),
+    color: "rgba(255,255,255,0.9)",
+  },
+  actionsWrap: {
+    position: "absolute",
+    bottom: verticalScale(104),
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.s6,
+    gap: moderateScale(10),
+  },
+  saveBtn: {
+    height: verticalScale(54),
+    borderRadius: 999,
+    backgroundColor: "#3BA79F",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#3BA79F",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  saveLabel: {
+    color: "#FFFFFF",
+    fontFamily: "DMSans_700Bold",
+    fontSize: fontScale(16),
+    letterSpacing: -0.15,
+  },
+  secondaryBtn: {
+    height: verticalScale(48),
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.22)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+  },
+  secondaryLabel: {
+    color: "rgba(255,255,255,0.88)",
+    fontFamily: "DMSans_600SemiBold",
+    fontSize: fontScale(14),
+    letterSpacing: 0.2,
   },
 }));
