@@ -128,6 +128,10 @@ const ScreenCareTeam: React.FC = () => {
   };
 
   const hasMembers = members.length > 0;
+  // Disable Continue when a specialty is picked but the clinician's
+  // name is still empty — otherwise the user would think they'd
+  // added someone and land on next-appointment with nothing set.
+  const pendingNameRequired = addingRole !== null && nameDraft.trim().length === 0;
 
   return (
     <SceneTransition mode="scale-fade">
@@ -144,16 +148,6 @@ const ScreenCareTeam: React.FC = () => {
         <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
           <View style={styles.topBar}>
             <BackButton onPress={() => router.back()} />
-            <Pressable onPress={onContinue} hitSlop={8}>
-              <Text
-                style={[
-                  typography.label,
-                  { color: colors.textTertiary, fontFamily: "DMSans_500Medium" },
-                ]}
-              >
-                Skip
-              </Text>
-            </Pressable>
           </View>
           <View style={styles.progressSlot}>
             <OnboardingProgress value={0.65} />
@@ -242,7 +236,10 @@ const ScreenCareTeam: React.FC = () => {
                 <View
                   style={[
                     styles.customRow,
-                    { backgroundColor: colors.bgSurface, borderColor: colors.border },
+                    {
+                      backgroundColor: colors.bgMuted,
+                      borderColor: colors.accent + "55",
+                    },
                   ]}
                 >
                   <TextInput
@@ -383,16 +380,37 @@ const ScreenCareTeam: React.FC = () => {
               </Text>
             )}
 
-            <View style={[styles.privacyRow, { backgroundColor: colors.bgMuted }]}>
-              <Lock size={moderateScale(12)} color={colors.textTertiary} strokeWidth={2.2} />
-              <Text style={[typography.caption, { color: colors.textTertiary, flex: 1 }]}>
+            <View
+              style={[
+                styles.privacyRow,
+                {
+                  backgroundColor: colors.accent + "14",
+                  borderColor: colors.accent + "33",
+                },
+              ]}
+            >
+              <Lock size={moderateScale(14)} color={colors.accent} strokeWidth={2.4} />
+              <Text
+                style={[
+                  typography.caption,
+                  {
+                    color: colors.accent,
+                    flex: 1,
+                    fontFamily: "DMSans_600SemiBold",
+                  },
+                ]}
+              >
                 Private to you.
               </Text>
             </View>
           </ScrollView>
 
           <View style={styles.ctaSlot}>
-            <PrimaryButton label={"Continue"} onPress={onContinue} />
+            <PrimaryButton
+              label={"Continue"}
+              onPress={onContinue}
+              disabled={pendingNameRequired}
+            />
           </View>
         </SafeAreaView>
       </View>
@@ -546,6 +564,7 @@ const useStyles = makeStyles((theme) => ({
     paddingHorizontal: scale(14),
     paddingVertical: verticalScale(10),
     borderRadius: theme.radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
     marginTop: spacing.s6,
   },
   ctaSlot: {
