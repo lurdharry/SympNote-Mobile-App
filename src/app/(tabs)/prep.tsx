@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,8 +27,6 @@ const TabPrep: React.FC = () => {
   const router = useRouter();
   const { upcoming, past } = usePrepRows();
 
-  const [expanded, setExpanded] = useState<string | null>(upcoming[0]?.id ?? null);
-
   return (
     <SceneTransition mode="crossfade-parallax-up">
       <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
@@ -47,14 +45,7 @@ const TabPrep: React.FC = () => {
             {upcoming.length === 0 && past.length === 0 ? (
               <PrepEmpty />
             ) : (
-              upcoming.map((r) => (
-                <AppointmentCard
-                  key={r.id}
-                  row={r}
-                  open={expanded === r.id}
-                  onToggle={() => setExpanded(expanded === r.id ? null : r.id)}
-                />
-              ))
+              upcoming.map((r) => <AppointmentCard key={r.id} row={r} />)
             )}
 
             <Pressable
