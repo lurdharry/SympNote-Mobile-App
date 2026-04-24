@@ -292,23 +292,21 @@ const AppointmentDetail: React.FC = () => {
           </View>
 
           <View style={styles.heroBody}>
-            <View style={styles.heroRow}>
-              <View style={styles.specTile}>
-                <SpecIcon size={moderateScale(22)} color="#FFFFFF" strokeWidth={2.2} />
-              </View>
-              <View style={styles.heroPill}>
-                <Text style={styles.heroPillText}>{pill.label}</Text>
+            <View style={styles.specTile}>
+              <SpecIcon size={moderateScale(20)} color="#FFFFFF" strokeWidth={2.2} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.heroName} numberOfLines={1}>
+                {appt.doctorName}
+              </Text>
+              <View style={styles.heroMeta}>
+                <Text style={styles.heroMetaText} numberOfLines={1}>
+                  {appt.specialty} · {formatDate(appt.date)} · {formatTime(appt.date)}
+                </Text>
               </View>
             </View>
-            <Text style={styles.heroName} numberOfLines={2}>
-              {appt.doctorName}
-            </Text>
-            <Text style={styles.heroSpec}>{appt.specialty}</Text>
-            <View style={styles.heroMeta}>
-              <CalendarDays size={moderateScale(12)} color="rgba(255,255,255,0.85)" strokeWidth={2} />
-              <Text style={styles.heroMetaText}>
-                {formatDate(appt.date)} · {formatTime(appt.date)}
-              </Text>
+            <View style={styles.heroPill}>
+              <Text style={styles.heroPillText}>{pill.label}</Text>
             </View>
           </View>
         </View>
@@ -849,31 +847,31 @@ const MenuRow: React.FC<MenuRowProps> = ({ Icon, label, tint, disabled, onPress 
 
 const useStyles = makeStyles((theme) => ({
   hero: {
-    paddingBottom: theme.spacing.s5,
+    paddingBottom: theme.spacing.s4,
     overflow: 'hidden',
     borderBottomLeftRadius: theme.radius.xl,
     borderBottomRightRadius: theme.radius.xl,
   },
   heroBlob: {
     position: 'absolute',
-    right: -scale(40),
-    top: -verticalScale(40),
-    width: moderateScale(180),
-    height: moderateScale(180),
-    borderRadius: moderateScale(90),
+    right: -scale(30),
+    top: -verticalScale(30),
+    width: moderateScale(140),
+    height: moderateScale(140),
+    borderRadius: moderateScale(70),
     backgroundColor: 'rgba(255,255,255,0.1)',
   },
   heroBar: {
     paddingHorizontal: theme.spacing.s6,
-    paddingBottom: theme.spacing.s3,
+    paddingBottom: theme.spacing.s2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   heroIconBtn: {
-    width: moderateScale(36),
-    height: moderateScale(36),
-    borderRadius: moderateScale(18),
+    width: moderateScale(34),
+    height: moderateScale(34),
+    borderRadius: moderateScale(17),
     backgroundColor: 'rgba(255,255,255,0.14)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -881,56 +879,44 @@ const useStyles = makeStyles((theme) => ({
   heroBody: {
     paddingHorizontal: theme.spacing.s6,
     paddingTop: theme.spacing.s2,
-  },
-  heroRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.s4,
+    gap: moderateScale(12),
   },
   specTile: {
-    width: moderateScale(48),
-    height: moderateScale(48),
+    width: moderateScale(44),
+    height: moderateScale(44),
     borderRadius: moderateScale(14),
     backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroPill: {
-    paddingHorizontal: scale(12),
-    paddingVertical: verticalScale(6),
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(5),
     borderRadius: theme.radius.full,
     backgroundColor: 'rgba(255,255,255,0.2)',
   },
   heroPillText: {
     fontFamily: 'DMSans_700Bold',
-    fontSize: fontScale(11),
+    fontSize: fontScale(10),
     color: '#FFFFFF',
     letterSpacing: 0.4,
   },
   heroName: {
-    ...theme.typography.h1,
     fontFamily: 'Fraunces_500Medium',
     color: '#FFFFFF',
-    letterSpacing: -0.6,
-    fontSize: fontScale(28),
-    lineHeight: fontScale(34),
-  },
-  heroSpec: {
-    ...theme.typography.body,
-    color: 'rgba(255,255,255,0.88)',
-    marginTop: 2,
-    fontFamily: 'DMSans_500Medium',
+    letterSpacing: -0.4,
+    fontSize: fontScale(20),
+    lineHeight: fontScale(24),
   },
   heroMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: moderateScale(6),
-    marginTop: moderateScale(10),
+    marginTop: 2,
   },
   heroMetaText: {
     ...theme.typography.caption,
-    color: 'rgba(255,255,255,0.88)',
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: fontScale(12),
   },
   content: {
     paddingHorizontal: theme.spacing.s6,
