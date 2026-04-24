@@ -46,6 +46,15 @@ export type Recording = {
   transcript: string;
   structured: StructuredEntry;
   tags: string[];
+  /**
+   * Optional multi-select routing. Each name matches a clinician
+   * display name on the user's care team.
+   *  - Empty / undefined: recording is "general" and feeds every
+   *    clinician's visit brief (within the time window).
+   *  - Non-empty: recording is routed only to the named clinicians'
+   *    briefs.
+   */
+  clinicianNames?: string[];
 };
 
 /**

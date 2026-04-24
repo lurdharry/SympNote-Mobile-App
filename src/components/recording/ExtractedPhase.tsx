@@ -7,13 +7,24 @@ import { FIELDS, StructuredWithSources, fieldValue } from './types';
 import { SeverityBadge } from '../clinical/SeverityBadge';
 import { UrgencyChip } from '../clinical/UrgencyChip';
 import { RedFlagAlert } from '../clinical/RedFlagAlert';
+import { ClinicianTagRow } from './ClinicianTagRow';
+import type { Clinician } from '../../stores/types';
 
 type Props = {
   structured: StructuredWithSources;
   onSave: () => void;
+  careTeam: Clinician[];
+  selectedClinicians: string[];
+  onToggleClinician: (name: string) => void;
 };
 
-export const ExtractedPhase: React.FC<Props> = ({ structured, onSave }) => {
+export const ExtractedPhase: React.FC<Props> = ({
+  structured,
+  onSave,
+  careTeam,
+  selectedClinicians,
+  onToggleClinician,
+}) => {
   const styles = useStyles();
 
   // Only render fields that actually have a value. Severity is hidden
@@ -50,6 +61,12 @@ export const ExtractedPhase: React.FC<Props> = ({ structured, onSave }) => {
           ) : null}
         </View>
       )}
+
+      <ClinicianTagRow
+        careTeam={careTeam}
+        selected={selectedClinicians}
+        onToggle={onToggleClinician}
+      />
 
       <Button label="Save entry" breathe haptic="heavy" onPress={onSave} />
     </View>
