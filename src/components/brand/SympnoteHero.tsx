@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { StyleSheet, View } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
 import Animated, {
   Easing,
   SharedValue,
@@ -9,14 +9,16 @@ import Animated, {
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
-import { SympnoteMark } from "./SympnoteMark";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { moderateScale } from "../../theme";
+
+const ICON = require("../../../assets/icon.png");
 
 /**
  * Hero version of the brand mark with two staggered pulse rings (per
  * design handoff: 1.8s, one offset by 0.9s, scale 1 → 1.35, opacity
- * 0.45 → 0).
+ * 0.45 → 0). Renders the app-icon PNG at the centre so the hero
+ * matches exactly what's pinned to the home screen.
  *
  * Ring 1 uses a warm gold tint (`#F6C06A` at 35%); ring 2 uses a
  * teal tint (`#3BA79F` at 25%) so the two rings read as distinct
@@ -56,6 +58,7 @@ export const SympnoteHero: React.FC<Props> = ({ size = moderateScale(128) }) => 
 
   const ring1Style = ringStyle(ring1);
   const ring2Style = ringStyle(ring2);
+  const radius = size * 0.22;
 
   return (
     <View style={{ width: size, height: size }}>
@@ -64,7 +67,7 @@ export const SympnoteHero: React.FC<Props> = ({ size = moderateScale(128) }) => 
         style={[
           StyleSheet.absoluteFill,
           styles.ring,
-          { borderRadius: size * 0.28, backgroundColor: "#F6C06A" },
+          { borderRadius: radius, backgroundColor: "#F6C06A" },
           ring1Style,
         ]}
         pointerEvents="none"
@@ -74,12 +77,16 @@ export const SympnoteHero: React.FC<Props> = ({ size = moderateScale(128) }) => 
         style={[
           StyleSheet.absoluteFill,
           styles.ring,
-          { borderRadius: size * 0.28, backgroundColor: "#3BA79F" },
+          { borderRadius: radius, backgroundColor: "#3BA79F" },
           ring2Style,
         ]}
         pointerEvents="none"
       />
-      <SympnoteMark size={size} />
+      <Image
+        source={ICON}
+        style={{ width: size, height: size, borderRadius: radius }}
+        resizeMode="cover"
+      />
     </View>
   );
 }
