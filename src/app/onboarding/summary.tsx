@@ -9,15 +9,17 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Animated, { Easing, FadeInDown } from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
 import { parseISO } from "date-fns";
-import { Pencil } from "lucide-react-native";
+import { Clock, Mic, Pencil } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
   moderateScale,
   scale,
   shadows,
-  typography,
+  spacing,
   useTheme,
   verticalScale,
 } from "@/theme";
@@ -67,6 +69,16 @@ const ScreenSummary: React.FC = () => {
   return (
     <SceneTransition mode="scale-fade">
       <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
+        {/* Ambient aurora — ties the screen to the rest of onboarding. */}
+        <View pointerEvents="none" style={styles.aurora}>
+          <LinearGradient
+            colors={[colors.accent + "22", colors.accent + "00"]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </View>
+
         <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
           <View style={styles.topBar}>
             <BackButton onPress={() => router.back()} />
@@ -78,19 +90,50 @@ const ScreenSummary: React.FC = () => {
             contentContainerStyle={styles.content}
             showsVerticalScrollIndicator={false}
           >
-            <Text style={[styles.headline, { color: colors.textPrimary }]}>
-              Your next visit,{"\n"}already prepared.
-            </Text>
-            <Text style={[styles.sub, { color: colors.textSecondary }]}>
-              {promiseSub}
-            </Text>
+            <Animated.View
+              entering={FadeInDown.duration(480).easing(Easing.out(Easing.cubic))}
+              style={[
+                styles.eyebrow,
+                {
+                  backgroundColor: colors.accent + "14",
+                  borderColor: colors.accent + "33",
+                },
+              ]}
+            >
+              <View style={[styles.eyebrowDot, { backgroundColor: colors.accent }]} />
+              <Text style={[styles.eyebrowText, { color: colors.accent }]}>
+                YOUR FIRST NOTE
+              </Text>
+            </Animated.View>
 
-            <TranscriptQuote
-              transcript={draft.transcript}
-              durationSec={draft.durationSec}
-              onChangeText={updateTranscript}
-              onReRecord={onReRecord}
-            />
+            <Animated.Text
+              entering={FadeInDown.duration(560).delay(80).easing(Easing.out(Easing.cubic))}
+              style={[styles.headline, { color: colors.textPrimary }]}
+            >
+              Your next visit,{"\n"}
+              <Text style={{ fontStyle: "italic", color: colors.accent }}>
+                already prepared
+              </Text>
+              .
+            </Animated.Text>
+
+            <Animated.Text
+              entering={FadeInDown.duration(560).delay(160).easing(Easing.out(Easing.cubic))}
+              style={[styles.sub, { color: colors.textSecondary }]}
+            >
+              {promiseSub}
+            </Animated.Text>
+
+            <Animated.View
+              entering={FadeInDown.duration(640).delay(240).easing(Easing.out(Easing.cubic))}
+            >
+              <TranscriptQuote
+                transcript={draft.transcript}
+                durationSec={draft.durationSec}
+                onChangeText={updateTranscript}
+                onReRecord={onReRecord}
+              />
+            </Animated.View>
           </ScrollView>
 
           <View style={styles.ctaArea}>
@@ -125,46 +168,52 @@ const TranscriptQuote: React.FC<TranscriptQuoteProps> = ({
         shadows.card,
       ]}
     >
-      <View style={[styles.quoteBar, { backgroundColor: colors.accent }]} />
-      <View style={{ flex: 1 }}>
-        <TextInput
-          value={transcript}
-          onChangeText={onChangeText}
-          multiline
-          scrollEnabled
-          textAlignVertical="top"
-          style={[styles.quoteText, styles.quoteInput, { color: colors.textPrimary }]}
-        />
-        <View style={styles.quoteMeta}>
-          <View style={[styles.metaDot, { backgroundColor: colors.textTertiary }]} />
-          <Text style={[typography.caption, { color: colors.textTertiary }]}>
-            {formatDuration(durationSec)} · just now ·{" "}
-          </Text>
-          <Pressable onPress={onReRecord} hitSlop={8}>
-            <Text
-              style={[
-                typography.caption,
-                {
-                  color: colors.textSecondary,
-                  textDecorationLine: "underline",
-                  fontFamily: "DMSans_600SemiBold",
-                },
-              ]}
-            >
-              Re-record
-            </Text>
-          </Pressable>
-          <View style={{ flex: 1 }} />
-          <Pencil size={moderateScale(11)} color={colors.textTertiary} strokeWidth={2} />
-          <Text
-            style={[
-              typography.caption,
-              { color: colors.textTertiary, fontStyle: "italic" },
-            ]}
-          >
-            Tap to edit
+      {/* Soft accent wash across the top of the card. */}
+      <LinearGradient
+        colors={[colors.accent + "18", colors.accent + "00"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.quoteWash}
+      />
+
+      {/* Oversized ornamental quotation glyph. */}
+      <Text style={[styles.quoteGlyph, { color: colors.accent + "55" }]}>
+        &ldquo;
+      </Text>
+
+      <TextInput
+        value={transcript}
+        onChangeText={onChangeText}
+        multiline
+        scrollEnabled
+        textAlignVertical="top"
+        style={[styles.quoteText, styles.quoteInput, { color: colors.textPrimary }]}
+      />
+
+      <View style={[styles.metaRow, { borderTopColor: colors.border }]}>
+        <View style={[styles.metaChip, { backgroundColor: colors.bgMuted }]}>
+          <Mic size={moderateScale(10)} color={colors.textSecondary} strokeWidth={2.2} />
+          <Text style={[styles.metaChipText, { color: colors.textSecondary }]}>
+            {formatDuration(durationSec)}
           </Text>
         </View>
+        <View style={[styles.metaChip, { backgroundColor: colors.bgMuted }]}>
+          <Clock size={moderateScale(10)} color={colors.textSecondary} strokeWidth={2.2} />
+          <Text style={[styles.metaChipText, { color: colors.textSecondary }]}>
+            Just now
+          </Text>
+        </View>
+        <View style={{ flex: 1 }} />
+        <Pressable onPress={onReRecord} hitSlop={8}>
+          <Text style={[styles.reRecord, { color: colors.accent }]}>Re-record</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.editHintRow}>
+        <Pencil size={moderateScale(10)} color={colors.textTertiary} strokeWidth={2} />
+        <Text style={[styles.editHintText, { color: colors.textTertiary }]}>
+          Tap the text above to edit
+        </Text>
       </View>
     </View>
   );
@@ -182,6 +231,14 @@ export default ScreenSummary;
 const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },
   safe: { flex: 1 },
+  aurora: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: verticalScale(320),
+    overflow: "hidden",
+  },
   topBar: {
     paddingTop: theme.spacing.s3,
     paddingHorizontal: theme.spacing.s6,
@@ -194,59 +251,116 @@ const useStyles = makeStyles((theme) => ({
   },
   content: {
     paddingHorizontal: theme.spacing.s6,
-    paddingTop: theme.spacing.s5,
+    paddingTop: theme.spacing.s4,
     paddingBottom: theme.spacing.s6,
+  },
+  eyebrow: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(6),
+    paddingHorizontal: scale(10),
+    paddingVertical: verticalScale(5),
+    borderRadius: theme.radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  eyebrowDot: {
+    width: moderateScale(6),
+    height: moderateScale(6),
+    borderRadius: moderateScale(3),
+  },
+  eyebrowText: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: fontScale(10),
+    letterSpacing: 1.4,
   },
   headline: {
     ...theme.typography.h1,
     fontFamily: "Fraunces_500Medium",
-    letterSpacing: -0.6,
-    textAlign: "center",
-    marginTop: moderateScale(6),
-    lineHeight: fontScale(36),
+    letterSpacing: -0.8,
+    fontSize: fontScale(32),
+    lineHeight: fontScale(38),
+    marginTop: spacing.s4,
   },
   sub: {
     ...theme.typography.body,
-    textAlign: "center",
     marginTop: moderateScale(10),
-    marginBottom: theme.spacing.s5,
-    paddingHorizontal: theme.spacing.s3,
+    marginBottom: theme.spacing.s6,
+    lineHeight: fontScale(22),
+    maxWidth: moderateScale(340),
   },
   quoteCard: {
-    flexDirection: "row",
-    padding: moderateScale(16),
-    borderRadius: theme.radius.lg,
+    position: "relative",
+    paddingHorizontal: moderateScale(18),
+    paddingTop: moderateScale(18),
+    paddingBottom: moderateScale(12),
+    borderRadius: theme.radius.xl,
     borderWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
   },
-  quoteBar: {
-    width: 3,
-    borderRadius: 2,
-    marginRight: scale(12),
-    alignSelf: "stretch",
+  quoteWash: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: verticalScale(70),
+  },
+  quoteGlyph: {
+    fontFamily: "Fraunces_500Medium",
+    fontSize: fontScale(64),
+    lineHeight: fontScale(64),
+    height: fontScale(44),
+    marginTop: -moderateScale(4),
+    marginLeft: -moderateScale(2),
   },
   quoteText: {
     ...theme.typography.body,
-    fontFamily: "Fraunces_300Light",
-    fontSize: fontScale(16),
-    lineHeight: fontScale(24),
+    fontFamily: "Fraunces_400Regular",
+    fontSize: fontScale(17),
+    lineHeight: fontScale(26),
     letterSpacing: -0.1,
   },
   quoteInput: {
-    maxHeight: verticalScale(180),
+    maxHeight: verticalScale(200),
     padding: 0,
     margin: 0,
+    marginTop: moderateScale(4),
   },
-  quoteMeta: {
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(6),
+    marginTop: verticalScale(14),
+    paddingTop: verticalScale(12),
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  metaChip: {
     flexDirection: "row",
     alignItems: "center",
     gap: moderateScale(4),
-    marginTop: verticalScale(12),
+    paddingHorizontal: scale(8),
+    paddingVertical: verticalScale(4),
+    borderRadius: theme.radius.full,
   },
-  metaDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 2,
-    opacity: 0.6,
+  metaChipText: {
+    fontFamily: "DMSans_600SemiBold",
+    fontSize: fontScale(11),
+    letterSpacing: 0.1,
+  },
+  reRecord: {
+    fontFamily: "DMSans_600SemiBold",
+    fontSize: fontScale(12),
+    textDecorationLine: "underline",
+  },
+  editHintRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(4),
+    marginTop: verticalScale(8),
+  },
+  editHintText: {
+    ...theme.typography.caption,
+    fontStyle: "italic",
   },
   ctaArea: {
     paddingHorizontal: theme.spacing.s6,
