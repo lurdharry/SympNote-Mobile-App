@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -6,6 +6,7 @@ import {
   Share,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -18,15 +19,18 @@ import {
   CalendarDays,
   Copy as CopyIcon,
   Download,
+  LineChart as LineChartIcon,
   MessageCircleQuestion,
   MoreVertical,
   Pencil,
   Pill,
+  Plus,
   RefreshCw,
   Share as ShareIcon,
   Sparkles,
   Target,
   Trash2,
+  X as XIcon,
 } from 'lucide-react-native';
 import {
   fontScale,
@@ -42,7 +46,10 @@ import {
 import { SharedElementScene } from '@/components/navigation/SharedElementScene';
 import { StaggeredList } from '@/components/animated/StaggeredList';
 import { Button } from '@/components/ui/Button';
+import { AppointmentSeverityChart } from '@/components/appointment/AppointmentSeverityChart';
 import { findSpecialty } from '@/constants/specialties';
+import { deriveAppointmentBrief, type DerivedSeverityPoint } from '@/utils/prep';
+import { usePrepQuestions } from '@/hooks/usePrepQuestions';
 import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { useRecordingsStore } from '@/stores/useRecordingsStore';
 import { useProfileStore } from '@/stores/useProfileStore';
@@ -119,6 +126,11 @@ const AppointmentDetail: React.FC = () => {
   const days = daysUntil(appt.date);
   const specialty = findSpecialty(appt.specialty);
   const SpecIcon = specialty.Icon;
+  const derived = useMemo(
+    () => deriveAppointmentBrief(appt, allRecordings, allAppointments),
+    [appt, allRecordings, allAppointments],
+  );
+  const severityData = derived.severity;
 
   // When the appointment is in a terminal status, the badge reflects
   // that state instead of a relative-time countdown. Countdown only
@@ -343,7 +355,12 @@ const AppointmentDetail: React.FC = () => {
                   regenerating={generating}
                 />
               )}
-              <BriefView brief={brief} accentGrad={specialty.grad} />
+              <BriefView
+                brief={brief}
+                accentGrad={specialty.grad}
+                appointmentId={appt.id}
+                severity={severityData}
+              />
             </>
           )}
 
@@ -530,9 +547,16 @@ const StaleBanner: React.FC<StaleBannerProps> = ({ onRegenerate, regenerating })
 interface BriefViewProps {
   brief: AppointmentBrief;
   accentGrad: [string, string];
+  appointmentId: string;
+  severity: DerivedSeverityPoint[];
 }
 
-const BriefView: React.FC<BriefViewProps> = ({ brief, accentGrad }) => {
+const BriefView: React.FC<BriefViewProps> = ({
+  brief,
+  accentGrad,
+  appointmentId,
+  severity,
+}) => {
   const { colors } = useTheme();
   const styles = useStyles();
 
@@ -642,6 +666,17 @@ const BriefView: React.FC<BriefViewProps> = ({ brief, accentGrad }) => {
         </View>
       ) : null}
 
+      {severity.length > 0 ? (
+        <View style={[styles.section, { marginTop: spacing.s5 }]}>
+          <SectionHeader
+            Icon={LineChartIcon}
+            label="Severity over time"
+            tint={accentGrad[0]}
+          />
+          <AppointmentSeverityChart data={severity} accent={accentGrad[0]} />
+        </View>
+      ) : null}
+
       {brief.medications.length > 0 ? (
         <View style={[styles.section, { marginTop: spacing.s5 }]}>
           <SectionHeader Icon={Pill} label="Medications" tint={colors.accent} />
@@ -661,36 +696,144 @@ const BriefView: React.FC<BriefViewProps> = ({ brief, accentGrad }) => {
         </View>
       ) : null}
 
-      {brief.questions.length > 0 ? (
-        <View style={[styles.section, { marginTop: spacing.s5 }]}>
-          <SectionHeader
-            Icon={MessageCircleQuestion}
-            label="Questions to ask"
-            tint={colors.accent}
-          />
-          {brief.questions.map((q, i) => (
-            <View key={i} style={styles.questionRow}>
-              <Text
-                style={[
-                  typography.body,
-                  {
-                    color: colors.accent,
-                    fontFamily: 'DMSans_700Bold',
-                    marginRight: 8,
-                    minWidth: moderateScale(20),
-                  },
-                ]}
-              >
-                {i + 1}.
-              </Text>
-              <Text style={[typography.body, { color: colors.textPrimary, flex: 1 }]}>
-                {q}
-              </Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
+      <View style={[styles.section, { marginTop: spacing.s5 }]}>
+        <SectionHeader
+          Icon={MessageCircleQuestion}
+          label="Questions to ask"
+          tint={colors.accent}
+        />
+        <QuestionsEditor
+          questions={brief.questions}
+          appointmentId={appointmentId}
+        />
+      </View>
     </StaggeredList>
+  );
+};
+
+// ─── QuestionsEditor ──────────────────────────────────────────────────────
+// Inline add / remove on the detail screen. Each question is a numbered
+// row with a tap-target X. The trailing dashed row opens an inline
+// TextInput that commits on submit or blur.
+
+interface QuestionsEditorProps {
+  questions: string[];
+  appointmentId: string;
+}
+
+const QuestionsEditor: React.FC<QuestionsEditorProps> = ({
+  questions,
+  appointmentId,
+}) => {
+  const { colors } = useTheme();
+  const styles = useStyles();
+  const { add, remove } = usePrepQuestions(appointmentId);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState('');
+
+  const commit = () => {
+    const trimmed = draft.trim();
+    if (trimmed) add(trimmed);
+    setDraft('');
+    setAdding(false);
+  };
+
+  return (
+    <View style={{ gap: moderateScale(4) }}>
+      {questions.map((q, i) => (
+        <View key={`${i}-${q.slice(0, 10)}`} style={styles.questionRow}>
+          <Text
+            style={[
+              typography.body,
+              {
+                color: colors.accent,
+                fontFamily: 'DMSans_700Bold',
+                marginRight: 8,
+                minWidth: moderateScale(20),
+              },
+            ]}
+          >
+            {i + 1}.
+          </Text>
+          <Text
+            style={[typography.body, { color: colors.textPrimary, flex: 1 }]}
+          >
+            {q}
+          </Text>
+          <Pressable
+            onPress={() => remove(i)}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={`Remove question ${i + 1}`}
+          >
+            <XIcon
+              size={moderateScale(14)}
+              color={colors.textTertiary}
+              strokeWidth={2}
+            />
+          </Pressable>
+        </View>
+      ))}
+
+      {adding ? (
+        <View style={[styles.questionRow, { alignItems: 'flex-start' }]}>
+          <Text
+            style={[
+              typography.body,
+              {
+                color: colors.accent,
+                fontFamily: 'DMSans_700Bold',
+                marginRight: 8,
+                minWidth: moderateScale(20),
+              },
+            ]}
+          >
+            {questions.length + 1}.
+          </Text>
+          <TextInput
+            autoFocus
+            value={draft}
+            onChangeText={setDraft}
+            onSubmitEditing={commit}
+            onBlur={commit}
+            placeholder="Type your question…"
+            placeholderTextColor={colors.textTertiary}
+            returnKeyType="done"
+            multiline
+            style={[
+              typography.body,
+              {
+                flex: 1,
+                color: colors.textPrimary,
+                padding: 0,
+                lineHeight: fontScale(22),
+              },
+            ]}
+          />
+        </View>
+      ) : (
+        <Pressable
+          onPress={() => {
+            hapticLight();
+            setAdding(true);
+          }}
+          style={[styles.addQuestionRow, { borderColor: colors.border }]}
+        >
+          <Plus size={moderateScale(14)} color={colors.textTertiary} strokeWidth={2} />
+          <Text
+            style={[
+              typography.label,
+              {
+                color: colors.textTertiary,
+                fontFamily: 'DMSans_600SemiBold',
+              },
+            ]}
+          >
+            Add question
+          </Text>
+        </Pressable>
+      )}
+    </View>
   );
 };
 
@@ -1032,6 +1175,18 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: 'row',
     alignItems: 'flex-start',
     paddingVertical: verticalScale(6),
+    gap: moderateScale(6),
+  },
+  addQuestionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: moderateScale(6),
+    paddingVertical: verticalScale(10),
+    marginTop: verticalScale(4),
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderRadius: moderateScale(10),
   },
   ctaBar: {
     flexDirection: 'row',
