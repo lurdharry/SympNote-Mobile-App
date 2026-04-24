@@ -27,6 +27,7 @@ import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { FULL_HEADLINE } from "../../constants/onboarding";
 import { resetAppState } from "../../utils/resetApp";
 import { hapticMedium } from "../../services/haptics";
+import { SympnoteMark } from "@/components/brand/SympnoteMark";
 
 const ScreenHook: React.FC = () => {
   const router = useRouter();
@@ -111,7 +112,6 @@ const ScreenHook: React.FC = () => {
             <Animated.View style={[{ marginBottom: spacing.s6 }, hero]}>
               <SympnoteHero size={124} />
             </Animated.View>
-
             <View style={styles.headlineSlot}>
               <Text
                 aria-hidden
@@ -171,7 +171,7 @@ const ScreenHook: React.FC = () => {
       </View>
     </SceneTransition>
   );
-}
+};
 
 type LucideIcon = typeof Zap;
 
@@ -198,7 +198,7 @@ const TrustChip: React.FC<TrustChipProps> = ({ Icon, label, tint }) => {
       <Text style={[styles.trustLabel, { color: colors.textPrimary }]}>{label}</Text>
     </View>
   );
-}
+};
 
 export default ScreenHook;
 
