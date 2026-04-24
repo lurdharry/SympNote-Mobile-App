@@ -202,13 +202,16 @@ const ScreenCareTeam: React.FC = () => {
               </View>
             )}
 
-            {/* Inline add flow — all on this screen, no modal.
-                Tap a chip to pick its specialty, or type a custom one.
-                A name input slides in below as soon as a specialty is
-                chosen; submit adds the clinician and returns to idle. */}
+            {/* Inline add flow — capped at one clinician during
+                onboarding. Once added, the add UI hides and a hint
+                points the user to Settings for additions later.
+                Tap a chip to pick a specialty, or type a custom one;
+                a name input slides in below, submit adds and returns
+                to idle. */}
+            {!hasMembers && (
             <View style={styles.quickAddBlock}>
               <Text style={[styles.quickAddLabel, { color: colors.textTertiary }]}>
-                {hasMembers ? "Add another" : "Tap a specialty to add"}
+                Tap a specialty to add
               </Text>
               <View style={styles.chipsWrap}>
                 {QUICK_ADD_SHORTCUTS.map((s) => {
@@ -355,6 +358,19 @@ const ScreenCareTeam: React.FC = () => {
                 </View>
               )}
             </View>
+            )}
+
+            {hasMembers && (
+              <Text
+                style={[
+                  typography.caption,
+                  styles.addMoreHint,
+                  { color: colors.textTertiary },
+                ]}
+              >
+                You can add more clinicians later in Settings.
+              </Text>
+            )}
 
             {/* Appointment module — only meaningful once there's a clinician. */}
             {hasMembers && (
@@ -481,6 +497,10 @@ const useStyles = makeStyles((theme) => ({
     fontFamily: "DMSans_700Bold",
     fontSize: fontScale(10),
     letterSpacing: 1.2,
+  },
+  addMoreHint: {
+    marginTop: spacing.s4,
+    fontStyle: "italic",
   },
   chip: {
     flexDirection: "row",
