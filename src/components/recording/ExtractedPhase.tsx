@@ -15,6 +15,17 @@ type Props = {
 
 export const ExtractedPhase: React.FC<Props> = ({ structured, onSave }) => {
   const styles = useStyles();
+
+  // Only render fields that actually have a value. Severity is hidden
+  // when the patient reported no symptom (header already says so);
+  // location/duration/triggers/symptoms hide when their string value
+  // is empty.
+  const visibleFields = FIELDS.filter((f) => {
+    if (f.key === 'severity') return structured.severity > 0;
+    return fieldValue(structured, f.key).length > 0;
+  });
+  const hasDetails = visibleFields.length > 0 || !!structured.notes;
+
   return (
     <View style={{ marginTop: spacing.s6, gap: spacing.s5 }}>
       <Header structured={structured} />
@@ -23,20 +34,22 @@ export const ExtractedPhase: React.FC<Props> = ({ structured, onSave }) => {
         <RedFlagAlert items={structured.redFlags} />
       )}
 
-      <View style={{ gap: spacing.s3 }}>
-        <Text style={styles.sectionLabel}>Details</Text>
-        {FIELDS.map((f) => (
-          <FieldRow
-            key={f.key}
-            label={f.label}
-            value={fieldValue(structured, f.key)}
-            active
-          />
-        ))}
-        {structured.notes ? (
-          <FieldRow label="Notes" value={structured.notes} active />
-        ) : null}
-      </View>
+      {hasDetails && (
+        <View style={{ gap: spacing.s3 }}>
+          <Text style={styles.sectionLabel}>Details</Text>
+          {visibleFields.map((f) => (
+            <FieldRow
+              key={f.key}
+              label={f.label}
+              value={fieldValue(structured, f.key)}
+              active
+            />
+          ))}
+          {structured.notes ? (
+            <FieldRow label="Notes" value={structured.notes} active />
+          ) : null}
+        </View>
+      )}
 
       <Button label="Save entry" breathe haptic="heavy" onPress={onSave} />
     </View>
