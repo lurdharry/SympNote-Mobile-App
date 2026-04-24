@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Settings } from 'lucide-react-native';
 import Animated, {
   Easing,
   FadeIn,
@@ -228,15 +228,14 @@ const TabHome: React.FC = () => {
               }}
               accessibilityRole="button"
               accessibilityLabel="Settings"
-              style={styles.avatar}
+              hitSlop={10}
+              style={styles.settingsBtn}
             >
-              <LinearGradient
-                colors={['#2C6E6B', '#1F504E']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
+              <Settings
+                size={moderateScale(28)}
+                color={colors.textPrimary}
+                strokeWidth={2}
               />
-              <Text style={styles.avatarLetter}>Y</Text>
             </Pressable>
           </View>
 
@@ -376,18 +375,11 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: 'space-between',
     gap: moderateScale(12),
   },
-  avatar: {
+  settingsBtn: {
     width: moderateScale(40),
     height: moderateScale(40),
-    borderRadius: moderateScale(20),
-    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  avatarLetter: {
-    color: '#FFFFFF',
-    fontFamily: 'DMSans_700Bold',
-    fontSize: fontScale(16),
   },
   scroll: {
     paddingHorizontal: spacing.s6,
