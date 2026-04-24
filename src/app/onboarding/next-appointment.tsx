@@ -1,11 +1,19 @@
 import React, { useMemo, useState } from "react";
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { addDays, format, setHours, setMinutes, setSeconds } from "date-fns";
-import { Calendar, ChevronUp, Clock, Lock } from "lucide-react-native";
+import { Calendar, Clock, Lock } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
@@ -66,9 +74,11 @@ const ScreenNextAppointment: React.FC = () => {
   const heroTint = specialty.grad[1];
 
   const [when, setWhen] = useState<Date>(defaultNextAppointment);
+  /** Which picker modal is open, if any. */
   const [pickerMode, setPickerMode] = useState<"date" | "time" | null>(null);
-
-  const iosDateDisplay: "inline" | "spinner" = pickerMode === "date" ? "inline" : "spinner";
+  /** Draft value for the open picker. Kept separate from `when` so
+   *  Cancel can discard a pending change. */
+  const [draft, setDraft] = useState<Date>(when);
 
   const applyPreset = (days: number) => {
     hapticLight();
@@ -77,15 +87,36 @@ const ScreenNextAppointment: React.FC = () => {
     setWhen(target);
   };
 
-  const togglePicker = (mode: "date" | "time") => {
+  const openPicker = (mode: "date" | "time") => {
     hapticLight();
-    setPickerMode((prev) => (prev === mode ? null : mode));
+    setDraft(when);
+    setPickerMode(mode);
+  };
+
+  const cancelPicker = () => {
+    hapticLight();
+    setPickerMode(null);
+  };
+
+  const confirmPicker = () => {
+    hapticLight();
+    setWhen(draft);
+    setPickerMode(null);
   };
 
   const onPickerChange = (event: DateTimePickerEvent, selected?: Date) => {
-    if (Platform.OS === "android") setPickerMode(null);
-    if (event.type === "dismissed") return;
-    if (selected) setWhen(selected);
+    // Android's native dialog fires its own OK/Cancel and then calls
+    // this with event.type set accordingly. Our modal only wraps the
+    // iOS spinner/inline variants, so on Android we just bridge the
+    // native buttons directly to our commit/cancel flow.
+    if (Platform.OS === "android") {
+      if (event.type === "set" && selected) {
+        setWhen(selected);
+      }
+      setPickerMode(null);
+      return;
+    }
+    if (selected) setDraft(selected);
   };
 
   const onSkip = () => {
@@ -118,21 +149,7 @@ const ScreenNextAppointment: React.FC = () => {
     return hit?.days ?? null;
   }, [when]);
 
-  const renderCollapsedChip = (mode: "date" | "time") => (
-    <Pressable
-      onPress={() => togglePicker(mode)}
-      style={[styles.collapsedChip, { backgroundColor: colors.bgSurface, borderColor: colors.border }]}
-    >
-      {mode === "date" ? (
-        <Calendar size={moderateScale(12)} color={colors.textTertiary} strokeWidth={2} />
-      ) : (
-        <Clock size={moderateScale(12)} color={colors.textTertiary} strokeWidth={2} />
-      )}
-      <Text style={[styles.collapsedChipText, { color: colors.textSecondary }]} numberOfLines={1}>
-        {mode === "date" ? format(when, "EEE, MMM d") : format(when, "h:mm a")}
-      </Text>
-    </Pressable>
-  );
+  const iosDisplay: "inline" | "spinner" = pickerMode === "date" ? "inline" : "spinner";
 
   return (
     <SceneTransition mode="scale-fade">
@@ -177,7 +194,6 @@ const ScreenNextAppointment: React.FC = () => {
               Set a date and we'll have a visit brief ready. Skip if nothing's on the calendar yet.
             </Text>
 
-            {/* Compact single-line hero — the chosen date as a live value */}
             <View style={[styles.hero, shadows.card]}>
               <LinearGradient
                 colors={specialty.grad}
@@ -191,7 +207,6 @@ const ScreenNextAppointment: React.FC = () => {
               {lead.name && <Text style={styles.heroSub}>with {lead.name}</Text>}
             </View>
 
-            {/* Preset chips */}
             <View style={styles.presetsRow}>
               {PRESETS.map((p) => {
                 const active = activePresetDays === p.days;
@@ -224,115 +239,22 @@ const ScreenNextAppointment: React.FC = () => {
               })}
             </View>
 
-            {/* Stepped tiles — default: two side-by-side. When one is
-                tapped, it expands full-width and shows its picker
-                inline, bounded by a clear container + Done button.
-                The other tile collapses to a small chip beside it. */}
-            {pickerMode === null && (
-              <View style={styles.tilesRow}>
-                <TilePressable
-                  mode="date"
-                  label="Date"
-                  value={format(when, "EEE, MMM d")}
-                  Icon={Calendar}
-                  tint={heroTint}
-                  onPress={() => togglePicker("date")}
-                />
-                <TilePressable
-                  mode="time"
-                  label="Time"
-                  value={format(when, "h:mm a")}
-                  Icon={Clock}
-                  tint={heroTint}
-                  onPress={() => togglePicker("time")}
-                />
-              </View>
-            )}
-
-            {pickerMode !== null && (
-              <View style={styles.steppedArea}>
-                {/* Expanded tile with inline picker + always-visible Done */}
-                <View
-                  style={[
-                    styles.expanded,
-                    { backgroundColor: colors.bgSurface, borderColor: heroTint },
-                    shadows.card,
-                  ]}
-                >
-                  <View style={styles.expandedHeader}>
-                    <View style={[styles.tileIcon, { backgroundColor: heroTint + "1A" }]}>
-                      {pickerMode === "date" ? (
-                        <Calendar size={moderateScale(14)} color={heroTint} strokeWidth={2.2} />
-                      ) : (
-                        <Clock size={moderateScale(14)} color={heroTint} strokeWidth={2.2} />
-                      )}
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[typography.caption, { color: colors.textTertiary }]}>
-                        {pickerMode === "date" ? "Pick a date" : "Pick a time"}
-                      </Text>
-                      <Text
-                        style={[styles.expandedValue, { color: colors.textPrimary }]}
-                        numberOfLines={1}
-                      >
-                        {pickerMode === "date"
-                          ? format(when, "EEE, MMM d")
-                          : format(when, "h:mm a")}
-                      </Text>
-                    </View>
-                    <Pressable
-                      onPress={() => setPickerMode(null)}
-                      hitSlop={10}
-                      style={[styles.collapseBtn, { backgroundColor: colors.bgMuted }]}
-                      accessibilityRole="button"
-                      accessibilityLabel="Collapse"
-                    >
-                      <ChevronUp
-                        size={moderateScale(14)}
-                        color={colors.textSecondary}
-                        strokeWidth={2.2}
-                      />
-                    </Pressable>
-                  </View>
-
-                  <View style={[styles.expandedDivider, { backgroundColor: colors.border }]} />
-
-                  <View style={styles.pickerWrap}>
-                    {Platform.OS === "android" && (
-                      <DateTimePicker
-                        value={when}
-                        mode={pickerMode}
-                        display="default"
-                        minimumDate={pickerMode === "date" ? new Date() : undefined}
-                        onChange={onPickerChange}
-                      />
-                    )}
-                    {Platform.OS === "ios" && (
-                      <DateTimePicker
-                        value={when}
-                        mode={pickerMode}
-                        display={iosDateDisplay}
-                        minimumDate={pickerMode === "date" ? new Date() : undefined}
-                        onChange={onPickerChange}
-                        accentColor={heroTint}
-                      />
-                    )}
-                  </View>
-
-                  <Pressable
-                    onPress={() => setPickerMode(null)}
-                    style={[styles.doneBtn, { backgroundColor: heroTint }]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Done"
-                  >
-                    <Text style={styles.doneBtnText}>Done</Text>
-                  </Pressable>
-                </View>
-
-                {/* Small swap chip for the other picker */}
-                {renderCollapsedChip(pickerMode === "date" ? "time" : "date")}
-              </View>
-            )}
+            <View style={styles.tilesRow}>
+              <TilePressable
+                label="Date"
+                value={format(when, "EEE, MMM d")}
+                Icon={Calendar}
+                tint={heroTint}
+                onPress={() => openPicker("date")}
+              />
+              <TilePressable
+                label="Time"
+                value={format(when, "h:mm a")}
+                Icon={Clock}
+                tint={heroTint}
+                onPress={() => openPicker("time")}
+              />
+            </View>
 
             <View style={[styles.privacyRow, { backgroundColor: colors.bgMuted }]}>
               <Lock size={moderateScale(12)} color={colors.textTertiary} strokeWidth={2.2} />
@@ -346,15 +268,83 @@ const ScreenNextAppointment: React.FC = () => {
             <PrimaryButton label="Save appointment" onPress={onSave} />
           </View>
         </SafeAreaView>
+
+        {/* Picker modal. Android uses its own native dialog and skips
+            the modal wrapper; iOS gets a sheet with Cancel / Done. */}
+        {Platform.OS === "android" && pickerMode && (
+          <DateTimePicker
+            value={draft}
+            mode={pickerMode}
+            display="default"
+            minimumDate={pickerMode === "date" ? new Date() : undefined}
+            onChange={onPickerChange}
+          />
+        )}
+
+        {Platform.OS === "ios" && (
+          <Modal
+            visible={pickerMode !== null}
+            transparent
+            animationType="fade"
+            onRequestClose={cancelPicker}
+          >
+            <Pressable style={styles.backdrop} onPress={cancelPicker} />
+            <View style={[styles.sheet, { backgroundColor: colors.bgSurface }]}>
+              <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
+                <Pressable onPress={cancelPicker} hitSlop={8}>
+                  <Text
+                    style={[
+                      typography.body,
+                      { color: colors.textSecondary, fontFamily: "DMSans_500Medium" },
+                    ]}
+                  >
+                    Cancel
+                  </Text>
+                </Pressable>
+                <Text
+                  style={[
+                    typography.label,
+                    {
+                      color: colors.textPrimary,
+                      fontFamily: "DMSans_600SemiBold",
+                      fontSize: fontScale(13),
+                    },
+                  ]}
+                >
+                  {pickerMode === "date" ? "Pick a date" : "Pick a time"}
+                </Text>
+                <Pressable onPress={confirmPicker} hitSlop={8}>
+                  <Text
+                    style={[
+                      typography.body,
+                      { color: heroTint, fontFamily: "DMSans_700Bold" },
+                    ]}
+                  >
+                    Done
+                  </Text>
+                </Pressable>
+              </View>
+              <View style={styles.sheetBody}>
+                {pickerMode && (
+                  <DateTimePicker
+                    value={draft}
+                    mode={pickerMode}
+                    display={iosDisplay}
+                    minimumDate={pickerMode === "date" ? new Date() : undefined}
+                    onChange={onPickerChange}
+                    accentColor={heroTint}
+                  />
+                )}
+              </View>
+            </View>
+          </Modal>
+        )}
       </View>
     </SceneTransition>
   );
 };
 
-// ─── Tile pressable ────────────────────────────────────────────────────
-
 interface TilePressableProps {
-  mode: "date" | "time";
   label: string;
   value: string;
   Icon: typeof Calendar;
@@ -487,70 +477,6 @@ const useStyles = makeStyles((theme) => ({
     fontFamily: "DMSans_600SemiBold",
     marginTop: 1,
   },
-  steppedArea: {
-    marginTop: spacing.s4,
-    gap: moderateScale(10),
-  },
-  expanded: {
-    borderRadius: theme.radius.xl,
-    borderWidth: 1.5,
-    paddingHorizontal: moderateScale(14),
-    paddingTop: moderateScale(14),
-    paddingBottom: moderateScale(10),
-  },
-  expandedHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(10),
-    marginBottom: moderateScale(10),
-  },
-  expandedValue: {
-    ...theme.typography.body,
-    fontFamily: "DMSans_600SemiBold",
-    marginTop: 1,
-  },
-  expandedDivider: {
-    height: StyleSheet.hairlineWidth,
-    marginBottom: moderateScale(6),
-  },
-  pickerWrap: {
-    alignItems: "center",
-    marginBottom: moderateScale(6),
-  },
-  collapseBtn: {
-    width: moderateScale(28),
-    height: moderateScale(28),
-    borderRadius: moderateScale(14),
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  doneBtn: {
-    alignSelf: "stretch",
-    paddingVertical: verticalScale(12),
-    borderRadius: theme.radius.full,
-    alignItems: "center",
-    marginTop: moderateScale(4),
-  },
-  doneBtnText: {
-    color: "#FFFFFF",
-    fontFamily: "DMSans_700Bold",
-    fontSize: fontScale(14),
-    letterSpacing: 0.2,
-  },
-  collapsedChip: {
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(6),
-    paddingHorizontal: scale(12),
-    paddingVertical: verticalScale(8),
-    borderRadius: theme.radius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  collapsedChipText: {
-    fontFamily: "DMSans_500Medium",
-    fontSize: fontScale(12),
-  },
   privacyRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -563,5 +489,36 @@ const useStyles = makeStyles((theme) => ({
   ctaSlot: {
     paddingHorizontal: theme.spacing.s6,
     paddingTop: verticalScale(8),
+  },
+  backdrop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  sheet: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderTopLeftRadius: theme.radius.xl,
+    borderTopRightRadius: theme.radius.xl,
+    paddingBottom: verticalScale(28),
+    paddingTop: verticalScale(6),
+  },
+  sheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: scale(18),
+    paddingVertical: verticalScale(14),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  sheetBody: {
+    paddingHorizontal: scale(12),
+    paddingTop: verticalScale(4),
+    alignItems: "center",
   },
 }));
