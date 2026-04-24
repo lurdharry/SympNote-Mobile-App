@@ -30,7 +30,7 @@ import {
   verticalScale,
 } from "../../theme";
 import { PrimaryButton } from "../../components/ui/PrimaryButton";
-import { CraftingMascot } from "../../components/onboarding/CraftingMascot";
+import { SympnoteSprite } from "../../components/onboarding/SympnoteSprite";
 import { purchase, Plan } from "../../services/subscription";
 import { structureTranscript } from "../../services/ai";
 import { useProfileStore } from "../../stores/useProfileStore";
@@ -281,7 +281,7 @@ const CraftingOverlay: React.FC<CraftingOverlayProps> = ({ reduced }) => {
     <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bgPrimary }]}>
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
         <View style={craftingStyles.body}>
-          <CraftingMascot reduced={reduced} />
+          <SympnoteSprite pose="crafting" reduced={reduced} />
           <Text
             style={[
               typography.h2,
