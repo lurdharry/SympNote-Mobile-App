@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -10,6 +10,7 @@ import { ReviewPhase } from "../components/recording/ReviewPhase";
 import { ExtractingPhase } from "../components/recording/ExtractingPhase";
 import { ExtractedPhase } from "../components/recording/ExtractedPhase";
 import { useRecordingFlow } from "../components/recording/useRecordingFlow";
+import { useProfileStore } from "../stores/useProfileStore";
 import { useRecordingsStore } from "../stores/useRecordingsStore";
 import { uuid } from "../utils/uuid";
 import { hapticHeavy, hapticLight } from "../services/haptics";
@@ -29,8 +30,22 @@ const RecordModal: React.FC = () => {
   const { kind } = useLocalSearchParams<{ kind?: string }>();
   const flow = useRecordingFlow();
   const insets = useSafeAreaInsets();
+  const careTeam = useProfileStore(
+    (s) => s.personalization?.careTeam ?? [],
+  );
 
   const presetTag = typeof kind === "string" ? kindToTag(kind) : null;
+
+  const [selectedClinicians, setSelectedClinicians] = useState<string[]>([]);
+  const toggleClinician = useCallback((name: string) => {
+    setSelectedClinicians((prev) => {
+      const norm = name.trim();
+      const lower = norm.toLowerCase();
+      const hit = prev.findIndex((s) => s.trim().toLowerCase() === lower);
+      if (hit >= 0) return prev.filter((_, i) => i !== hit);
+      return [...prev, norm];
+    });
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -54,6 +69,9 @@ const RecordModal: React.FC = () => {
       transcript: flow.reviewText.trim(),
       structured: flow.structured,
       tags,
+      ...(selectedClinicians.length > 0
+        ? { clinicianNames: selectedClinicians }
+        : {}),
     });
     hapticHeavy();
     router.back();
@@ -142,7 +160,13 @@ const RecordModal: React.FC = () => {
           )}
 
           {flow.phase === "extracted" && flow.structured && (
-            <ExtractedPhase structured={flow.structured} onSave={save} />
+            <ExtractedPhase
+              structured={flow.structured}
+              onSave={save}
+              careTeam={careTeam}
+              selectedClinicians={selectedClinicians}
+              onToggleClinician={toggleClinician}
+            />
           )}
         </ScrollView>
       </View>

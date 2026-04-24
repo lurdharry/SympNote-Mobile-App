@@ -66,10 +66,17 @@ const windowStart = (
 };
 
 /**
- * Pick which recordings feed the AI brief for a given appointment —
- * everything logged since the patient's last attended visit with the
- * same doctor, falling back to the last 30 days when no prior visit
- * exists. Returned oldest-first so the AI receives a chronological view.
+ * Pick which recordings feed the AI brief for a given appointment.
+ * Two filters combine:
+ *  1. Time window — everything logged since the patient's last
+ *     attended visit with the same doctor (falling back to any
+ *     doctor, then the last 30 days).
+ *  2. Routing — a recording with no `clinicianNames` is "general"
+ *     and feeds every clinician's brief. A recording tagged for a
+ *     subset of clinicians only feeds that subset — a "knee pain"
+ *     entry meant for the orthopedist stops leaking into the
+ *     cardiologist's brief.
+ * Returned oldest-first so the AI receives a chronological view.
  */
 export const recordingsForAppointmentBrief = (
   appointment: Appointment,
@@ -77,8 +84,14 @@ export const recordingsForAppointmentBrief = (
   allAppointments: Appointment[] = [],
 ): Recording[] => {
   const startMs = windowStart(appointment, allAppointments, Date.now());
+  const doctor = appointment.doctorName.trim().toLowerCase();
   return allRecordings
     .filter((r) => parseISO(r.createdAt).getTime() >= startMs)
+    .filter((r) => {
+      const tags = r.clinicianNames ?? [];
+      if (tags.length === 0) return true;
+      return tags.some((n) => n.trim().toLowerCase() === doctor);
+    })
     .sort((a, b) => parseISO(a.createdAt).getTime() - parseISO(b.createdAt).getTime());
 };
 
