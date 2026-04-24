@@ -1,13 +1,11 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CalendarPlus, ChevronRight } from 'lucide-react-native';
+import { Plus } from 'lucide-react-native';
 import {
   makeStyles,
   moderateScale,
-  scale,
-  shadows,
   spacing,
   typography,
   useTheme,
@@ -32,10 +30,26 @@ const TabPrep: React.FC = () => {
       <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
           <View style={styles.header}>
-            <Text style={[typography.h1, { color: colors.textPrimary }]}>Prep</Text>
-            <Text style={[typography.body, { color: colors.textSecondary, marginTop: 2 }]}>
-              AI summaries for your upcoming visits.
-            </Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[typography.h1, { color: colors.textPrimary }]}>Prep</Text>
+              <Text
+                style={[typography.body, { color: colors.textSecondary, marginTop: 2 }]}
+              >
+                AI summaries for your upcoming visits.
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => {
+                hapticLight();
+                router.push('/appointment-new');
+              }}
+              hitSlop={10}
+              style={[styles.headerAdd, { backgroundColor: colors.accent }]}
+              accessibilityRole="button"
+              accessibilityLabel="Add appointment"
+            >
+              <Plus size={moderateScale(20)} color="#FFFFFF" strokeWidth={2.4} />
+            </Pressable>
           </View>
 
           <ScrollView
@@ -47,58 +61,6 @@ const TabPrep: React.FC = () => {
             ) : (
               upcoming.map((r) => <AppointmentCard key={r.id} row={r} />)
             )}
-
-            <Pressable
-              onPress={() => {
-                hapticLight();
-                router.push('/appointment-new');
-              }}
-              style={[
-                styles.addCard,
-                { backgroundColor: colors.bgSurface, borderColor: colors.border },
-                shadows.card,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Add appointment"
-            >
-              <View
-                style={[styles.addIcon, { backgroundColor: colors.accent + '1A' }]}
-              >
-                <CalendarPlus
-                  size={moderateScale(18)}
-                  color={colors.accent}
-                  strokeWidth={2.2}
-                />
-              </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text
-                  style={[
-                    typography.h3,
-                    {
-                      color: colors.textPrimary,
-                      fontFamily: 'DMSans_600SemiBold',
-                    },
-                  ]}
-                  numberOfLines={1}
-                >
-                  Add appointment
-                </Text>
-                <Text
-                  style={[
-                    typography.caption,
-                    { color: colors.textTertiary, marginTop: 1 },
-                  ]}
-                  numberOfLines={1}
-                >
-                  We'll prep a brief for your next visit.
-                </Text>
-              </View>
-              <ChevronRight
-                size={moderateScale(16)}
-                color={colors.textTertiary}
-                strokeWidth={2}
-              />
-            </Pressable>
 
             {past.length > 0 && (
               <View style={styles.pastSection}>
@@ -140,27 +102,21 @@ const useStyles = makeStyles((theme) => ({
     paddingTop: theme.spacing.s3,
     paddingHorizontal: theme.spacing.s6,
     paddingBottom: theme.spacing.s3,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: moderateScale(12),
+  },
+  headerAdd: {
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: moderateScale(20),
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...theme.shadows.accentGlow,
   },
   content: {
     paddingHorizontal: theme.spacing.s6,
     paddingBottom: verticalScale(120),
-  },
-  addCard: {
-    marginTop: theme.spacing.s4,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: moderateScale(12),
-    paddingHorizontal: scale(14),
-    paddingVertical: verticalScale(14),
-    borderRadius: theme.radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  addIcon: {
-    width: moderateScale(40),
-    height: moderateScale(40),
-    borderRadius: moderateScale(12),
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   pastSection: {
     marginTop: theme.spacing.s6,
