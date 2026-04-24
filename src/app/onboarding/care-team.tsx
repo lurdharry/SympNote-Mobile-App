@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { addDays, setHours, setMinutes, setSeconds } from "date-fns";
-import { Lock, Plus } from "lucide-react-native";
+import { Lock, Plus, X } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
@@ -20,7 +20,6 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { StaggeredList } from "@/components/animated/StaggeredList";
 import { ClinicianCard } from "@/components/onboarding/care-team/ClinicianCard";
 import type { Clinician } from "@/components/onboarding/care-team/ClinicianCard";
-import { AddClinicianSheet } from "@/components/onboarding/care-team/AddClinicianSheet";
 import { AppointmentBlock } from "@/components/onboarding/care-team/AppointmentBlock";
 import { SPECIALTIES, Specialty } from "@/constants/specialties";
 import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
@@ -67,34 +66,48 @@ const ScreenCareTeam: React.FC = () => {
   const setAnswer = useProfileStore((s) => s.setOnboardingAnswer);
 
   const [members, setMembers] = useState<Clinician[]>([]);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [sheetSeed, setSheetSeed] = useState<Specialty | null>(null);
-  const [customRoleSeed, setCustomRoleSeed] = useState<string>("");
   const [customDraft, setCustomDraft] = useState("");
+  /** Role the user is currently adding a clinician under. Null when
+   *  no add is in progress. Setting this reveals the inline name
+   *  input below the specialty grid and highlights the matching chip
+   *  (if the role matches a preset). */
+  const [addingRole, setAddingRole] = useState<string | null>(null);
+  const [nameDraft, setNameDraft] = useState("");
 
   const [hasAppointment, setHasAppointment] = useState(false);
   const [nextWhen, setNextWhen] = useState<Date>(defaultNextAppointment);
   const [pickerMode, setPickerMode] = useState<"date" | "time" | null>(null);
 
-  const openSheet = (preset?: Specialty) => {
+  const pickSpecialty = (spec: Specialty) => {
     hapticLight();
-    setSheetSeed(preset ?? null);
-    setCustomRoleSeed("");
-    setSheetOpen(true);
-  };
-
-  const openSheetWithCustomRole = () => {
-    const role = customDraft.trim();
-    if (!role) return;
-    hapticLight();
-    setSheetSeed(null);
-    setCustomRoleSeed(role);
-    setSheetOpen(true);
+    setAddingRole((prev) => (prev === spec.label ? null : spec.label));
+    setNameDraft("");
     setCustomDraft("");
   };
 
-  const handleAdd = (value: { name: string; role: string }) => {
-    setMembers((m) => [...m, { id: uuid(), ...value }]);
+  const startCustom = () => {
+    const role = customDraft.trim();
+    if (!role) return;
+    hapticLight();
+    setAddingRole(role);
+    setNameDraft("");
+    setCustomDraft("");
+  };
+
+  const cancelAdd = () => {
+    hapticLight();
+    setAddingRole(null);
+    setNameDraft("");
+  };
+
+  const commitClinician = () => {
+    if (!addingRole) return;
+    const name = nameDraft.trim();
+    if (!name) return;
+    hapticLight();
+    setMembers((m) => [...m, { id: uuid(), name, role: addingRole }]);
+    setAddingRole(null);
+    setNameDraft("");
   };
 
   const handleRemove = (id: string) => {
@@ -189,10 +202,10 @@ const ScreenCareTeam: React.FC = () => {
               </View>
             )}
 
-            {/* Quick-add specialty grid — all specialties visible at
-                once in a flex-wrap. Label flips contextually. A dashed
-                "Other" chip at the end opens the add sheet without a
-                preset so users can type a specialty that isn't here. */}
+            {/* Inline add flow — all on this screen, no modal.
+                Tap a chip to pick its specialty, or type a custom one.
+                A name input slides in below as soon as a specialty is
+                chosen; submit adds the clinician and returns to idle. */}
             <View style={styles.quickAddBlock}>
               <Text style={[styles.quickAddLabel, { color: colors.textTertiary }]}>
                 {hasMembers ? "Add another" : "Tap a specialty to add"}
@@ -200,19 +213,25 @@ const ScreenCareTeam: React.FC = () => {
               <View style={styles.chipsWrap}>
                 {QUICK_ADD_SHORTCUTS.map((s) => {
                   const Icon = s.Icon;
+                  const active = addingRole === s.label;
                   return (
                     <Pressable
                       key={s.id}
-                      onPress={() => openSheet(s)}
+                      onPress={() => pickSpecialty(s)}
                       style={({ pressed }) => [
                         styles.chip,
                         {
-                          backgroundColor: colors.bgSurface,
-                          borderColor: pressed ? s.grad[1] : colors.border,
+                          backgroundColor: active
+                            ? s.grad[1] + "14"
+                            : colors.bgSurface,
+                          borderColor:
+                            active || pressed ? s.grad[1] : colors.border,
+                          borderWidth: active ? 1.5 : StyleSheet.hairlineWidth,
                         },
                       ]}
                       accessibilityRole="button"
                       accessibilityLabel={`Add ${s.label}`}
+                      accessibilityState={{ selected: active }}
                     >
                       <View
                         style={[styles.chipTile, { backgroundColor: s.grad[1] + "1F" }]}
@@ -223,7 +242,7 @@ const ScreenCareTeam: React.FC = () => {
                         style={[
                           typography.label,
                           {
-                            color: colors.textPrimary,
+                            color: active ? s.grad[1] : colors.textPrimary,
                             fontFamily: "DMSans_600SemiBold",
                             fontSize: fontScale(12),
                           },
@@ -236,44 +255,105 @@ const ScreenCareTeam: React.FC = () => {
                 })}
               </View>
 
-              <View style={[styles.customRow, { borderColor: colors.border }]}>
-                <TextInput
-                  value={customDraft}
-                  onChangeText={setCustomDraft}
-                  placeholder="Or type a specialty…"
-                  placeholderTextColor={colors.textTertiary}
-                  onSubmitEditing={openSheetWithCustomRole}
-                  returnKeyType="next"
-                  autoCapitalize="words"
-                  style={[styles.customInput, { color: colors.textPrimary }]}
-                  accessibilityLabel="Type a specialty"
-                />
-                <Pressable
-                  onPress={openSheetWithCustomRole}
-                  disabled={customDraft.trim().length === 0}
-                  hitSlop={8}
-                  style={[
-                    styles.customAddBtn,
-                    {
-                      backgroundColor:
-                        customDraft.trim().length === 0 ? colors.bgMuted : colors.accent,
-                      opacity: customDraft.trim().length === 0 ? 0.7 : 1,
-                    },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Add this specialty"
-                >
-                  <Plus
-                    size={moderateScale(16)}
-                    color={
-                      customDraft.trim().length === 0
-                        ? colors.textTertiary
-                        : "#FFFFFF"
-                    }
-                    strokeWidth={2.6}
+              {addingRole === null && (
+                <View style={[styles.customRow, { borderColor: colors.border }]}>
+                  <TextInput
+                    value={customDraft}
+                    onChangeText={setCustomDraft}
+                    placeholder="Or type a specialty…"
+                    placeholderTextColor={colors.textTertiary}
+                    onSubmitEditing={startCustom}
+                    returnKeyType="next"
+                    autoCapitalize="words"
+                    style={[styles.customInput, { color: colors.textPrimary }]}
+                    accessibilityLabel="Type a specialty"
                   />
-                </Pressable>
-              </View>
+                  <Pressable
+                    onPress={startCustom}
+                    disabled={customDraft.trim().length === 0}
+                    hitSlop={8}
+                    style={[
+                      styles.customAddBtn,
+                      {
+                        backgroundColor:
+                          customDraft.trim().length === 0 ? colors.bgMuted : colors.accent,
+                        opacity: customDraft.trim().length === 0 ? 0.7 : 1,
+                      },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Continue with this specialty"
+                  >
+                    <Plus
+                      size={moderateScale(16)}
+                      color={
+                        customDraft.trim().length === 0
+                          ? colors.textTertiary
+                          : "#FFFFFF"
+                      }
+                      strokeWidth={2.6}
+                    />
+                  </Pressable>
+                </View>
+              )}
+
+              {addingRole !== null && (
+                <View style={styles.addCard}>
+                  <View style={styles.addCardHeader}>
+                    <Text style={[styles.addCardRole, { color: colors.accent }]}>
+                      {addingRole.toUpperCase()}
+                    </Text>
+                    <Pressable
+                      onPress={cancelAdd}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel="Cancel"
+                    >
+                      <X size={moderateScale(14)} color={colors.textTertiary} strokeWidth={2.2} />
+                    </Pressable>
+                  </View>
+                  <View style={[styles.customRow, { borderColor: colors.accent }]}>
+                    <TextInput
+                      value={nameDraft}
+                      onChangeText={setNameDraft}
+                      placeholder="Clinician's name"
+                      placeholderTextColor={colors.textTertiary}
+                      onSubmitEditing={commitClinician}
+                      returnKeyType="done"
+                      autoCapitalize="words"
+                      autoFocus
+                      style={[styles.customInput, { color: colors.textPrimary }]}
+                      accessibilityLabel="Clinician's name"
+                    />
+                    <Pressable
+                      onPress={commitClinician}
+                      disabled={nameDraft.trim().length === 0}
+                      hitSlop={8}
+                      style={[
+                        styles.customAddBtn,
+                        {
+                          backgroundColor:
+                            nameDraft.trim().length === 0
+                              ? colors.bgMuted
+                              : colors.accent,
+                          opacity: nameDraft.trim().length === 0 ? 0.7 : 1,
+                        },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Add clinician"
+                    >
+                      <Plus
+                        size={moderateScale(16)}
+                        color={
+                          nameDraft.trim().length === 0
+                            ? colors.textTertiary
+                            : "#FFFFFF"
+                        }
+                        strokeWidth={2.6}
+                      />
+                    </Pressable>
+                  </View>
+                </View>
+              )}
             </View>
 
             {/* Appointment module — only meaningful once there's a clinician. */}
@@ -307,14 +387,6 @@ const ScreenCareTeam: React.FC = () => {
             <PrimaryButton label={"Continue"} onPress={onContinue} />
           </View>
         </SafeAreaView>
-
-        <AddClinicianSheet
-          visible={sheetOpen}
-          initialSpecialty={sheetSeed}
-          initialCustomRole={customRoleSeed}
-          onClose={() => setSheetOpen(false)}
-          onAdd={handleAdd}
-        />
       </View>
     </SceneTransition>
   );
@@ -394,6 +466,21 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: moderateScale(16),
     alignItems: "center",
     justifyContent: "center",
+  },
+  addCard: {
+    marginTop: moderateScale(8),
+    gap: moderateScale(6),
+  },
+  addCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: scale(4),
+  },
+  addCardRole: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: fontScale(10),
+    letterSpacing: 1.2,
   },
   chip: {
     flexDirection: "row",

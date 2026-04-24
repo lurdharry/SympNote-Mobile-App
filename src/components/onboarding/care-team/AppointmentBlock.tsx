@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -194,8 +193,10 @@ export const AppointmentBlock: React.FC<AppointmentBlockProps> = ({
             </Pressable>
           </View>
 
-          {/* Android renders DateTimePicker as its own native dialog
-              when mounted — no wrapper needed. */}
+          {/* Inline picker, no modal. Android still renders as its
+              own native dialog when mounted; iOS uses inline calendar
+              / spinner that flows in the layout. Tap the tile again
+              to collapse — same gesture that opened it. */}
           {pickerMode && Platform.OS === 'android' && (
             <DateTimePicker
               value={when}
@@ -206,49 +207,32 @@ export const AppointmentBlock: React.FC<AppointmentBlockProps> = ({
             />
           )}
 
-          {/* iOS wraps the picker in a centered modal card so the
-              calendar doesn't eat the whole page. */}
-          {Platform.OS === 'ios' && (
-            <Modal
-              visible={!!pickerMode}
-              transparent
-              animationType="fade"
-              onRequestClose={onClosePicker}
+          {pickerMode && Platform.OS === 'ios' && (
+            <View
+              style={[
+                styles.inlinePicker,
+                { borderTopColor: colors.border },
+              ]}
             >
-              <View style={styles.backdrop}>
-                <Pressable
-                  style={StyleSheet.absoluteFill}
-                  onPress={onClosePicker}
-                />
-                <View
+              <DateTimePicker
+                value={when}
+                mode={pickerMode}
+                display={iosDateDisplay}
+                minimumDate={pickerMode === 'date' ? new Date() : undefined}
+                onChange={handlePickerChange}
+                accentColor={colors.accent}
+              />
+              <Pressable onPress={onClosePicker} style={styles.doneRow}>
+                <Text
                   style={[
-                    styles.modalCard,
-                    { backgroundColor: colors.bgPrimary },
+                    typography.label,
+                    { color: colors.accent, fontFamily: 'DMSans_600SemiBold' },
                   ]}
                 >
-                  {pickerMode && (
-                    <DateTimePicker
-                      value={when}
-                      mode={pickerMode}
-                      display={iosDateDisplay}
-                      minimumDate={pickerMode === 'date' ? new Date() : undefined}
-                      onChange={handlePickerChange}
-                      accentColor={colors.accent}
-                    />
-                  )}
-                  <Pressable onPress={onClosePicker} style={styles.doneRow}>
-                    <Text
-                      style={[
-                        typography.label,
-                        { color: colors.accent, fontFamily: 'DMSans_600SemiBold' },
-                      ]}
-                    >
-                      Done
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-            </Modal>
+                  Done
+                </Text>
+              </Pressable>
+            </View>
           )}
         </>
       )}
@@ -315,20 +299,10 @@ const useStyles = makeStyles((theme) => ({
     fontFamily: 'DMSans_600SemiBold',
     marginTop: 1,
   },
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.s5,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: moderateScale(360),
-    borderRadius: theme.radius.xl,
-    paddingHorizontal: spacing.s5,
-    paddingTop: spacing.s4,
-    paddingBottom: spacing.s2,
+  inlinePicker: {
+    marginTop: spacing.s4,
+    paddingTop: spacing.s2,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   doneRow: {
     alignItems: 'flex-end',
