@@ -125,15 +125,19 @@ const AGE_DESCRIPTIONS: Record<PersonalizationProfile['ageBand'], string> = {
 };
 
 const CONDITION_LABELS: Record<string, string> = {
-  asthma: 'asthma',
-  diabetes: 'diabetes',
   hypertension: 'high blood pressure',
+  cholesterol: 'high cholesterol',
+  diabetes: 'diabetes',
+  allergies: 'allergies',
+  gerd: 'acid reflux / GERD',
   depression: 'depression / anxiety',
+  arthritis: 'arthritis',
   migraines: 'migraines',
-  autoimmune: 'autoimmune condition',
+  asthma: 'asthma',
   thyroid: 'thyroid condition',
   heart: 'heart condition',
-  'on-meds': 'on regular medication',
+  autoimmune: 'autoimmune condition',
+  cancer: 'cancer (current or past)',
   smoker: 'smoker or recently quit',
 };
 
