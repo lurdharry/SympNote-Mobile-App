@@ -7,10 +7,22 @@ import Animated, {
   SharedValue,
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
+import {
+  BlurMask,
+  Canvas,
+  Circle,
+  Group,
+  Path,
+  RadialGradient,
+  Skia,
+  useClock,
+  vec,
+} from "@shopify/react-native-skia";
+import { useDerivedValue } from "react-native-reanimated";
 import {
   fontScale,
   makeStyles,
@@ -22,22 +34,18 @@ import {
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface HoldToRecordOverlayProps {
-  /** Whether the hold is active + a recording is in progress. Drives
-   *  mount/unmount of the overlay. */
   visible: boolean;
-  /** Live partial transcript to surface while the user speaks. */
   liveTranscript: string;
-  /** Seconds elapsed since recording began. */
   durationSec: number;
-  /** 0–1 normalized volume, drives the orb's pulse. */
   volume: SharedValue<number>;
 }
 
 /**
- * Theatrical full-screen overlay shown while the user holds the
- * home FAB to record. A teal aurora gradient washes up from the mic
- * area, the underlying home stays visible at ~30% opacity, and a
- * volume-reactive orb plus live transcript anchor the centre.
+ * Full-screen hold-to-record canvas. Glass-blurred backdrop, a
+ * voice-reactive Skia blob anchored slightly above centre, live
+ * transcript in serif, and a subtle timer pill. Entry is one spring
+ * scale from the FAB origin (bottom-centre) so the whole surface
+ * feels like it grew out of the mic — not a curtain dropping.
  */
 export const HoldToRecordOverlay: React.FC<HoldToRecordOverlayProps> = ({
   visible,
@@ -49,156 +57,235 @@ export const HoldToRecordOverlay: React.FC<HoldToRecordOverlayProps> = ({
   const styles = useStyles();
   const reduced = useReducedMotion();
 
-  // Mount animation — sweeps from 0 to 1 as the aurora rises.
+  // Master progress — drives every animation so they stay in sync.
   const progress = useSharedValue(0);
-  // Ambient twirl used on the aurora so it feels alive even when
-  // the user is silent.
-  const breathe = useSharedValue(0);
 
   useEffect(() => {
     if (visible) {
-      progress.value = withTiming(1, {
-        duration: reduced ? 120 : 420,
-        easing: Easing.out(Easing.cubic),
-      });
-      if (!reduced) {
-        breathe.value = withRepeat(
-          withTiming(1, { duration: 2400, easing: Easing.inOut(Easing.sin) }),
-          -1,
-          true,
-        );
-      }
+      progress.value = reduced
+        ? withTiming(1, { duration: 90 })
+        : withSpring(1, { damping: 18, stiffness: 140, mass: 0.9 });
     } else {
       progress.value = withTiming(0, {
-        duration: reduced ? 90 : 260,
+        duration: reduced ? 80 : 220,
         easing: Easing.in(Easing.cubic),
       });
-      breathe.value = 0;
     }
-  }, [visible, reduced, progress, breathe]);
+  }, [visible, reduced, progress]);
 
+  // Backdrop blur + tint fade
   const backdropStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
+    opacity: interpolate(progress.value, [0, 1], [0, 1], Extrapolation.CLAMP),
   }));
 
-  const auroraStyle = useAnimatedStyle(() => {
-    // Rising band: translateY from +60% at rest → -10% fully open.
-    const ty = interpolate(progress.value, [0, 1], [60, -10], Extrapolation.CLAMP);
-    const scale = 1 + breathe.value * 0.08;
+  // Orb scales + translates from the FAB origin (bottom-centre).
+  const orbWrapStyle = useAnimatedStyle(() => {
+    const scale = interpolate(progress.value, [0, 1], [0.2, 1], Extrapolation.CLAMP);
+    const ty = interpolate(progress.value, [0, 1], [180, 0], Extrapolation.CLAMP);
     return {
-      transform: [{ translateY: `${ty}%` }, { scale }],
-      opacity: progress.value,
+      transform: [{ translateY: ty }, { scale }],
+      opacity: interpolate(progress.value, [0, 0.4, 1], [0, 0.6, 1]),
     };
   });
 
-  const orbOuterStyle = useAnimatedStyle(() => {
-    const v = volume.value;
-    const scale = 0.9 + progress.value * 0.1 + v * 0.25;
-    return {
-      transform: [{ scale }],
-      opacity: 0.55 * progress.value,
-    };
-  });
+  const timerStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0, 0.5, 1], [0, 0, 1]),
+    transform: [{ translateY: interpolate(progress.value, [0, 1], [-16, 0]) }],
+  }));
 
-  const orbInnerStyle = useAnimatedStyle(() => {
-    const v = volume.value;
-    const scale = 0.85 + progress.value * 0.15 + v * 0.35;
-    return {
-      transform: [{ scale }],
-      opacity: 0.9 * progress.value,
-    };
-  });
+  const transcriptStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0, 0.6, 1], [0, 0, 1]),
+    transform: [{ translateY: interpolate(progress.value, [0, 1], [24, 0]) }],
+  }));
 
-  const orbCoreStyle = useAnimatedStyle(() => {
-    const v = volume.value;
-    const scale = 0.9 + v * 0.2;
-    return {
-      transform: [{ scale }],
-      opacity: progress.value,
-    };
-  });
-
-  const contentStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 0.55, 1], [0, 0, 1], Extrapolation.CLAMP),
-    transform: [
-      {
-        translateY: interpolate(progress.value, [0, 1], [20, 0], Extrapolation.CLAMP),
-      },
-    ],
+  const hintStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0, 0.7, 1], [0, 0, 1]),
   }));
 
   if (!visible && progress.value === 0) return null;
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      {/* Dim the underlying home to ~30% visibility. */}
-      <Animated.View style={[styles.backdrop, backdropStyle]} />
-
-      {/* Aurora — rising from below, gradient from the mic's teal. */}
-      <Animated.View style={[styles.auroraWrap, auroraStyle]}>
-        <LinearGradient
-          colors={[
-            "rgba(44,110,107,0)",
-            "rgba(44,110,107,0.18)",
-            "rgba(61,166,159,0.42)",
-            "rgba(246,192,106,0.22)",
-          ]}
-          locations={[0, 0.38, 0.78, 1]}
-          start={{ x: 0.5, y: 1 }}
-          end={{ x: 0.5, y: 0 }}
-          style={StyleSheet.absoluteFill}
-        />
+      {/* Glass backdrop — native iOS blur, no fake opacity wash. */}
+      <Animated.View style={[StyleSheet.absoluteFill, backdropStyle]}>
+        <BlurView intensity={reduced ? 30 : 80} tint="dark" style={StyleSheet.absoluteFill} />
+        <View style={styles.tint} />
       </Animated.View>
 
-      {/* Volume-reactive orb: outer halo + mid ring + bright core. */}
-      <View style={styles.orbAnchor} pointerEvents="none">
-        <Animated.View style={[styles.orbOuter, orbOuterStyle]}>
-          <LinearGradient
-            colors={["rgba(61,166,159,0.55)", "rgba(61,166,159,0)"]}
-            start={{ x: 0.5, y: 0.5 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-        </Animated.View>
-        <Animated.View style={[styles.orbInner, orbInnerStyle]}>
-          <LinearGradient
-            colors={["#3BA79F", "#2C6E6B"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-        </Animated.View>
-        <Animated.View style={[styles.orbCore, orbCoreStyle]}>
-          <LinearGradient
-            colors={["#F5F1EA", "#F6C06A"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
+      {/* Timer pill — small, high, a recording dot throbbing next to it. */}
+      <Animated.View style={[styles.timerWrap, timerStyle]}>
+        <View style={[styles.timerPill, { borderColor: "rgba(255,255,255,0.14)" }]}>
+          <RecordingDot />
+          <Text style={styles.timerText}>{formatDuration(durationSec)}</Text>
+        </View>
+      </Animated.View>
+
+      {/* Hero orb — Skia, organic, voice-reactive. */}
+      <View style={styles.orbAnchor}>
+        <Animated.View style={orbWrapStyle}>
+          <ReactiveBlob volume={volume} size={moderateScale(260)} />
         </Animated.View>
       </View>
 
-      {/* Content — transcript preview, timer, hint. */}
-      <Animated.View style={[styles.content, contentStyle]} pointerEvents="none">
-        <Text style={[styles.timer, { color: colors.textPrimary }]}>
-          {formatDuration(durationSec)}
-        </Text>
-        <Text
-          style={[styles.transcript, { color: colors.textPrimary }]}
-          numberOfLines={4}
-        >
+      {/* Live transcript — serif, three lines max, dominates the lower half. */}
+      <Animated.View style={[styles.transcriptWrap, transcriptStyle]}>
+        <Text style={styles.transcript} numberOfLines={3}>
           {liveTranscript || "Listening…"}
         </Text>
-        <View style={styles.hintRow}>
-          <View style={[styles.hintDot, { backgroundColor: colors.accent }]} />
-          <Text style={[styles.hint, { color: colors.textSecondary }]}>
-            Release to save
-          </Text>
+      </Animated.View>
+
+      {/* Release hint at the bottom — tight, instructional. */}
+      <Animated.View style={[styles.hintWrap, hintStyle]}>
+        <View style={[styles.hintPill, { backgroundColor: "rgba(255,255,255,0.08)" }]}>
+          <Text style={styles.hintText}>Release to save</Text>
         </View>
       </Animated.View>
     </View>
   );
 };
+
+// ── Throbbing record dot ───────────────────────────────────────────
+
+const RecordingDot: React.FC = () => {
+  const reduced = useReducedMotion();
+  const pulse = useSharedValue(1);
+  useEffect(() => {
+    if (reduced) return;
+    // Simple two-way spring loop — feels more alive than withRepeat linear.
+    const loop = () => {
+      pulse.value = withTiming(0.55, { duration: 720, easing: Easing.out(Easing.sin) }, () => {
+        pulse.value = withTiming(1, { duration: 720, easing: Easing.in(Easing.sin) }, () => {
+          loop();
+        });
+      });
+    };
+    loop();
+  }, [reduced, pulse]);
+  const style = useAnimatedStyle(() => ({ opacity: pulse.value }));
+  return <Animated.View style={[styles_dot.dot, style]} />;
+};
+
+const styles_dot = StyleSheet.create({
+  dot: {
+    width: moderateScale(7),
+    height: moderateScale(7),
+    borderRadius: moderateScale(4),
+    backgroundColor: "#F06060",
+  },
+});
+
+// ── Voice-reactive Skia blob (display-only, non-interactive) ──────
+
+const VERTEX_COUNT = 10;
+const TWO_PI = Math.PI * 2;
+
+interface ReactiveBlobProps {
+  volume: SharedValue<number>;
+  size: number;
+}
+
+const ReactiveBlob: React.FC<ReactiveBlobProps> = ({ volume, size }) => {
+  const clock = useClock();
+  const center = size / 2;
+  const baseR = size * 0.26;
+
+  // Smoothed meter — raw volume ticks every 300ms and would jitter.
+  const smoothed = useSharedValue(0);
+  useDerivedValue(() => {
+    const target = volume.value;
+    smoothed.value += (target - smoothed.value) * 0.18;
+  });
+
+  const blobPath = useDerivedValue(() => {
+    const path = Skia.Path.Make();
+    const t = clock.value / 1000;
+    const m = smoothed.value;
+    const wobble = baseR * (0.04 + m * 0.18);
+    const pts: Array<[number, number]> = [];
+    for (let i = 0; i < VERTEX_COUNT; i++) {
+      const angle = (i / VERTEX_COUNT) * TWO_PI;
+      const phase = i * 0.73;
+      const wob =
+        Math.sin(t * 1.2 + phase) * wobble +
+        Math.sin(t * 2.6 + phase * 0.7) * wobble * 0.5;
+      const r = baseR + wob + m * baseR * 0.32;
+      pts.push([center + Math.cos(angle) * r, center + Math.sin(angle) * r]);
+    }
+    const first = pts[0]!;
+    path.moveTo(
+      (first[0] + pts[VERTEX_COUNT - 1]![0]) / 2,
+      (first[1] + pts[VERTEX_COUNT - 1]![1]) / 2,
+    );
+    for (let i = 0; i < VERTEX_COUNT; i++) {
+      const curr = pts[i]!;
+      const next = pts[(i + 1) % VERTEX_COUNT]!;
+      path.quadTo(curr[0], curr[1], (curr[0] + next[0]) / 2, (curr[1] + next[1]) / 2);
+    }
+    path.close();
+    return path;
+  });
+
+  const haloR = useDerivedValue(() => baseR * 1.45 + smoothed.value * baseR * 1.1);
+  const haloOp = useDerivedValue(() => 0.22 + smoothed.value * 0.55);
+  const coreR = useDerivedValue(() => baseR * 0.32 + smoothed.value * 14);
+
+  const gradient = useDerivedValue<string[]>(() => {
+    const m = smoothed.value;
+    if (m < 0.1) return ["#A8C4C2", "#3BA79F", "#1F504E"];
+    const warmth = Math.min(1, m * 1.3);
+    const mix = (a: string, b: string, t: number) => {
+      const ai = parseInt(a.slice(1), 16);
+      const bi = parseInt(b.slice(1), 16);
+      const r = Math.round(((ai >> 16) & 0xff) + (((bi >> 16) & 0xff) - ((ai >> 16) & 0xff)) * t);
+      const g = Math.round(((ai >> 8) & 0xff) + (((bi >> 8) & 0xff) - ((ai >> 8) & 0xff)) * t);
+      const b2 = Math.round((ai & 0xff) + ((bi & 0xff) - (ai & 0xff)) * t);
+      return `#${((r << 16) | (g << 8) | b2).toString(16).padStart(6, "0")}`;
+    };
+    return [
+      mix("#A8C4C2", "#F6C06A", warmth),
+      mix("#3BA79F", "#E07A5F", warmth),
+      mix("#1F504E", "#C45C3F", warmth),
+    ];
+  });
+
+  const haloColor = useDerivedValue(() =>
+    smoothed.value > 0.3 ? "#E07A5F" : "#3BA79F",
+  );
+
+  return (
+    <View style={{ width: size, height: size }}>
+      <Canvas style={StyleSheet.absoluteFill}>
+        <Group>
+          {/* Outer halo */}
+          <Circle cx={center} cy={center} r={haloR} opacity={haloOp} color={haloColor}>
+            <BlurMask blur={28} style="normal" />
+          </Circle>
+          {/* Soft middle glow */}
+          <Circle cx={center} cy={center} r={baseR * 1.12}>
+            <RadialGradient c={vec(center, center)} r={baseR * 1.15} colors={gradient} />
+            <BlurMask blur={18} style="solid" />
+          </Circle>
+          {/* Organic core blob */}
+          <Path path={blobPath}>
+            <RadialGradient c={vec(center, center)} r={baseR} colors={gradient} />
+            <BlurMask blur={8} style="solid" />
+          </Path>
+          {/* Bright inner highlight — moves with the meter */}
+          <Circle
+            cx={center - baseR * 0.2}
+            cy={center - baseR * 0.28}
+            r={coreR}
+            color="rgba(255,255,255,0.4)"
+          >
+            <BlurMask blur={10} style="normal" />
+          </Circle>
+        </Group>
+      </Canvas>
+    </View>
+  );
+};
+
+// ── Helpers ─────────────────────────────────────────────────────────
 
 const formatDuration = (s: number): string => {
   const m = Math.floor(s / 60);
@@ -207,78 +294,75 @@ const formatDuration = (s: number): string => {
 };
 
 const useStyles = makeStyles(() => ({
-  backdrop: {
+  tint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(10, 18, 18, 0.72)",
+    backgroundColor: "rgba(8, 14, 14, 0.38)",
   },
-  auroraWrap: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: "hidden",
-  },
-  orbAnchor: {
+  timerWrap: {
     position: "absolute",
-    top: "28%",
+    top: verticalScale(72),
     left: 0,
     right: 0,
     alignItems: "center",
-    justifyContent: "center",
   },
-  orbOuter: {
-    position: "absolute",
-    width: moderateScale(220),
-    height: moderateScale(220),
-    borderRadius: moderateScale(110),
-    overflow: "hidden",
+  timerPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(8),
+    paddingHorizontal: moderateScale(14),
+    paddingVertical: moderateScale(7),
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: "rgba(255,255,255,0.06)",
   },
-  orbInner: {
-    position: "absolute",
-    width: moderateScale(120),
-    height: moderateScale(120),
-    borderRadius: moderateScale(60),
-    overflow: "hidden",
+  timerText: {
+    fontFamily: "DMSans_600SemiBold",
+    fontSize: fontScale(12),
+    letterSpacing: 0.8,
+    color: "rgba(255,255,255,0.92)",
   },
-  orbCore: {
+  orbAnchor: {
     position: "absolute",
-    width: moderateScale(56),
-    height: moderateScale(56),
-    borderRadius: moderateScale(28),
-    overflow: "hidden",
+    top: "22%",
+    left: 0,
+    right: 0,
+    alignItems: "center",
   },
-  content: {
+  transcriptWrap: {
     position: "absolute",
-    top: "54%",
+    top: "62%",
     left: 0,
     right: 0,
     paddingHorizontal: spacing.s6,
     alignItems: "center",
   },
-  timer: {
-    fontFamily: "Fraunces_500Medium",
-    fontSize: fontScale(38),
-    letterSpacing: -1,
-    marginBottom: verticalScale(12),
-  },
   transcript: {
     fontFamily: "Fraunces_400Regular",
-    fontSize: fontScale(18),
-    lineHeight: fontScale(26),
+    fontSize: fontScale(22),
+    lineHeight: fontScale(30),
+    letterSpacing: -0.3,
     textAlign: "center",
-    minHeight: verticalScale(52),
+    color: "rgba(255,255,255,0.95)",
+    minHeight: verticalScale(90),
+    maxWidth: moderateScale(320),
   },
-  hintRow: {
-    flexDirection: "row",
+  hintWrap: {
+    position: "absolute",
+    bottom: verticalScale(112),
+    left: 0,
+    right: 0,
     alignItems: "center",
-    gap: moderateScale(8),
-    marginTop: verticalScale(24),
   },
-  hintDot: {
-    width: moderateScale(8),
-    height: moderateScale(8),
-    borderRadius: moderateScale(4),
+  hintPill: {
+    paddingHorizontal: moderateScale(14),
+    paddingVertical: moderateScale(7),
+    borderRadius: 999,
   },
-  hint: {
+  hintText: {
     fontFamily: "DMSans_600SemiBold",
-    fontSize: fontScale(12),
-    letterSpacing: 0.4,
+    fontSize: fontScale(11),
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    color: "rgba(255,255,255,0.88)",
   },
 }));
