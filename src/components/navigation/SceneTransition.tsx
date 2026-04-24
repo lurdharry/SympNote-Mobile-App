@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleProp, StyleSheet, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -8,6 +8,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { useTheme } from '../../theme';
 
 export type SceneMode =
   | 'scale-fade' // onboarding
@@ -36,6 +37,7 @@ export const SceneTransition: React.FC<Props> = ({
   enterDelay = 0,
 }) => {
   const reduced = useReducedMotion();
+  const { colors } = useTheme();
   const opacity = useSharedValue(0);
   const scale = useSharedValue(mode === 'scale-fade' ? 0.95 : 1);
   const translateY = useSharedValue(
@@ -107,7 +109,17 @@ export const SceneTransition: React.FC<Props> = ({
     ],
   }));
 
-  return <Animated.View style={[styles.fill, style$, style]}>{children}</Animated.View>;
+  // Two-layer wrapper: outer solid-color View (never fades) so nothing
+  // white shows through the screen when the inner animated layer is at
+  // opacity 0 during entry/exit. The inner Animated.View is what actually
+  // fades + slides.
+  return (
+    <View style={[styles.fill, { backgroundColor: colors.bgPrimary }]}>
+      <Animated.View style={[styles.fill, style$, style]}>
+        {children}
+      </Animated.View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
