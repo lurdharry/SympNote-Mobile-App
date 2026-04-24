@@ -10,9 +10,11 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Clipboard from 'expo-clipboard';
 import {
   AlertTriangle,
+  ArrowLeft,
   CalendarDays,
   Copy as CopyIcon,
   Download,
@@ -21,6 +23,7 @@ import {
   Pencil,
   Pill,
   RefreshCw,
+  Share as ShareIcon,
   Sparkles,
   Target,
   Trash2,
@@ -38,8 +41,8 @@ import {
 } from '@/theme';
 import { SharedElementScene } from '@/components/navigation/SharedElementScene';
 import { StaggeredList } from '@/components/animated/StaggeredList';
-import { BackButton } from '@/components/ui/BackButton';
 import { Button } from '@/components/ui/Button';
+import { findSpecialty } from '@/constants/specialties';
 import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { useRecordingsStore } from '@/stores/useRecordingsStore';
 import { useProfileStore } from '@/stores/useProfileStore';
@@ -117,6 +120,8 @@ const AppointmentDetail: React.FC = () => {
   const stale = isBriefStale(appt, allRecordings);
   const brief = appt.brief;
   const days = daysUntil(appt.date);
+  const specialty = findSpecialty(appt.specialty);
+  const SpecIcon = specialty.Icon;
 
   // When the appointment is in a terminal status, the badge reflects
   // that state instead of a relative-time countdown. Countdown only
@@ -249,90 +254,75 @@ const AppointmentDetail: React.FC = () => {
 
   return (
     <SharedElementScene style={{ backgroundColor: colors.bgPrimary }}>
-      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        {/* Sticky top bar — always tappable, never scrolls away.
+      <View style={{ flex: 1 }}>
+        {/* Gradient hero — back button + kebab overlay on the gradient.
             Explicit paddingTop from insets so the bar clears the status
             bar even when SharedElementScene's positioning confuses the
             nested SafeAreaView during the expand transition. */}
-        <View style={[styles.topBar, { paddingTop: insets.top + verticalScale(6) }]}>
-          <BackButton onPress={goBack} />
-          <Text
-            style={[
-              typography.label,
-              {
-                color: colors.textTertiary,
-                letterSpacing: 1,
-                fontFamily: 'DMSans_700Bold',
-                fontSize: fontScale(11),
-              },
-            ]}
-          >
-            VISIT BRIEF
-          </Text>
-          <Pressable
-            onPress={() => {
-              hapticLight();
-              setMenuOpen(true);
-            }}
-            hitSlop={10}
-            style={[styles.menuBtn, { backgroundColor: colors.bgMuted }]}
-            accessibilityRole="button"
-            accessibilityLabel="More actions"
-          >
-            <MoreVertical size={moderateScale(18)} color={colors.textPrimary} strokeWidth={2} />
-          </Pressable>
+        <View style={styles.hero}>
+          <LinearGradient
+            colors={specialty.grad}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View pointerEvents="none" style={styles.heroBlob} />
+          <View style={[styles.heroBar, { paddingTop: insets.top + verticalScale(6) }]}>
+            <Pressable
+              onPress={goBack}
+              hitSlop={16}
+              style={styles.heroIconBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+            >
+              <ArrowLeft size={moderateScale(20)} color="#FFFFFF" strokeWidth={2} />
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                hapticLight();
+                setMenuOpen(true);
+              }}
+              hitSlop={10}
+              style={styles.heroIconBtn}
+              accessibilityRole="button"
+              accessibilityLabel="More actions"
+            >
+              <MoreVertical size={moderateScale(20)} color="#FFFFFF" strokeWidth={2} />
+            </Pressable>
+          </View>
+
+          <View style={styles.heroBody}>
+            <View style={styles.heroRow}>
+              <View style={styles.specTile}>
+                <SpecIcon size={moderateScale(22)} color="#FFFFFF" strokeWidth={2.2} />
+              </View>
+              <View style={styles.heroPill}>
+                <Text style={styles.heroPillText}>{pill.label}</Text>
+              </View>
+            </View>
+            <Text style={styles.heroName} numberOfLines={2}>
+              {appt.doctorName}
+            </Text>
+            <Text style={styles.heroSpec}>{appt.specialty}</Text>
+            <View style={styles.heroMeta}>
+              <CalendarDays size={moderateScale(12)} color="rgba(255,255,255,0.85)" strokeWidth={2} />
+              <Text style={styles.heroMetaText}>
+                {formatDate(appt.date)} · {formatTime(appt.date)}
+              </Text>
+            </View>
+          </View>
         </View>
 
         <ScrollView
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          {/* Hero */}
-          <View style={styles.hero}>
-            <View style={styles.heroHeader}>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={[styles.heroName, { color: colors.textPrimary }]}>
-                  {appt.doctorName}
-                </Text>
-                <Text
-                  style={[typography.body, { color: colors.textSecondary, marginTop: 2 }]}
-                >
-                  {appt.specialty}
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.countdown,
-                  { backgroundColor: pill.tint + '1A', borderColor: pill.tint + '55' },
-                ]}
-              >
-                <Text
-                  style={[
-                    typography.label,
-                    {
-                      color: pill.tint,
-                      fontFamily: 'DMSans_700Bold',
-                    },
-                  ]}
-                >
-                  {pill.label}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.heroMeta}>
-              <CalendarDays size={moderateScale(12)} color={colors.textTertiary} strokeWidth={2} />
-              <Text style={[typography.caption, { color: colors.textTertiary }]}>
-                {formatDate(appt.date)} · {formatTime(appt.date)}
-              </Text>
-            </View>
-          </View>
-
           {/* Source caption — lets the user see what the brief is drawing
               from without needing to curate recordings by hand. */}
           <Text
             style={[
               typography.caption,
-              { color: colors.textTertiary, marginTop: spacing.s2, marginBottom: spacing.s3 },
+              { color: colors.textTertiary, marginBottom: spacing.s3 },
             ]}
           >
             Drawing from{' '}
@@ -358,7 +348,7 @@ const AppointmentDetail: React.FC = () => {
                   regenerating={generating}
                 />
               )}
-              <BriefView brief={brief} />
+              <BriefView brief={brief} accentGrad={specialty.grad} />
             </>
           )}
 
@@ -379,13 +369,31 @@ const AppointmentDetail: React.FC = () => {
 
         {/* Sticky primary action — only when brief exists */}
         {brief && (
-          <View style={[styles.ctaBar, { borderTopColor: colors.border, backgroundColor: colors.bgPrimary }]}>
-            <View style={{ flex: 1 }}>
-              <Button
-                label="Share with doctor"
-                onPress={share}
+          <View
+            style={[
+              styles.ctaBar,
+              {
+                borderTopColor: colors.border,
+                backgroundColor: colors.bgPrimary,
+                paddingBottom: insets.bottom + verticalScale(12),
+              },
+            ]}
+          >
+            <Pressable
+              onPress={share}
+              style={styles.primaryShare}
+              accessibilityRole="button"
+              accessibilityLabel="Share with doctor"
+            >
+              <LinearGradient
+                colors={specialty.grad}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
               />
-            </View>
+              <ShareIcon size={moderateScale(16)} color="#FFFFFF" strokeWidth={2.2} />
+              <Text style={styles.primaryShareText}>Share with doctor</Text>
+            </Pressable>
             <Pressable
               onPress={exportPdf}
               hitSlop={8}
@@ -442,7 +450,7 @@ const AppointmentDetail: React.FC = () => {
             reopen();
           }}
         />
-      </SafeAreaView>
+      </View>
     </SharedElementScene>
   );
 };
@@ -526,17 +534,24 @@ const StaleBanner: React.FC<StaleBannerProps> = ({ onRegenerate, regenerating })
 
 interface BriefViewProps {
   brief: AppointmentBrief;
+  accentGrad: [string, string];
 }
 
-const BriefView: React.FC<BriefViewProps> = ({ brief }) => {
+const BriefView: React.FC<BriefViewProps> = ({ brief, accentGrad }) => {
   const { colors } = useTheme();
   const styles = useStyles();
 
   return (
     <StaggeredList stagger={90} initialDelay={80}>
       {brief.summary ? (
-        <View style={[styles.section, { marginTop: spacing.s6 }]}>
-          <SectionHeader Icon={Target} label="Summary" tint={colors.accent} />
+        <View style={[styles.summaryCard, { marginTop: spacing.s6, borderColor: colors.border }]}>
+          <LinearGradient
+            colors={[accentGrad[0] + '14', accentGrad[1] + '08']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <SectionHeader Icon={Target} label="Summary" tint={accentGrad[0]} />
           <Text style={[styles.summaryText, { color: colors.textPrimary }]}>
             {brief.summary}
           </Text>
@@ -569,10 +584,10 @@ const BriefView: React.FC<BriefViewProps> = ({ brief }) => {
 
       {brief.topConcerns.length > 0 ? (
         <View style={[styles.section, { marginTop: spacing.s5 }]}>
-          <SectionHeader Icon={Target} label="Top concerns" tint="#E07A5F" />
+          <SectionHeader Icon={Target} label="Top concerns" tint={colors.coral} />
           {brief.topConcerns.map((c, i) => (
             <View key={i} style={styles.concernRow}>
-              <View style={[styles.concernDot, { backgroundColor: '#E07A5F' }]} />
+              <View style={[styles.concernDot, { backgroundColor: colors.coral }]} />
               <View style={{ flex: 1 }}>
                 <Text
                   style={[
@@ -595,7 +610,7 @@ const BriefView: React.FC<BriefViewProps> = ({ brief }) => {
 
       {brief.timeline.length > 0 ? (
         <View style={[styles.section, { marginTop: spacing.s5 }]}>
-          <SectionHeader Icon={CalendarDays} label="Timeline" tint="#D97706" />
+          <SectionHeader Icon={CalendarDays} label="Timeline" tint={colors.textTertiary} />
           {brief.timeline.map((t, i) => (
             <View key={i} style={styles.timelineRow}>
               <Text
@@ -620,7 +635,7 @@ const BriefView: React.FC<BriefViewProps> = ({ brief }) => {
 
       {brief.patterns.length > 0 ? (
         <View style={[styles.section, { marginTop: spacing.s5 }]}>
-          <SectionHeader Icon={Sparkles} label="Patterns" tint="#5A8F6E" />
+          <SectionHeader Icon={Sparkles} label="Patterns" tint={colors.success} />
           {brief.patterns.map((p, i) => (
             <View key={i} style={styles.bulletRow}>
               <Text style={[typography.body, { color: colors.textTertiary, marginRight: 8 }]}>
@@ -634,7 +649,7 @@ const BriefView: React.FC<BriefViewProps> = ({ brief }) => {
 
       {brief.medications.length > 0 ? (
         <View style={[styles.section, { marginTop: spacing.s5 }]}>
-          <SectionHeader Icon={Pill} label="Medications" tint="#2C6E6B" />
+          <SectionHeader Icon={Pill} label="Medications" tint={colors.accent} />
           <View style={styles.medsRow}>
             {brief.medications.map((m, i) => (
               <View
@@ -833,52 +848,94 @@ const MenuRow: React.FC<MenuRowProps> = ({ Icon, label, tint, disabled, onPress 
 };
 
 const useStyles = makeStyles((theme) => ({
-  topBar: {
+  hero: {
+    paddingBottom: theme.spacing.s5,
+    overflow: 'hidden',
+    borderBottomLeftRadius: theme.radius.xl,
+    borderBottomRightRadius: theme.radius.xl,
+  },
+  heroBlob: {
+    position: 'absolute',
+    right: -scale(40),
+    top: -verticalScale(40),
+    width: moderateScale(180),
+    height: moderateScale(180),
+    borderRadius: moderateScale(90),
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  heroBar: {
     paddingHorizontal: theme.spacing.s6,
-    paddingVertical: theme.spacing.s3,
+    paddingBottom: theme.spacing.s3,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
   },
-  menuBtn: {
+  heroIconBtn: {
     width: moderateScale(36),
     height: moderateScale(36),
     borderRadius: moderateScale(18),
+    backgroundColor: 'rgba(255,255,255,0.14)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  content: {
+  heroBody: {
     paddingHorizontal: theme.spacing.s6,
-    paddingTop: theme.spacing.s5,
-    paddingBottom: theme.spacing.s10,
+    paddingTop: theme.spacing.s2,
   },
-  hero: {
-    marginBottom: spacing.s4,
-  },
-  heroHeader: {
+  heroRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: moderateScale(12),
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: theme.spacing.s4,
+  },
+  specTile: {
+    width: moderateScale(48),
+    height: moderateScale(48),
+    borderRadius: moderateScale(14),
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroPill: {
+    paddingHorizontal: scale(12),
+    paddingVertical: verticalScale(6),
+    borderRadius: theme.radius.full,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  heroPillText: {
+    fontFamily: 'DMSans_700Bold',
+    fontSize: fontScale(11),
+    color: '#FFFFFF',
+    letterSpacing: 0.4,
   },
   heroName: {
     ...theme.typography.h1,
     fontFamily: 'Fraunces_500Medium',
-    letterSpacing: -0.5,
+    color: '#FFFFFF',
+    letterSpacing: -0.6,
+    fontSize: fontScale(28),
+    lineHeight: fontScale(34),
   },
-  countdown: {
-    paddingHorizontal: scale(10),
-    paddingVertical: verticalScale(4),
-    borderRadius: theme.radius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-    marginTop: verticalScale(6),
+  heroSpec: {
+    ...theme.typography.body,
+    color: 'rgba(255,255,255,0.88)',
+    marginTop: 2,
+    fontFamily: 'DMSans_500Medium',
   },
   heroMeta: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: moderateScale(6),
-    marginTop: moderateScale(8),
+    marginTop: moderateScale(10),
+  },
+  heroMetaText: {
+    ...theme.typography.caption,
+    color: 'rgba(255,255,255,0.88)',
+  },
+  content: {
+    paddingHorizontal: theme.spacing.s6,
+    paddingTop: theme.spacing.s5,
+    paddingBottom: theme.spacing.s10,
   },
   generateCard: {
     marginTop: spacing.s5,
@@ -931,6 +988,12 @@ const useStyles = makeStyles((theme) => ({
     fontFamily: 'DMSans_700Bold',
     letterSpacing: 1,
     fontSize: fontScale(11),
+  },
+  summaryCard: {
+    padding: moderateScale(16),
+    borderRadius: theme.radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
   },
   summaryText: {
     ...theme.typography.body,
@@ -992,9 +1055,24 @@ const useStyles = makeStyles((theme) => ({
     alignItems: 'center',
     gap: moderateScale(8),
     paddingHorizontal: theme.spacing.s6,
-    paddingTop: verticalScale(10),
-    paddingBottom: verticalScale(10),
+    paddingTop: verticalScale(12),
     borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  primaryShare: {
+    flex: 1,
+    height: verticalScale(48),
+    borderRadius: theme.radius.full,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: moderateScale(8),
+    overflow: 'hidden',
+  },
+  primaryShareText: {
+    color: '#FFFFFF',
+    fontFamily: 'DMSans_700Bold',
+    fontSize: fontScale(15),
+    letterSpacing: 0.2,
   },
   iconAction: {
     width: moderateScale(48),
