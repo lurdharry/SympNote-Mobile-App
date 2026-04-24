@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -49,59 +49,65 @@ const ScreenQualifier: React.FC = () => {
     <SceneTransition mode="scale-fade">
       <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
         <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
-          <View style={styles.topBar}>
-            <BackButton onPress={onBack} />
-            <View style={{ width: 40 }} />
-          </View>
-          <View style={styles.progressSlot}>
-            <OnboardingProgress value={0.25} />
-          </View>
-
-          <ScrollView
-            ref={scrollRef}
-            style={{ flex: 1 }}
-            contentContainerStyle={styles.feed}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
+          <KeyboardAvoidingView
+            style={styles.safe}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            keyboardVerticalOffset={0}
           >
-            {questions.slice(0, step).map((q) => (
-              <React.Fragment key={`${q.id}-turn`}>
-                <AssistantBubble>{q.ask}</AssistantBubble>
-                {answers[q.id] && <UserBubble>{labelFor(answers[q.id]!)}</UserBubble>}
-              </React.Fragment>
-            ))}
+            <View style={styles.topBar}>
+              <BackButton onPress={onBack} />
+              <View style={{ width: 40 }} />
+            </View>
+            <View style={styles.progressSlot}>
+              <OnboardingProgress value={0.25} />
+            </View>
 
-            {typing ? (
-              <TypingBubble />
-            ) : (
-              <>
-                <AssistantBubble>{current.ask}</AssistantBubble>
-                {current.hint && (
-                  <Text style={[typography.caption, styles.hint, { color: colors.textTertiary }]}>
-                    {current.hint}
-                  </Text>
-                )}
-              </>
-            )}
+            <ScrollView
+              ref={scrollRef}
+              style={{ flex: 1 }}
+              contentContainerStyle={styles.feed}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {questions.slice(0, step).map((q) => (
+                <React.Fragment key={`${q.id}-turn`}>
+                  <AssistantBubble>{q.ask}</AssistantBubble>
+                  {answers[q.id] && <UserBubble>{labelFor(answers[q.id]!)}</UserBubble>}
+                </React.Fragment>
+              ))}
 
-            <View style={{ height: 8 }} />
-          </ScrollView>
+              {typing ? (
+                <TypingBubble />
+              ) : (
+                <>
+                  <AssistantBubble>{current.ask}</AssistantBubble>
+                  {current.hint && (
+                    <Text style={[typography.caption, styles.hint, { color: colors.textTertiary }]}>
+                      {current.hint}
+                    </Text>
+                  )}
+                </>
+              )}
 
-          <View
-            style={[
-              styles.tray,
-              { borderTopColor: colors.border, backgroundColor: colors.bgPrimary },
-            ]}
-          >
-            <ChipTray
-              disabled={typing}
-              options={current.options ?? []}
-              multi={current.multi}
-              allowCustom={current.allowCustom}
-              onAnswer={answer}
-              onSkip={current.skippable ? skip : undefined}
-            />
-          </View>
+              <View style={{ height: 8 }} />
+            </ScrollView>
+
+            <View
+              style={[
+                styles.tray,
+                { borderTopColor: colors.border, backgroundColor: colors.bgPrimary },
+              ]}
+            >
+              <ChipTray
+                disabled={typing}
+                options={current.options ?? []}
+                multi={current.multi}
+                allowCustom={current.allowCustom}
+                onAnswer={answer}
+                onSkip={current.skippable ? skip : undefined}
+              />
+            </View>
+          </KeyboardAvoidingView>
         </SafeAreaView>
       </View>
     </SceneTransition>
