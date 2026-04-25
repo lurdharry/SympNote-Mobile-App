@@ -93,7 +93,7 @@ const ScreenFirstRecording: React.FC = () => {
             <View style={{ width: 40 }} />
           </View>
           <View style={styles.progressSlot}>
-            <OnboardingProgress value={1} />
+            <OnboardingProgress value={0.9} />
           </View>
 
           <Animated.View
