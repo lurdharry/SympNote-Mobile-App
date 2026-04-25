@@ -47,11 +47,6 @@ interface ChipProps {
   index: number;
   disabled: boolean;
   selected: boolean;
-  /** When true, renders the option as a vertical card with the
-   *  option's Mascot above the label instead of the row-style chip
-   *  with an icon tile. Caller decides this — true only when every
-   *  option in the question carries a Mascot. */
-  cardLayout: boolean;
   onPress: () => void;
 }
 
@@ -79,10 +74,6 @@ export const ChipTray: React.FC<ChipTrayProps> = ({
 
   const allOptions = [...options, ...customOptions];
   const customEnabled = multi && allowCustom;
-  // Card layout kicks in only when every preset option carries a
-  // Mascot. Custom options never have one, so we deliberately
-  // ignore them here — they'll still render as plain text cards.
-  const cardLayout = options.length > 0 && options.every((o) => !!o.Mascot);
 
   const toggle = (opt: Option) => {
     hapticLight();
@@ -146,7 +137,7 @@ export const ChipTray: React.FC<ChipTrayProps> = ({
 
   return (
     <View style={{ gap: moderateScale(10) }}>
-      <View style={[styles.wrap, cardLayout && styles.wrapCards]}>
+      <View style={styles.wrap}>
         {allOptions.map((opt, i) => (
           <Chip
             key={opt.v}
@@ -154,7 +145,6 @@ export const ChipTray: React.FC<ChipTrayProps> = ({
             index={i}
             disabled={disabled}
             selected={multi && selected.has(opt.v)}
-            cardLayout={cardLayout}
             onPress={() => toggle(opt)}
           />
         ))}
@@ -241,7 +231,7 @@ export const ChipTray: React.FC<ChipTrayProps> = ({
   );
 };
 
-const Chip: React.FC<ChipProps> = ({ option, index, disabled, selected, cardLayout, onPress }) => {
+const Chip: React.FC<ChipProps> = ({ option, index, disabled, selected, onPress }) => {
   const { colors } = useTheme();
   const styles = useStyles();
 
@@ -272,17 +262,13 @@ const Chip: React.FC<ChipProps> = ({ option, index, disabled, selected, cardLayo
     opacity: selected ? 0.3 : press.value * 0.45,
   }));
 
-  const { Icon, Mascot } = option;
+  const { Icon } = option;
 
   return (
-    <Animated.View style={[styles.outer, cardLayout && styles.outerCard, outerStyle]}>
+    <Animated.View style={[styles.outer, outerStyle]}>
       <Animated.View
         pointerEvents="none"
-        style={[
-          cardLayout ? styles.glowCard : styles.glow,
-          { backgroundColor: tint },
-          glowStyle,
-        ]}
+        style={[styles.glow, { backgroundColor: tint }, glowStyle]}
       />
       <Pressable
         onPress={onPress}
@@ -294,7 +280,7 @@ const Chip: React.FC<ChipProps> = ({ option, index, disabled, selected, cardLayo
           press.value = withTiming(0, { duration: 220 });
         }}
         style={({ pressed }) => [
-          cardLayout ? styles.card : styles.chip,
+          styles.chip,
           {
             borderColor: selected || pressed ? tint : colors.border,
             borderWidth: selected ? 1.5 : StyleSheet.hairlineWidth,
@@ -306,34 +292,12 @@ const Chip: React.FC<ChipProps> = ({ option, index, disabled, selected, cardLayo
         accessibilityLabel={option.t}
         accessibilityState={{ selected }}
       >
-        {cardLayout ? (
-          <>
-            <View style={styles.cardMascotSlot}>
-              {Mascot ? (
-                <Mascot size={moderateScale(56)} tint={tint} />
-              ) : Icon ? (
-                <View style={[styles.iconTile, { backgroundColor: tint + "22" }]}>
-                  <Icon size={moderateScale(18)} color={tint} strokeWidth={2.2} />
-                </View>
-              ) : null}
-            </View>
-            <Text
-              style={[styles.cardLabel, { color: colors.textPrimary }]}
-              numberOfLines={2}
-            >
-              {option.t}
-            </Text>
-          </>
-        ) : (
-          <>
-            {Icon && (
-              <View style={[styles.iconTile, { backgroundColor: tint + "22" }]}>
-                <Icon size={moderateScale(12)} color={tint} strokeWidth={2.4} />
-              </View>
-            )}
-            <Text style={styles.label}>{option.t}</Text>
-          </>
+        {Icon && (
+          <View style={[styles.iconTile, { backgroundColor: tint + "22" }]}>
+            <Icon size={moderateScale(12)} color={tint} strokeWidth={2.4} />
+          </View>
         )}
+        <Text style={styles.label}>{option.t}</Text>
       </Pressable>
     </Animated.View>
   );
@@ -347,19 +311,8 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     justifyContent: "center",
   },
-  // Card-mode wrap — taller cards laid out as a wrapping row.
-  wrapCards: {
-    gap: moderateScale(10),
-    alignItems: "stretch",
-  },
   outer: {
     position: "relative",
-  },
-  outerCard: {
-    flexBasis: "30%",
-    flexGrow: 1,
-    minWidth: moderateScale(96),
-    maxWidth: moderateScale(140),
   },
   glow: {
     position: "absolute",
@@ -368,37 +321,6 @@ const useStyles = makeStyles((theme) => ({
     top: -2,
     bottom: -2,
     borderRadius: theme.radius.full,
-  },
-  glowCard: {
-    position: "absolute",
-    left: -2,
-    right: -2,
-    top: -2,
-    bottom: -2,
-    borderRadius: theme.radius.lg,
-  },
-  card: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "flex-end",
-    paddingHorizontal: scale(8),
-    paddingTop: verticalScale(10),
-    paddingBottom: verticalScale(10),
-    borderRadius: theme.radius.lg,
-    gap: moderateScale(6),
-    ...theme.shadows.card,
-  },
-  cardMascotSlot: {
-    width: moderateScale(64),
-    height: moderateScale(64),
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cardLabel: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: fontScale(12),
-    letterSpacing: 0.1,
-    textAlign: "center",
   },
   chip: {
     flexDirection: "row",
