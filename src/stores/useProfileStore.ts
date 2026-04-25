@@ -51,7 +51,7 @@ const initial: State = {
   subscriptionStatus: "none",
   trialEndsAt: null,
   personalization: null,
-  themePreference: "auto",
+  themePreference: "light",
   hapticsEnabled: true,
   reduceMotionOverride: "auto",
   firstEntryHeroDismissed: false,
