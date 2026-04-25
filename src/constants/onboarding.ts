@@ -1,4 +1,3 @@
-import type { ComponentType } from 'react';
 import {
   Activity,
   Bone,
@@ -12,30 +11,13 @@ import {
   HeartPulse,
   Ribbon,
   Shield,
+  Sparkles,
   Sprout,
   Wind,
   Zap,
 } from 'lucide-react-native';
-import {
-  FlameMascot,
-  PulseMascot,
-  SparkMascot,
-  SproutMascot,
-  StarMascot,
-} from '@/components/onboarding/AgeMascots';
 
 type IconRef = typeof Calendar;
-
-/**
- * Optional mini-mascot for an option chip. When every option in a
- * question has one, ChipTray switches to a card layout with the
- * mascot at top + label below.
- */
-export interface MascotProps {
-  size: number;
-  tint: string;
-}
-export type MascotRef = ComponentType<MascotProps>;
 
 /* -------------------- Hook (screen 01) -------------------- */
 
@@ -48,10 +30,6 @@ export interface Option {
   v: string;
   /** Lucide icon rendered in the chip's left-tile. Optional. */
   Icon?: IconRef;
-  /** Optional mini-mascot. When every option has one, the tray
-   *  switches to a richer card layout with the mascot above the
-   *  label. */
-  Mascot?: MascotRef;
   /** Tint applied to the chip's icon tile. */
   tint?: string;
 }
@@ -105,11 +83,11 @@ export const QUESTIONS: Question[] = [
     ask: 'First, how old are you?',
     hint: "Your age tells Sympnote what normal looks like for you. A 25 year old's fatigue reads different from a 65 year old's.",
     options: [
-      { t: '12 to 17',   v: 'teen',    Icon: Sprout,    Mascot: SproutMascot, tint: '#5A8F6E' },
-      { t: '18 to 29',   v: '18-29',   Icon: Zap,       Mascot: SparkMascot,  tint: '#2C6E6B' },
-      { t: '30 to 49',   v: '30-49',   Icon: Flame,     Mascot: FlameMascot,  tint: '#C88A4A' },
-      { t: '50 to 64',   v: '50-64',   Icon: HeartPulse, Mascot: PulseMascot, tint: '#E07A5F' },
-      { t: '65 or older', v: '65-plus', Icon: HeartPulse, Mascot: StarMascot,  tint: '#6CA4A0' },
+      { t: '12 to 17', v: 'teen',    Icon: Sprout,   tint: '#5A8F6E' },
+      { t: '18 to 29', v: '18-29',   Icon: Zap,      tint: '#2C6E6B' },
+      { t: '30 to 49', v: '30-49',   Icon: Flame,    tint: '#C88A4A' },
+      { t: '50 to 64', v: '50-64',   Icon: Activity, tint: '#E07A5F' },
+      { t: '65 or older', v: '65-plus', Icon: Sparkles, tint: '#6CA4A0' },
     ],
   },
   {
