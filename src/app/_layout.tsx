@@ -82,8 +82,7 @@ const RootLayout: React.FC = () => {
                 <Stack.Screen
                   name="settings"
                   options={{
-                    animation: "slide_from_bottom",
-                    presentation: "modal",
+                    animation: "slide_from_right",
                   }}
                 />
                 <Stack.Screen

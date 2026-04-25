@@ -12,20 +12,23 @@ export type Badge = {
 };
 
 export type SettingsStats = {
+  /** Consecutive days with at least one recording. Still computed
+   *  because the home FirstEntryHero copy references it; not
+   *  surfaced on the settings screen anymore. */
   streak: number;
-  xp: number;
-  level: number;
-  xpIntoLevel: number;
-  xpForNextLevel: number;
-  levelProgress: number;
-  badges: Badge[];
   recordingsCount: number;
   summariesCount: number;
+  badges: Badge[];
 };
 
 /**
- * Derived gamification + engagement stats surfaced on the settings
- * screen: consecutive-day streak, XP/level, and badge unlock state.
+ * Honest, neutral stats for the settings screen: how much you've
+ * captured + which milestone badges you've unlocked. No level / no
+ * XP / no streak surfacing — they were game-mechanic borrows that
+ * implied "more is better" in a clinical context where it isn't.
+ *
+ * `computeStreak` is still exposed for FirstEntryHero copy on home,
+ * which uses it as a contextual line rather than a pressure metric.
  */
 export function useSettingsStats(): SettingsStats {
   const recordings = useRecordingsStore((s) => s.recordings);
@@ -34,31 +37,20 @@ export function useSettingsStats(): SettingsStats {
   const streak = useMemo(() => computeStreak(recordings), [recordings]);
   const summariesCount = useMemo(
     () => appointments.filter((a) => !!a.brief?.summary).length,
-    [appointments]
+    [appointments],
   );
 
-  const xp = recordings.length * 10 + summariesCount * 50;
-  const level = Math.floor(xp / 100) + 1;
-  const xpIntoLevel = xp % 100;
-  const xpForNextLevel = 100 * level;
-  const levelProgress = (xpIntoLevel / 100) * 100;
-
   const badges: Badge[] = [
-    { key: 'first',  label: 'First note', unlocked: recordings.length >= 1 },
-    { key: 'streak', label: '5-day',      unlocked: streak >= 5 },
-    { key: 'prep',   label: 'Prep pro',   unlocked: summariesCount >= 1 },
-    { key: 'thirty', label: '30 notes',   unlocked: recordings.length >= 30 },
+    { key: 'first', label: 'First note', unlocked: recordings.length >= 1 },
+    { key: 'streak', label: '5-day', unlocked: streak >= 5 },
+    { key: 'prep', label: 'Prep pro', unlocked: summariesCount >= 1 },
+    { key: 'thirty', label: '30 notes', unlocked: recordings.length >= 30 },
   ];
 
   return {
     streak,
-    xp,
-    level,
-    xpIntoLevel,
-    xpForNextLevel,
-    levelProgress,
-    badges,
     recordingsCount: recordings.length,
     summariesCount,
+    badges,
   };
 }
