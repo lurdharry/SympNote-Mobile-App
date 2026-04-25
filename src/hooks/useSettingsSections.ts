@@ -1,14 +1,10 @@
 import { Alert, Linking, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
-  Accessibility,
-  Activity,
-  Bell,
   Download,
   Heart,
   Info,
   Lock,
-  Mic,
   Sparkles,
   Trash2,
   User as UserIcon,
@@ -34,13 +30,10 @@ export interface SettingsRow {
   label: string;
   value?: string;
   badge?: string;
-  toggleKey?: 'voiceOnly';
   onPress?: () => void;
-  /**
-   * Optional override for the row's icon tile and icon tint. Used by
-   * destructive rows (e.g. Clear all data) to signal consequence
-   * without putting the whole row in red.
-   */
+  /** Optional override for the row's icon tile and icon tint. Used
+   *  by destructive rows to signal consequence without painting the
+   *  whole row red. */
   tint?: string;
 }
 
@@ -69,29 +62,10 @@ const FOCUS_LABELS: Record<FocusArea, string> = {
   general: 'General journal',
 };
 
-const CONDITION_LABELS: Record<string, string> = {
-  asthma: 'Asthma',
-  diabetes: 'Diabetes',
-  hypertension: 'Hypertension',
-  depression: 'Depression/anxiety',
-  migraines: 'Migraines',
-  autoimmune: 'Autoimmune',
-  thyroid: 'Thyroid',
-  heart: 'Heart condition',
-  'on-meds': 'On regular meds',
-  smoker: 'Smoker',
-};
-
 const formatFocus = (focus: FocusArea[]): string => {
   if (focus.length === 0) return 'Not set';
   if (focus.length <= 2) return focus.map((f) => FOCUS_LABELS[f]).join(', ');
   return `${focus.length} areas`;
-};
-
-const formatConditions = (values: string[]): string => {
-  if (values.length === 0) return 'None reported';
-  if (values.length <= 2) return values.map((v) => CONDITION_LABELS[v] ?? v).join(', ');
-  return `${values.length} conditions`;
 };
 
 const subscriptionLabel = (status: SubscriptionStatus): string => {
@@ -100,20 +74,6 @@ const subscriptionLabel = (status: SubscriptionStatus): string => {
   return 'Not subscribed';
 };
 
-const openDeviceSettings = () => {
-  Linking.openSettings().catch(() => {
-    Alert.alert('Settings unavailable', 'Could not open device Settings.');
-  });
-};
-
-/**
- * Wipe user content (recordings + appointments + their briefs + any
- * pending draft) while keeping session-level state: subscription,
- * personalization profile, onboardingComplete, theme and haptic
- * preferences. Intended as a content reset, NOT a sign-out.
- * Re-arms the first-entry hero so the next recording still gets the
- * one-time celebration.
- */
 const clearAllContent = () => {
   Alert.alert(
     'Clear all data?',
@@ -137,8 +97,7 @@ const clearAllContent = () => {
 };
 
 const openManageSubscription = () => {
-  const url =
-    Platform.OS === 'ios' ? IOS_SUBSCRIPTIONS_URL : ANDROID_SUBSCRIPTIONS_URL;
+  const url = Platform.OS === 'ios' ? IOS_SUBSCRIPTIONS_URL : ANDROID_SUBSCRIPTIONS_URL;
   Linking.openURL(url).catch(() => {
     Alert.alert(
       'Manage in store',
@@ -158,22 +117,11 @@ const profileRows = (
     onPress: () =>
       Alert.alert(
         'Age',
-        'Sympnote uses your age band to calibrate AI reasoning. To change it, redo onboarding from Settings → Sign out.',
+        'Sympnote uses your age band to calibrate AI reasoning. To change it, reset the app from the bottom of Settings.',
       ),
   },
-  {
-    Icon: Activity,
-    label:
-      personalization && personalization.knownConditions.length > 1
-        ? 'Known conditions'
-        : 'Known condition',
-    value: personalization ? formatConditions(personalization.knownConditions) : 'Not set',
-    onPress: () =>
-      Alert.alert(
-        'Known conditions',
-        'These inform the AI baseline when interpreting your entries. To change, redo onboarding from Settings → Sign out.',
-      ),
-  },
+  // Conditions row is rendered separately by ConditionsEditor — it
+  // expands inline and edits the list without leaving Settings.
   {
     Icon: Users,
     label: 'Care team',
@@ -193,8 +141,10 @@ const profileRows = (
 ];
 
 /**
- * Builds the grouped settings sections. Each row declares its own
- * onPress so the screen just renders.
+ * Builds the grouped settings sections. Theme toggle and conditions
+ * editor are NOT here — they're dedicated components rendered
+ * directly in settings.tsx because they don't fit the simple
+ * label/value/onPress row contract.
  */
 export const useSettingsSections = (): SettingsSection[] => {
   const router = useRouter();
@@ -207,44 +157,22 @@ export const useSettingsSections = (): SettingsSection[] => {
   return [
     { title: 'Profile', rows: profileRows(router, personalization) },
     {
-      title: 'Preferences',
-      rows: [
-        {
-          Icon: Bell,
-          label: 'Notifications',
-          value: 'Managed by iOS',
-          onPress: openDeviceSettings,
-        },
-        {
-          Icon: Accessibility,
-          label: 'Accessibility',
-          value: 'Managed by iOS',
-          onPress: openDeviceSettings,
-        },
-        {
-          Icon: Mic,
-          label: 'Voice-only mode',
-          toggleKey: 'voiceOnly',
-        },
-      ],
-    },
-    {
       title: 'Privacy & data',
       rows: [
         {
           Icon: Lock,
           label: 'Privacy',
-          value: 'On-device only',
+          value: 'On-device transcription',
           onPress: () =>
             Alert.alert(
               'Privacy',
-              'Voice is transcribed on-device. Only text you approve is sent to AI.',
+              'Voice is transcribed on-device. Only text you approve is sent to AI for structuring.',
             ),
         },
         {
           Icon: Download,
-          label: `Export all data · ${recordings.length}`,
-          value: 'JSON',
+          label: `Export your data`,
+          value: `${recordings.length} ${recordings.length === 1 ? 'recording' : 'recordings'} · JSON`,
           onPress: exportUserData,
         },
         {

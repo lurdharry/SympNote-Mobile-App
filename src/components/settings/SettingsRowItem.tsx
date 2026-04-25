@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ChevronRight } from 'lucide-react-native';
 import { makeStyles, moderateScale, scale, typography, useTheme, verticalScale } from '@/theme';
@@ -9,26 +9,11 @@ import type { SettingsRow } from '@/hooks/useSettingsSections';
 interface SettingsRowItemProps {
   row: SettingsRow;
   isLast: boolean;
-  voiceOnly: boolean;
-  setVoiceOnly: (value: boolean) => void;
 }
 
-export const SettingsRowItem: React.FC<SettingsRowItemProps> = ({
-  row,
-  isLast,
-  voiceOnly,
-  setVoiceOnly,
-}) => {
+export const SettingsRowItem: React.FC<SettingsRowItemProps> = ({ row, isLast }) => {
   const { colors } = useTheme();
   const styles = useStyles();
-
-  const isToggle = !!row.toggleKey;
-  const toggleVal = row.toggleKey === 'voiceOnly' ? voiceOnly : false;
-
-  const onToggle = (value: boolean) => {
-    if (row.toggleKey === 'voiceOnly') setVoiceOnly(value);
-    if (value) hapticLight();
-  };
 
   const content = (
     <View
@@ -81,16 +66,7 @@ export const SettingsRowItem: React.FC<SettingsRowItemProps> = ({
           </Text>
         )}
       </View>
-      {isToggle ? (
-        <Switch
-          value={toggleVal}
-          onValueChange={onToggle}
-          trackColor={{ false: colors.bgMuted, true: colors.accent }}
-          thumbColor="#FFFFFF"
-        />
-      ) : (
-        <ChevronRight size={16} color={colors.textTertiary} strokeWidth={2} />
-      )}
+      <ChevronRight size={16} color={colors.textTertiary} strokeWidth={2} />
     </View>
   );
 

@@ -14,16 +14,9 @@ import { SettingsRowItem } from './SettingsRowItem';
 interface SectionGroupProps {
   title: string;
   rows: SettingsRow[];
-  voiceOnly: boolean;
-  setVoiceOnly: (value: boolean) => void;
 }
 
-export const SectionGroup: React.FC<SectionGroupProps> = ({
-  title,
-  rows,
-  voiceOnly,
-  setVoiceOnly,
-}) => {
+export const SectionGroup: React.FC<SectionGroupProps> = ({ title, rows }) => {
   const { colors } = useTheme();
   const styles = useStyles();
 
@@ -42,8 +35,6 @@ export const SectionGroup: React.FC<SectionGroupProps> = ({
             key={row.label}
             row={row}
             isLast={i === rows.length - 1}
-            voiceOnly={voiceOnly}
-            setVoiceOnly={setVoiceOnly}
           />
         ))}
       </View>
@@ -57,12 +48,13 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: spacing.s5,
   },
   title: {
-    fontFamily: 'DMSans_600SemiBold',
-    fontSize: fontScale(13),
-    lineHeight: fontScale(16),
-    letterSpacing: 1.1,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: fontScale(11),
+    lineHeight: fontScale(14),
+    letterSpacing: 1.4,
     textTransform: 'uppercase',
     paddingBottom: verticalScale(8),
+    paddingHorizontal: 4,
   },
   group: {
     borderRadius: theme.radius.lg,
