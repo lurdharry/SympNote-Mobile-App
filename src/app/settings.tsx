@@ -17,10 +17,8 @@ import {
 } from "@/theme";
 import { hapticLight, hapticSuccess } from "@/services/haptics";
 import { resetAppState } from "@/utils/resetApp";
-import { useSettingsStats } from "@/hooks/useSettingsStats";
 import { useSettingsSections } from "@/hooks/useSettingsSections";
 import { SectionGroup } from "@/components/settings/SectionGroup";
-import { MilestonesCard } from "@/components/settings/MilestonesCard";
 import { ThemeToggle } from "@/components/settings/ThemeToggle";
 import { ConditionsEditor } from "@/components/settings/ConditionsEditor";
 
@@ -28,8 +26,6 @@ const ScreenSettings: React.FC = () => {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useStyles();
-
-  const { recordingsCount, summariesCount, badges } = useSettingsStats();
 
   const sections = useSettingsSections();
   const profileSection = sections.find((s) => s.title === "Profile");
@@ -74,17 +70,6 @@ const ScreenSettings: React.FC = () => {
           contentContainerStyle={{ paddingBottom: spacing.s10 }}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>
-              JOURNEY
-            </Text>
-            <MilestonesCard
-              recordingsCount={recordingsCount}
-              summariesCount={summariesCount}
-              badges={badges}
-            />
-          </View>
-
           {/* Profile group: Age + Care team + Focus, with the inline
               expandable Conditions editor inserted into the same
               card. Visually it reads as one section. */}
