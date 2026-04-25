@@ -59,9 +59,11 @@ const ScreenFirstRecording: React.FC = () => {
   const headline = personalization?.firstRecordingPrompt ?? "What's been going on with you?";
 
   const [mode, setMode] = useState<Mode>("idle");
-  const [postCapture, setPostCapture] = useState<
-    { transcript: string; durationSec: number; createdAt: string } | null
-  >(null);
+  const [postCapture, setPostCapture] = useState<{
+    transcript: string;
+    durationSec: number;
+    createdAt: string;
+  } | null>(null);
   const [editValue, setEditValue] = useState("");
   // Educational layer: shown on the very first time the user is on
   // this screen until they successfully begin a hold. After that it
@@ -136,9 +138,7 @@ const ScreenFirstRecording: React.FC = () => {
               style={styles.flex}
             >
               <View style={styles.idleContent}>
-                <Text style={[styles.idleHeadline, { color: colors.textPrimary }]}>
-                  {headline}
-                </Text>
+                <Text style={[styles.idleHeadline, { color: colors.textPrimary }]}>{headline}</Text>
                 <Text style={[styles.idleSub, { color: colors.textSecondary }]}>
                   Speak in your own words. Sympnote keeps your transcript safe on your device.
                 </Text>
@@ -282,12 +282,7 @@ const HoldButton: React.FC<HoldButtonProps> = ({
 
   return (
     <View style={styles.holdButtonWrap}>
-      {highlight && (
-        <Animated.View
-          pointerEvents="none"
-          style={[styles.holdHalo, haloStyle]}
-        />
-      )}
+      {highlight && <Animated.View pointerEvents="none" style={[styles.holdHalo, haloStyle]} />}
       <Pressable
         onPressIn={onPressIn}
         onPressOut={onPressOut}
@@ -324,7 +319,7 @@ const TeachingTip: React.FC<TeachingTipProps> = ({ reduced }) => {
       exiting={FadeOut.duration(180)}
       style={styles.teachingWrap}
     >
-      <SympnoteSprite pose="listening" reduced={reduced} size={moderateScale(140)} />
+      {/* <SympnoteSprite pose="listening" reduced={reduced} size={moderateScale(140)} /> */}
       <Text style={[styles.teachingText, { color: colors.textPrimary }]}>
         Press and hold the mic
       </Text>
@@ -366,9 +361,7 @@ const TranscriptQuote: React.FC<TranscriptQuoteProps> = ({
         end={{ x: 0, y: 1 }}
         style={styles.quoteWash}
       />
-      <Text style={[styles.quoteGlyph, { color: colors.accent + "55" }]}>
-        &ldquo;
-      </Text>
+      <Text style={[styles.quoteGlyph, { color: colors.accent + "55" }]}>&ldquo;</Text>
       <TextInput
         value={transcript}
         onChangeText={onChangeText}
@@ -388,9 +381,7 @@ const TranscriptQuote: React.FC<TranscriptQuoteProps> = ({
         </View>
         <View style={[styles.metaChip, { backgroundColor: colors.bgMuted }]}>
           <Clock size={moderateScale(10)} color={colors.textSecondary} strokeWidth={2.2} />
-          <Text style={[styles.metaChipText, { color: colors.textSecondary }]}>
-            Just now
-          </Text>
+          <Text style={[styles.metaChipText, { color: colors.textSecondary }]}>Just now</Text>
         </View>
         <View style={{ flex: 1 }} />
         <Pressable onPress={onReRecord} hitSlop={8}>

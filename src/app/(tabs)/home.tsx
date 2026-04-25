@@ -1,42 +1,31 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Settings } from 'lucide-react-native';
-import Animated, {
-  Easing,
-  FadeIn,
-  FadeOut,
-} from 'react-native-reanimated';
-import {
-  fontScale,
-  makeStyles,
-  moderateScale,
-  spacing,
-  typography,
-  useTheme,
-} from '@/theme';
-import { SceneTransition } from '@/components/navigation/SceneTransition';
-import { hapticHeavy, hapticLight } from '@/services/haptics';
-import { useHomeDashboard } from '@/hooks/useHomeDashboard';
-import { useHoldToRecord } from '@/hooks/useHoldToRecord';
-import { useStructureTranscript } from '@/hooks/useStructureTranscript';
-import { UpNextCard } from '@/components/home/UpNextCard';
-import { QuickLogRow } from '@/components/home/QuickLogRow';
-import { TimelineCard } from '@/components/home/TimelineCard';
-import { TodayEmpty } from '@/components/home/TodayEmpty';
-import { InsightNudge } from '@/components/home/InsightNudge';
-import { FirstEntryHero } from '@/components/home/FirstEntryHero';
-import { PostVisitPrompt } from '@/components/home/PostVisitPrompt';
-import { RecordFAB } from '@/components/home/RecordFAB';
-import { HoldToRecordOverlay, HoldOverlayMode } from '@/components/home/HoldToRecordOverlay';
-import { SectionLabel } from '@/components/ui/SectionLabel';
-import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
-import { useProfileStore } from '@/stores/useProfileStore';
-import { useRecordingsStore } from '@/stores/useRecordingsStore';
-import { GeminiQuotaError } from '@/services/ai';
-import type { Clinician } from '@/stores/types';
-import { uuid } from '@/utils/uuid';
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Pressable, ScrollView, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Settings } from "lucide-react-native";
+import Animated, { Easing, FadeIn, FadeOut } from "react-native-reanimated";
+import { fontScale, makeStyles, moderateScale, spacing, typography, useTheme } from "@/theme";
+import { SceneTransition } from "@/components/navigation/SceneTransition";
+import { hapticHeavy, hapticLight } from "@/services/haptics";
+import { useHomeDashboard } from "@/hooks/useHomeDashboard";
+import { useHoldToRecord } from "@/hooks/useHoldToRecord";
+import { useStructureTranscript } from "@/hooks/useStructureTranscript";
+import { UpNextCard } from "@/components/home/UpNextCard";
+import { QuickLogRow } from "@/components/home/QuickLogRow";
+import { TimelineCard } from "@/components/home/TimelineCard";
+import { TodayEmpty } from "@/components/home/TodayEmpty";
+import { InsightNudge } from "@/components/home/InsightNudge";
+import { FirstEntryHero } from "@/components/home/FirstEntryHero";
+import { PostVisitPrompt } from "@/components/home/PostVisitPrompt";
+import { RecordFAB } from "@/components/home/RecordFAB";
+import { HoldToRecordOverlay, HoldOverlayMode } from "@/components/home/HoldToRecordOverlay";
+import { SectionLabel } from "@/components/ui/SectionLabel";
+import { useAppointmentsStore } from "@/stores/useAppointmentsStore";
+import { useProfileStore } from "@/stores/useProfileStore";
+import { useRecordingsStore } from "@/stores/useRecordingsStore";
+import { GeminiQuotaError } from "@/services/ai";
+import type { Clinician } from "@/stores/types";
+import { uuid } from "@/utils/uuid";
 
 // Module-level frozen fallback so the careTeam selector returns a
 // stable reference when personalization is null. Without this, the
@@ -64,16 +53,9 @@ const TabHome: React.FC = () => {
   const markMissed = useAppointmentsStore((s) => s.markMissed);
   const markCancelled = useAppointmentsStore((s) => s.markCancelled);
 
-  const firstEntryHeroDismissed = useProfileStore(
-    (s) => s.firstEntryHeroDismissed,
-  );
-  const dismissFirstEntryHero = useProfileStore(
-    (s) => s.dismissFirstEntryHero,
-  );
-  const showFirstEntryHero =
-    recordingsCount === 1 &&
-    !!firstRecording &&
-    !firstEntryHeroDismissed;
+  const firstEntryHeroDismissed = useProfileStore((s) => s.firstEntryHeroDismissed);
+  const dismissFirstEntryHero = useProfileStore((s) => s.dismissFirstEntryHero);
+  const showFirstEntryHero = recordingsCount === 1 && !!firstRecording && !firstEntryHeroDismissed;
 
   // ── Hold-to-record on the FAB ──────────────────────────────────
   // Short-tap → hint toast ("Hold to record").
@@ -97,10 +79,12 @@ const TabHome: React.FC = () => {
   // reviewing. Null means no review in progress. When this is set
   // alongside isRecording=false the overlay stays mounted in
   // review/extracting mode instead of dismissing.
-  const [postCapture, setPostCapture] = useState<
-    { transcript: string; durationSec: number; createdAt: string } | null
-  >(null);
-  const [editValue, setEditValue] = useState('');
+  const [postCapture, setPostCapture] = useState<{
+    transcript: string;
+    durationSec: number;
+    createdAt: string;
+  } | null>(null);
+  const [editValue, setEditValue] = useState("");
   const [aiError, setAiError] = useState<string | null>(null);
   const [retryInSec, setRetryInSec] = useState(0);
   const [isExtracting, setIsExtracting] = useState(false);
@@ -134,11 +118,11 @@ const TabHome: React.FC = () => {
     minCommitDurationMs: 1000,
     onShortTap: () => {
       hapticLight();
-      showToast('Hold to record');
+      showToast("Hold to record");
     },
     onDiscard: (reason) => {
       hapticLight();
-      showToast(reason === 'too-short' ? 'Hold a little longer' : "Didn't catch that");
+      showToast(reason === "too-short" ? "Hold a little longer" : "Didn't catch that");
     },
     onCommit: ({ transcript, durationSec }) => {
       // Stay on home. Transition the overlay to review mode with
@@ -155,7 +139,7 @@ const TabHome: React.FC = () => {
 
   const dismissOverlay = useCallback(() => {
     setPostCapture(null);
-    setEditValue('');
+    setEditValue("");
     setAiError(null);
     setRetryInSec(0);
     setIsExtracting(false);
@@ -178,9 +162,7 @@ const TabHome: React.FC = () => {
     setIsExtracting(true);
     structureMutation.mutate(text, {
       onSuccess: (structured) => {
-        const tags = Array.from(
-          new Set(structured.symptoms.slice(0, 2).filter(Boolean)),
-        );
+        const tags = Array.from(new Set(structured.symptoms.slice(0, 2).filter(Boolean)));
         useRecordingsStore.getState().add({
           id: uuid(),
           createdAt: postCapture.createdAt,
@@ -188,9 +170,7 @@ const TabHome: React.FC = () => {
           transcript: text,
           structured,
           tags,
-          ...(selectedClinicians.length > 0
-            ? { clinicianNames: selectedClinicians }
-            : {}),
+          ...(selectedClinicians.length > 0 ? { clinicianNames: selectedClinicians } : {}),
         });
         hapticHeavy();
         dismissOverlay();
@@ -201,28 +181,26 @@ const TabHome: React.FC = () => {
           setAiError(e.message);
           setRetryInSec(e.retryAfterSec ?? 0);
         } else {
-          setAiError(e instanceof Error ? e.message : 'Could not structure transcript.');
+          setAiError(e instanceof Error ? e.message : "Could not structure transcript.");
         }
       },
     });
   }, [postCapture, editValue, selectedClinicians, structureMutation, showToast, dismissOverlay]);
 
   const overlayMode: HoldOverlayMode = holdState.isRecording
-    ? 'recording'
+    ? "recording"
     : isExtracting
-      ? 'extracting'
-      : 'review';
+      ? "extracting"
+      : "review";
   const overlayVisible = holdState.isRecording || postCapture !== null;
 
   return (
     <SceneTransition mode="crossfade-parallax-up">
       <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
-        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
           <View style={styles.header}>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[typography.label, { color: colors.textTertiary }]}>
-                {dateEyebrow}
-              </Text>
+              <Text style={[typography.label, { color: colors.textTertiary }]}>{dateEyebrow}</Text>
               <Text
                 style={[typography.h1, { color: colors.textPrimary, marginTop: 2 }]}
                 numberOfLines={1}
@@ -233,25 +211,18 @@ const TabHome: React.FC = () => {
             <Pressable
               onPress={() => {
                 hapticLight();
-                router.push('/settings');
+                router.push("/settings");
               }}
               accessibilityRole="button"
               accessibilityLabel="Settings"
               hitSlop={10}
               style={styles.settingsBtn}
             >
-              <Settings
-                size={moderateScale(28)}
-                color={colors.textPrimary}
-                strokeWidth={2}
-              />
+              <Settings size={moderateScale(28)} color={colors.bgSurface} strokeWidth={2} />
             </Pressable>
           </View>
 
-          <ScrollView
-            contentContainerStyle={styles.scroll}
-            showsVerticalScrollIndicator={false}
-          >
+          <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
             {unresolvedVisit && (
               <View style={{ marginBottom: spacing.s4 }}>
                 <PostVisitPrompt
@@ -275,8 +246,8 @@ const TabHome: React.FC = () => {
 
             <UpNextCard
               appointment={nextAppointment}
-              onPress={() => router.push('/(tabs)/prep')}
-              onAdd={() => router.push('/appointment-new')}
+              onPress={() => router.push("/(tabs)/prep")}
+              onAdd={() => router.push("/appointment-new")}
             />
 
             <View style={{ marginTop: spacing.s4 }}>
@@ -288,23 +259,19 @@ const TabHome: React.FC = () => {
                 <SectionLabel label="Today" />
                 {todayEntries.length > 0 && (
                   <Text style={[typography.label, { color: colors.textTertiary }]}>
-                    {todayEntries.length}{' '}
-                    {todayEntries.length === 1 ? 'entry' : 'entries'}
+                    {todayEntries.length} {todayEntries.length === 1 ? "entry" : "entries"}
                   </Text>
                 )}
               </View>
               {todayEntries.length > 0 ? (
                 <TimelineCard entries={todayEntries} />
               ) : (
-                <TodayEmpty onPress={() => router.push('/record')} />
+                <TodayEmpty onPress={() => router.push("/record")} />
               )}
             </View>
 
             {nudge && (
-              <InsightNudge
-                nudge={nudge}
-                onPress={() => router.push('/(tabs)/insights')}
-              />
+              <InsightNudge nudge={nudge} onPress={() => router.push("/(tabs)/insights")} />
             )}
 
             {!showFirstEntryHero && (
@@ -313,7 +280,7 @@ const TabHome: React.FC = () => {
                   typography.caption,
                   {
                     color: colors.textTertiary,
-                    textAlign: 'center',
+                    textAlign: "center",
                     marginTop: spacing.s5,
                     paddingHorizontal: spacing.s6,
                   },
@@ -336,9 +303,7 @@ const TabHome: React.FC = () => {
             mode={overlayMode}
             liveTranscript={holdState.liveTranscript}
             durationSec={
-              holdState.isRecording
-                ? holdState.durationSec
-                : postCapture?.durationSec ?? 0
+              holdState.isRecording ? holdState.durationSec : (postCapture?.durationSec ?? 0)
             }
             volume={holdState.volume}
             editValue={editValue}
@@ -360,9 +325,7 @@ const TabHome: React.FC = () => {
               style={styles.toastWrap}
             >
               <View style={[styles.toast, { backgroundColor: colors.textPrimary }]}>
-                <Text style={[styles.toastText, { color: colors.bgSurface }]}>
-                  {toast}
-                </Text>
+                <Text style={[styles.toastText, { color: colors.bgSurface }]}>{toast}</Text>
               </View>
             </Animated.View>
           )}
@@ -379,44 +342,44 @@ const useStyles = makeStyles((theme) => ({
     paddingTop: theme.spacing.s3,
     paddingHorizontal: theme.spacing.s6,
     paddingBottom: theme.spacing.s3,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
     gap: moderateScale(12),
   },
   settingsBtn: {
     width: moderateScale(40),
     height: moderateScale(40),
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   scroll: {
     paddingHorizontal: spacing.s6,
     paddingBottom: 160,
   },
   sectionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   toastWrap: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     bottom: moderateScale(180),
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   toast: {
     paddingHorizontal: moderateScale(14),
     paddingVertical: moderateScale(8),
     borderRadius: moderateScale(20),
-    maxWidth: '80%',
+    maxWidth: "80%",
   },
   toastText: {
-    fontFamily: 'DMSans_600SemiBold',
+    fontFamily: "DMSans_600SemiBold",
     fontSize: fontScale(12),
     letterSpacing: 0.2,
-    textAlign: 'center',
+    textAlign: "center",
   },
 }));
