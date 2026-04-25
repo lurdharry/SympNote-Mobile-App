@@ -6,7 +6,7 @@ import { addDays } from 'date-fns';
 import { useProfileStore } from '../stores/useProfileStore';
 
 export type Plan = {
-  id: 'weekly' | 'monthly' | 'annual';
+  id: 'monthly' | 'annual';
   price: string;
   period: string;
   badge?: string;
@@ -14,7 +14,6 @@ export type Plan = {
 };
 
 export const PLANS: Plan[] = [
-  { id: 'weekly', price: '$4.99', period: 'week' },
   { id: 'monthly', price: '$9.99', period: 'month' },
   {
     id: 'annual',
