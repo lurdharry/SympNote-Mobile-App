@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
+  FadeIn,
+  FadeOut,
   SharedValue,
   useAnimatedStyle,
   useDerivedValue,
@@ -12,7 +14,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Mic } from 'lucide-react-native';
-import { makeStyles, moderateScale, verticalScale } from '@/theme';
+import { fontScale, makeStyles, moderateScale, useTheme, verticalScale } from '@/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 interface RecordFABProps {
@@ -37,6 +39,7 @@ export const RecordFAB: React.FC<RecordFABProps> = ({
   volume,
 }) => {
   const styles = useStyles();
+  const { colors } = useTheme();
   const reduced = useReducedMotion();
   const pulse1 = useSharedValue(0);
   const pulse2 = useSharedValue(0);
@@ -98,8 +101,8 @@ export const RecordFAB: React.FC<RecordFABProps> = ({
             onPressOut={onPressOut}
             delayLongPress={500}
             accessibilityRole="button"
-            accessibilityLabel="Hold to record a voice note"
-            accessibilityHint="Press and hold to record. Release to save."
+            accessibilityLabel="Record or type a note"
+            accessibilityHint="Hold to record a voice note. Tap once to open the typing screen."
             style={styles.fab}
           >
             <LinearGradient
@@ -112,6 +115,19 @@ export const RecordFAB: React.FC<RecordFABProps> = ({
           </Pressable>
         </Animated.View>
       </View>
+
+      {!isRecording && (
+        <Animated.View
+          pointerEvents="none"
+          entering={FadeIn.duration(220)}
+          exiting={FadeOut.duration(140)}
+          style={styles.caption}
+        >
+          <Text style={[styles.captionText, { color: colors.textTertiary }]}>Hold to record</Text>
+          <View style={[styles.captionDot, { backgroundColor: colors.textTertiary }]} />
+          <Text style={[styles.captionText, { color: colors.textTertiary }]}>Tap to type</Text>
+        </Animated.View>
+      )}
     </View>
   );
 };
@@ -151,5 +167,22 @@ const useStyles = makeStyles(() => ({
     shadowOpacity: 0.45,
     shadowRadius: 28,
     elevation: 14,
+  },
+  caption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(8),
+    marginTop: verticalScale(8),
+  },
+  captionText: {
+    fontFamily: 'DMSans_500Medium',
+    fontSize: fontScale(11),
+    letterSpacing: 0.2,
+  },
+  captionDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 2,
+    opacity: 0.6,
   },
 }));
