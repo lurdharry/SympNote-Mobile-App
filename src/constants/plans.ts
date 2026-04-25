@@ -1,7 +1,7 @@
-import { Plan } from '../services/subscription';
+import { Plan } from "../services/subscription";
 
 export type PlanDef = {
-  id: Plan['id'];
+  id: Plan["id"];
   label: string;
   /** Big price on the right of the card. */
   price: string;
@@ -25,21 +25,21 @@ export type PlanDef = {
  */
 export const PAYWALL_PLANS: PlanDef[] = [
   {
-    id: 'monthly',
-    label: 'Monthly',
-    price: '$9.99',
-    per: 'per month',
-    subline: '$9.99/month after trial',
-    trialBadge: '3-Day Free Trial',
+    id: "monthly",
+    label: "Monthly",
+    price: "$9.99",
+    per: "per month",
+    subline: "$9.99/month after trial",
+    trialBadge: "3-Day Free Trial",
   },
   {
-    id: 'annual',
-    label: 'Annual',
-    price: '$59.99',
-    per: 'per year',
-    subline: 'Just $4.99/month',
-    valueBadge: 'Best Value',
-    saveBadge: 'SAVE 50%',
+    id: "annual",
+    label: "Annual",
+    price: "$59.99",
+    per: "per year",
+    subline: "Just $4.99/month",
+    valueBadge: "Best Value",
+    saveBadge: "Save 50%",
   },
 ];
 
