@@ -19,7 +19,6 @@ import { hapticLight, hapticSuccess } from "@/services/haptics";
 import { resetAppState } from "@/utils/resetApp";
 import { useSettingsStats } from "@/hooks/useSettingsStats";
 import { useSettingsSections } from "@/hooks/useSettingsSections";
-import { StatusHeader } from "@/components/settings/StatusHeader";
 import { SectionGroup } from "@/components/settings/SectionGroup";
 import { MilestonesCard } from "@/components/settings/MilestonesCard";
 import { ThemeToggle } from "@/components/settings/ThemeToggle";
@@ -75,10 +74,14 @@ const ScreenSettings: React.FC = () => {
           contentContainerStyle={{ paddingBottom: spacing.s10 }}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.headerSlot}>
-            <StatusHeader
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>
+              JOURNEY
+            </Text>
+            <MilestonesCard
               recordingsCount={recordingsCount}
               summariesCount={summariesCount}
+              badges={badges}
             />
           </View>
 
@@ -124,17 +127,6 @@ const ScreenSettings: React.FC = () => {
           {otherSections.map((section) => (
             <SectionGroup key={section.title} title={section.title} rows={section.rows} />
           ))}
-
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>
-              JOURNEY
-            </Text>
-            <MilestonesCard
-              recordingsCount={recordingsCount}
-              summariesCount={summariesCount}
-              badges={badges}
-            />
-          </View>
 
           <View style={styles.signOutSlot}>
             <Pressable
