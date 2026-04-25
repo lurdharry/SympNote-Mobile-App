@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated, {
   Easing,
+  useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -10,6 +11,8 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Path, Rect, Stop } from "react-native-svg";
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 import { moderateScale } from "@/theme";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
@@ -54,6 +57,8 @@ export const PocketbookMascot: React.FC<PocketbookMascotProps> = ({
   const shuffle = useSharedValue(0);
   const plusOne = useSharedValue(0);
   const halo = useSharedValue(0);
+  // EKG sweep — drives the traveling-spark on the chart's waveform.
+  const pulse = useSharedValue(0);
 
   useEffect(() => {
     if (reduced) return;
@@ -99,7 +104,14 @@ export const PocketbookMascot: React.FC<PocketbookMascotProps> = ({
       -1,
       false,
     );
-  }, [reduced, bob, blink, shuffle, plusOne, halo]);
+    // EKG sweep — linear loop, drives a small bright dash that
+    // travels left → right along the static waveform.
+    pulse.value = withRepeat(
+      withTiming(1, { duration: 1800, easing: Easing.linear }),
+      -1,
+      false,
+    );
+  }, [reduced, bob, blink, shuffle, plusOne, halo, pulse]);
 
   const wrapStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: -bob.value * 4 }],
@@ -121,6 +133,13 @@ export const PocketbookMascot: React.FC<PocketbookMascotProps> = ({
       transform: [{ translateY: -t * 18 }, { scale: 0.6 + t * 0.5 }],
     };
   });
+  // Animated stroke-dash sweep along the chart's waveform. The
+  // approximate path length is ~96 SVG units; a 6-unit visible dash
+  // with a 90-unit gap means only one dash is on the path at a
+  // time, traveling left → right and looping seamlessly.
+  const pulseProps = useAnimatedProps(() => ({
+    strokeDashoffset: -pulse.value * 96,
+  }));
 
   const eyeSize = size * 0.05;
 
@@ -283,7 +302,10 @@ export const PocketbookMascot: React.FC<PocketbookMascotProps> = ({
               opacity={0.6}
             />
             {/* Title strip on the front upper-half — a subtle Sympnote
-                pulse waveform, suggests it's a clinical chart. */}
+                pulse waveform that suggests it's a clinical chart.
+                Two overlaid paths: a dim static base and a brighter
+                animated dash sweep that travels left → right
+                continuously, like an EKG monitor. */}
             <Path
               d="M 28 26 L 38 26 L 42 20 L 48 32 L 52 26 L 60 26 L 64 20 L 70 32 L 74 26 L 92 26"
               stroke="#2C6E6B"
@@ -291,7 +313,17 @@ export const PocketbookMascot: React.FC<PocketbookMascotProps> = ({
               strokeLinecap="round"
               strokeLinejoin="round"
               fill="none"
-              opacity={0.7}
+              opacity={0.35}
+            />
+            <AnimatedPath
+              d="M 28 26 L 38 26 L 42 20 L 48 32 L 52 26 L 60 26 L 64 20 L 70 32 L 74 26 L 92 26"
+              stroke="#3BA79F"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+              strokeDasharray="6 90"
+              animatedProps={pulseProps}
             />
           </Svg>
         </View>
