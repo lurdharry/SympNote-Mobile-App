@@ -17,11 +17,11 @@ import {
   Zap,
 } from 'lucide-react-native';
 import {
-  FlameMascot,
-  PulseMascot,
-  SparkMascot,
-  SproutMascot,
-  StarMascot,
+  AdultMascot,
+  ElderMascot,
+  SeniorMascot,
+  TeenMascot,
+  YouthMascot,
 } from '@/components/onboarding/AgeMascots';
 
 type IconRef = typeof Calendar;
@@ -105,11 +105,11 @@ export const QUESTIONS: Question[] = [
     ask: 'First, how old are you?',
     hint: "Your age tells Sympnote what normal looks like for you. A 25 year old's fatigue reads different from a 65 year old's.",
     options: [
-      { t: '12 to 17',   v: 'teen',    Icon: Sprout,    Mascot: SproutMascot, tint: '#5A8F6E' },
-      { t: '18 to 29',   v: '18-29',   Icon: Zap,       Mascot: SparkMascot,  tint: '#2C6E6B' },
-      { t: '30 to 49',   v: '30-49',   Icon: Flame,     Mascot: FlameMascot,  tint: '#C88A4A' },
-      { t: '50 to 64',   v: '50-64',   Icon: HeartPulse, Mascot: PulseMascot, tint: '#E07A5F' },
-      { t: '65 or older', v: '65-plus', Icon: HeartPulse, Mascot: StarMascot,  tint: '#6CA4A0' },
+      { t: '12 to 17',   v: 'teen',    Icon: Sprout,    Mascot: TeenMascot,   tint: '#5A8F6E' },
+      { t: '18 to 29',   v: '18-29',   Icon: Zap,       Mascot: YouthMascot,  tint: '#2C6E6B' },
+      { t: '30 to 49',   v: '30-49',   Icon: Flame,     Mascot: AdultMascot,  tint: '#C88A4A' },
+      { t: '50 to 64',   v: '50-64',   Icon: HeartPulse, Mascot: ElderMascot, tint: '#E07A5F' },
+      { t: '65 or older', v: '65-plus', Icon: HeartPulse, Mascot: SeniorMascot, tint: '#6CA4A0' },
     ],
   },
   {
