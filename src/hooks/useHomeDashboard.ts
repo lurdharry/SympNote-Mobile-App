@@ -26,6 +26,14 @@ interface HomeDashboard {
    * Undefined when everything is resolved.
    */
   unresolvedVisit: Appointment | undefined;
+  /** ISO timestamp of the most recent recording, or undefined when the
+   *  user has none. The TodayCheckIn card uses this to detect "gap"
+   *  states (no log in >48h). */
+  lastRecordingAt: string | undefined;
+  /** Most-common tag across recordings in the last 7 days. The
+   *  TodayCheckIn card personalises its prompt with it ("How's your
+   *  knee today?"). Undefined when there's no recent tagged history. */
+  recentTopTag: string | undefined;
 }
 
 const TODAYS_ENTRY_LIMIT = 5;
@@ -97,6 +105,36 @@ export const useHomeDashboard = (): HomeDashboard => {
 
   const firstRecording = recordings.length === 1 ? recordings[0]! : null;
 
+  const lastRecordingAt = useMemo(() => {
+    if (recordings.length === 0) return undefined;
+    const newest = sortBy(recordings, (r) => -parseISO(r.createdAt).getTime())[0];
+    return newest?.createdAt;
+  }, [recordings]);
+
+  const recentTopTag = useMemo(() => {
+    if (recordings.length === 0) return undefined;
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const counts = new Map<string, number>();
+    for (const r of recordings) {
+      if (parseISO(r.createdAt).getTime() < cutoff) continue;
+      for (const tag of r.tags) {
+        const norm = tag.trim();
+        if (!norm) continue;
+        counts.set(norm, (counts.get(norm) ?? 0) + 1);
+      }
+    }
+    if (counts.size === 0) return undefined;
+    let topTag: string | undefined;
+    let topCount = 0;
+    for (const [tag, count] of counts) {
+      if (count > topCount) {
+        topTag = tag;
+        topCount = count;
+      }
+    }
+    return topTag;
+  }, [recordings]);
+
   return {
     nextAppointment,
     todayEntries,
@@ -106,5 +144,7 @@ export const useHomeDashboard = (): HomeDashboard => {
     recordingsCount: recordings.length,
     firstRecording,
     unresolvedVisit,
+    lastRecordingAt,
+    recentTopTag,
   };
 };

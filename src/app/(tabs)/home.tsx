@@ -11,9 +11,8 @@ import { useHomeDashboard } from "@/hooks/useHomeDashboard";
 import { useHoldToRecord } from "@/hooks/useHoldToRecord";
 import { useStructureTranscript } from "@/hooks/useStructureTranscript";
 import { UpNextCard } from "@/components/home/UpNextCard";
-import { QuickLogRow } from "@/components/home/QuickLogRow";
 import { TimelineCard } from "@/components/home/TimelineCard";
-import { TodayEmpty } from "@/components/home/TodayEmpty";
+import { TodayCheckIn } from "@/components/home/TodayCheckIn";
 import { InsightNudge } from "@/components/home/InsightNudge";
 import { FirstEntryHero } from "@/components/home/FirstEntryHero";
 import { PostVisitPrompt } from "@/components/home/PostVisitPrompt";
@@ -47,6 +46,8 @@ const TabHome: React.FC = () => {
     recordingsCount,
     firstRecording,
     unresolvedVisit,
+    lastRecordingAt,
+    recentTopTag,
   } = useHomeDashboard();
 
   const markAttended = useAppointmentsStore((s) => s.markAttended);
@@ -58,7 +59,7 @@ const TabHome: React.FC = () => {
   const showFirstEntryHero = recordingsCount === 1 && !!firstRecording && !firstEntryHeroDismissed;
 
   // ── Hold-to-record on the FAB ──────────────────────────────────
-  // Short-tap → hint toast ("Hold to record").
+  // Short-tap → open the full /record screen (voice + type + review).
   // Held ≥500ms → start recognition with theatrical overlay.
   // Released with a usable transcript → store as pending draft and
   // open /record in review phase via source=home-hold.
@@ -118,7 +119,7 @@ const TabHome: React.FC = () => {
     minCommitDurationMs: 1000,
     onShortTap: () => {
       hapticLight();
-      showToast("Hold to record");
+      router.push("/record");
     },
     onDiscard: (reason) => {
       hapticLight();
@@ -218,7 +219,7 @@ const TabHome: React.FC = () => {
               hitSlop={10}
               style={styles.settingsBtn}
             >
-              <Settings size={moderateScale(28)} color={colors.bgSurface} strokeWidth={2} />
+              <Settings size={moderateScale(28)} color={colors.textPrimary} strokeWidth={2} />
             </Pressable>
           </View>
 
@@ -250,10 +251,6 @@ const TabHome: React.FC = () => {
               onAdd={() => router.push("/appointment-new")}
             />
 
-            <View style={{ marginTop: spacing.s4 }}>
-              <QuickLogRow />
-            </View>
-
             <View style={{ marginTop: spacing.s5 }}>
               <View style={styles.sectionRow}>
                 <SectionLabel label="Today" />
@@ -266,7 +263,12 @@ const TabHome: React.FC = () => {
               {todayEntries.length > 0 ? (
                 <TimelineCard entries={todayEntries} />
               ) : (
-                <TodayEmpty onPress={() => router.push("/record")} />
+                <TodayCheckIn
+                  recordingsCount={recordingsCount}
+                  lastRecordingAt={lastRecordingAt}
+                  recentTopTag={recentTopTag}
+                  onPress={() => router.push("/record")}
+                />
               )}
             </View>
 
