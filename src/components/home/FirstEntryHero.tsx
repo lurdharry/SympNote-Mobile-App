@@ -10,7 +10,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { format, parseISO } from "date-fns";
-import { Sparkles, X as XIcon, Microchip, Mic } from "lucide-react-native";
+import { Sparkles, X as XIcon, Mic } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
@@ -18,13 +18,13 @@ import {
   scale,
   shadows,
   spacing,
-  typography,
   useTheme,
   verticalScale,
 } from "@/theme";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import type { Appointment, Recording } from "@/stores/types";
 import { hapticLight } from "@/services/haptics";
+import { FirstEntryMini } from "./FirstEntryMini";
 
 interface FirstEntryHeroProps {
   recording: Recording;
@@ -64,11 +64,7 @@ export const FirstEntryHero: React.FC<FirstEntryHeroProps> = ({
     transform: [{ translateY: translate.value }],
   }));
 
-  const sub = nextAppointment
-    ? `Prep for your visit with ${nextAppointment.doctorName} starts here.`
-    : "Every entry you add makes your next visit stronger.";
-
-  const meta = `${format(parseISO(recording.createdAt), "d MMM y, h:mm a")} · `;
+  const meta = `${format(parseISO(recording.createdAt), "d MMM, h:mm a")}`;
 
   const handleDismiss = () => {
     hapticLight();
@@ -94,7 +90,7 @@ export const FirstEntryHero: React.FC<FirstEntryHeroProps> = ({
 
       <View style={styles.topRow}>
         <View style={[styles.pill, { backgroundColor: colors.accent + "1A" }]}>
-          <Sparkles size={moderateScale(11)} color={colors.accent} strokeWidth={2.4} />
+          <Sparkles size={moderateScale(10)} color={colors.accent} strokeWidth={2.4} />
           <Text style={[styles.pillText, { color: colors.accent }]}>FIRST ENTRY · SAVED</Text>
         </View>
         <Pressable
@@ -103,32 +99,36 @@ export const FirstEntryHero: React.FC<FirstEntryHeroProps> = ({
           accessibilityRole="button"
           accessibilityLabel="Dismiss"
         >
-          <XIcon size={moderateScale(16)} color={colors.textTertiary} strokeWidth={2} />
+          <XIcon size={moderateScale(14)} color={colors.textTertiary} strokeWidth={2} />
         </Pressable>
       </View>
 
-      <Text style={[styles.headline, { color: colors.textPrimary }]}>Your record has begun.</Text>
-      <Text style={[styles.sub, { color: colors.textSecondary }]}>
-        {nextAppointment ? (
-          <Text>
-            Prep for your visit with{" "}
-            <Text style={styles.docName}>{nextAppointment.doctorName}</Text> starts here.
-          </Text>
-        ) : (
-          "Every entry you add makes your next visit stronger."
-        )}
-      </Text>
+      <View style={styles.body}>
+        <FirstEntryMini size={moderateScale(56)} />
 
-      <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-      <View style={styles.metaRow}>
-        <View style={[styles.metaDot, { backgroundColor: colors.accent }]} />
-        <Text style={[typography.caption, { color: colors.textTertiary }]}>{meta}</Text>
-        <View style={styles.microPhone}>
-          <Mic size={moderateScale(16)} color={colors.coral} strokeWidth={1} />
-          <Text style={[typography.caption, { color: colors.textTertiary }]}>
-            {recording.durationSec + "s"}
+        <View style={styles.textCol}>
+          <Text style={[styles.headline, { color: colors.textPrimary }]}>
+            Your record has begun.
           </Text>
+          <Text style={[styles.sub, { color: colors.textSecondary }]} numberOfLines={2}>
+            {nextAppointment ? (
+              <Text>
+                Prep for your visit with{" "}
+                <Text style={styles.docName}>{nextAppointment.doctorName}</Text> starts here.
+              </Text>
+            ) : (
+              "Every entry you add makes your next visit stronger."
+            )}
+          </Text>
+
+          <View style={styles.metaRow}>
+            <Text style={[styles.metaText, { color: colors.textTertiary }]}>{meta}</Text>
+            <View style={[styles.metaDot, { backgroundColor: colors.textTertiary }]} />
+            <Mic size={moderateScale(11)} color={colors.coral} strokeWidth={2} />
+            <Text style={[styles.metaText, { color: colors.textTertiary }]}>
+              {recording.durationSec}s
+            </Text>
+          </View>
         </View>
       </View>
     </Animated.View>
@@ -136,17 +136,10 @@ export const FirstEntryHero: React.FC<FirstEntryHeroProps> = ({
 };
 
 const useStyles = makeStyles((theme) => ({
-  docName: {
-    ...theme.typography.label,
-    color: "rgba(246,192,106,0.9)",
-    fontSize: fontScale(14),
-  },
-  microPhone: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
   card: {
-    padding: moderateScale(18),
+    paddingHorizontal: moderateScale(14),
+    paddingTop: moderateScale(12),
+    paddingBottom: moderateScale(14),
     borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",
@@ -155,47 +148,62 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: spacing.s3,
+    marginBottom: spacing.s2,
   },
   pill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: moderateScale(6),
-    paddingHorizontal: scale(10),
-    paddingVertical: verticalScale(4),
+    gap: moderateScale(5),
+    paddingHorizontal: scale(8),
+    paddingVertical: verticalScale(3),
     borderRadius: theme.radius.full,
   },
   pillText: {
     ...theme.typography.label,
     fontFamily: "DMSans_700Bold",
     letterSpacing: 0.9,
-    fontSize: fontScale(10),
+    fontSize: fontScale(9),
+  },
+  body: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(12),
+  },
+  textCol: {
+    flex: 1,
+    minWidth: 0,
   },
   headline: {
-    ...theme.typography.h2,
     fontFamily: "Fraunces_500Medium",
-    fontSize: fontScale(26),
-    lineHeight: fontScale(32),
-    letterSpacing: -0.4,
+    fontSize: fontScale(19),
+    lineHeight: fontScale(24),
+    letterSpacing: -0.3,
   },
   sub: {
     ...theme.typography.body,
-    marginTop: moderateScale(6),
-    lineHeight: fontScale(22),
+    fontSize: fontScale(13),
+    lineHeight: fontScale(18),
+    marginTop: 4,
   },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    marginTop: spacing.s4,
-    marginBottom: spacing.s3,
+  docName: {
+    ...theme.typography.label,
+    color: "rgba(246,192,106,0.95)",
+    fontSize: fontScale(13),
   },
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: moderateScale(6),
+    marginTop: moderateScale(8),
+  },
+  metaText: {
+    ...theme.typography.caption,
+    fontSize: fontScale(11),
   },
   metaDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 3,
+    height: 3,
+    borderRadius: 2,
+    opacity: 0.6,
   },
 }));
