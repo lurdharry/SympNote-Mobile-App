@@ -1,35 +1,35 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Flame, Mic } from "lucide-react-native";
+import { ClipboardList, Mic } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
   moderateScale,
   shadows,
   spacing,
-  typography,
   useTheme,
   verticalScale,
 } from "@/theme";
 
 interface StatusHeaderProps {
   recordingsCount: number;
-  streak: number;
-  level: number;
+  summariesCount: number;
 }
 
 /**
  * Settings landing card. The app doesn't collect a username, so the
- * header isn't an identity card — it's a *status* card. Three numbers
- * the user actually cares about: entries, streak, level. A subtle
- * teal-to-gold gradient ribbon at the top ties the card to the brand
- * without putting a fake avatar on a profile that doesn't exist.
+ * header isn't an identity card — it's a *status* card, and the two
+ * numbers it shows are honest reflections of value the app actually
+ * delivered: recordings captured, and visit briefs prepped.
+ *
+ * No streak, no level, no XP — those were game-mechanic borrows
+ * that implied "more is better" in a clinical context where it
+ * isn't.
  */
 export const StatusHeader: React.FC<StatusHeaderProps> = ({
   recordingsCount,
-  streak,
-  level,
+  summariesCount,
 }) => {
   const { colors } = useTheme();
   const styles = useStyles();
@@ -42,7 +42,6 @@ export const StatusHeader: React.FC<StatusHeaderProps> = ({
         shadows.card,
       ]}
     >
-      {/* Subtle gradient ribbon — brand without fake-avatar baggage. */}
       <LinearGradient
         colors={[colors.accent + "1F", colors.gold + "16", colors.accent + "00"]}
         start={{ x: 0, y: 0 }}
@@ -59,21 +58,14 @@ export const StatusHeader: React.FC<StatusHeaderProps> = ({
           Icon={Mic}
           tint={colors.accent}
           value={recordingsCount.toString()}
-          label={recordingsCount === 1 ? "entry" : "entries"}
+          label={recordingsCount === 1 ? "recording" : "recordings"}
         />
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
         <Stat
-          Icon={Flame}
-          tint={colors.coral}
-          value={streak.toString()}
-          label={streak === 1 ? "day streak" : "day streak"}
-        />
-        <View style={[styles.divider, { backgroundColor: colors.border }]} />
-        <Stat
-          Icon={null}
+          Icon={ClipboardList}
           tint={colors.gold}
-          value={`Lv ${level}`}
-          label="level"
+          value={summariesCount.toString()}
+          label={summariesCount === 1 ? "brief prepped" : "briefs prepped"}
         />
       </View>
     </View>
@@ -81,7 +73,7 @@ export const StatusHeader: React.FC<StatusHeaderProps> = ({
 };
 
 interface StatProps {
-  Icon: typeof Mic | null;
+  Icon: typeof Mic;
   tint: string;
   value: string;
   label: string;
@@ -92,11 +84,9 @@ const Stat: React.FC<StatProps> = ({ Icon, tint, value, label }) => {
   const styles = useStyles();
   return (
     <View style={styles.stat}>
-      {Icon && (
-        <View style={[styles.statIcon, { backgroundColor: tint + "1F" }]}>
-          <Icon size={moderateScale(13)} color={tint} strokeWidth={2.2} />
-        </View>
-      )}
+      <View style={[styles.statIcon, { backgroundColor: tint + "1F" }]}>
+        <Icon size={moderateScale(14)} color={tint} strokeWidth={2.2} />
+      </View>
       <Text style={[styles.statValue, { color: colors.textPrimary }]}>
         {value}
       </Text>
@@ -127,7 +117,7 @@ const useStyles = makeStyles((theme) => ({
     fontFamily: "DMSans_700Bold",
     fontSize: fontScale(10),
     letterSpacing: 1.4,
-    marginBottom: verticalScale(12),
+    marginBottom: verticalScale(14),
   },
   statsRow: {
     flexDirection: "row",
@@ -140,9 +130,9 @@ const useStyles = makeStyles((theme) => ({
     gap: moderateScale(4),
   },
   statIcon: {
-    width: moderateScale(28),
-    height: moderateScale(28),
-    borderRadius: moderateScale(14),
+    width: moderateScale(30),
+    height: moderateScale(30),
+    borderRadius: moderateScale(15),
     alignItems: "center",
     justifyContent: "center",
     marginBottom: moderateScale(2),
@@ -151,7 +141,7 @@ const useStyles = makeStyles((theme) => ({
     ...theme.typography.h2,
     fontFamily: "Fraunces_500Medium",
     letterSpacing: -0.5,
-    fontSize: fontScale(22),
+    fontSize: fontScale(26),
   },
   statLabel: {
     ...theme.typography.caption,
@@ -159,7 +149,7 @@ const useStyles = makeStyles((theme) => ({
   },
   divider: {
     width: StyleSheet.hairlineWidth,
-    height: verticalScale(40),
-    marginHorizontal: moderateScale(8),
+    height: verticalScale(48),
+    marginHorizontal: moderateScale(12),
   },
 }));

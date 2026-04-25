@@ -3,7 +3,8 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Constants from "expo-constants";
-import { LogOut, X as XIcon } from "lucide-react-native";
+import { LogOut } from "lucide-react-native";
+import { BackButton } from "@/components/ui/BackButton";
 import {
   fontScale,
   makeStyles,
@@ -15,7 +16,6 @@ import {
   verticalScale,
 } from "@/theme";
 import { hapticLight, hapticSuccess } from "@/services/haptics";
-import { useRecordingsStore } from "@/stores/useRecordingsStore";
 import { resetAppState } from "@/utils/resetApp";
 import { useSettingsStats } from "@/hooks/useSettingsStats";
 import { useSettingsSections } from "@/hooks/useSettingsSections";
@@ -30,10 +30,7 @@ const ScreenSettings: React.FC = () => {
   const { colors } = useTheme();
   const styles = useStyles();
 
-  const recordings = useRecordingsStore((s) => s.recordings);
-
-  const { streak, xp, level, xpForNextLevel, levelProgress, badges } =
-    useSettingsStats();
+  const { recordingsCount, summariesCount, badges } = useSettingsStats();
 
   const sections = useSettingsSections();
   const profileSection = sections.find((s) => s.title === "Profile");
@@ -67,15 +64,11 @@ const ScreenSettings: React.FC = () => {
     <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
       <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <View style={styles.header}>
-          <Text style={[typography.h1, { color: colors.textPrimary }]}>Settings</Text>
-          <Pressable
-            onPress={close}
-            accessibilityRole="button"
-            accessibilityLabel="Close"
-            style={[styles.closeBtn, { backgroundColor: colors.bgMuted }]}
-          >
-            <XIcon size={18} color={colors.textPrimary} strokeWidth={2} />
-          </Pressable>
+          <BackButton onPress={close} />
+          <Text style={[typography.h1, styles.title, { color: colors.textPrimary }]}>
+            Settings
+          </Text>
+          <View style={styles.headerRightFiller} />
         </View>
 
         <ScrollView
@@ -84,9 +77,8 @@ const ScreenSettings: React.FC = () => {
         >
           <View style={styles.headerSlot}>
             <StatusHeader
-              recordingsCount={recordings.length}
-              streak={streak}
-              level={level}
+              recordingsCount={recordingsCount}
+              summariesCount={summariesCount}
             />
           </View>
 
@@ -138,10 +130,8 @@ const ScreenSettings: React.FC = () => {
               JOURNEY
             </Text>
             <MilestonesCard
-              level={level}
-              xp={xp}
-              xpForNextLevel={xpForNextLevel}
-              levelProgress={levelProgress}
+              recordingsCount={recordingsCount}
+              summariesCount={summariesCount}
               badges={badges}
             />
           </View>
@@ -214,19 +204,19 @@ export default ScreenSettings;
 const useStyles = makeStyles((theme) => ({
   safe: { flex: 1 },
   header: {
-    paddingTop: theme.spacing.s4,
+    paddingTop: theme.spacing.s3,
     paddingBottom: theme.spacing.s3,
-    paddingHorizontal: theme.spacing.s6,
+    paddingHorizontal: theme.spacing.s5,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: moderateScale(8),
   },
-  closeBtn: {
+  title: {
+    flex: 1,
+    textAlign: "center",
+  },
+  headerRightFiller: {
     width: moderateScale(40),
-    height: moderateScale(40),
-    borderRadius: moderateScale(20),
-    alignItems: "center",
-    justifyContent: "center",
   },
   headerSlot: {
     paddingHorizontal: spacing.s6,
