@@ -32,6 +32,7 @@ import {
 } from "../../theme";
 import { PrimaryButton } from "../../components/ui/PrimaryButton";
 import { SympnoteSprite } from "../../components/onboarding/SympnoteSprite";
+import { PocketbookMascot } from "../../components/onboarding/PocketbookMascot";
 import { purchase, Plan } from "../../services/subscription";
 import { structureTranscript } from "../../services/ai";
 import { useProfileStore } from "../../stores/useProfileStore";
@@ -164,7 +165,7 @@ const ScreenPaywall: React.FC = () => {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.mascotSlot}>
-            <SympnoteSprite pose="greeting" reduced={reduced} size={moderateScale(160)} />
+            <PocketbookMascot reduced={reduced} size={moderateScale(180)} />
           </View>
 
           <Text
@@ -186,10 +187,12 @@ const ScreenPaywall: React.FC = () => {
                 color: colors.textSecondary,
                 textAlign: "center",
                 marginTop: 8,
+                paddingHorizontal: spacing.s4,
               },
             ]}
           >
-            Doctor-ready notes for every visit.
+            Unlimited voice notes, structured into clinical fields every time, with
+            visit briefs ready before you walk in.
           </Text>
 
           <View style={styles.plans}>
