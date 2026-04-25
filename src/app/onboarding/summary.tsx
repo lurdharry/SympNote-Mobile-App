@@ -1,20 +1,10 @@
 import React, { useEffect, useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, {
   Easing,
   FadeIn,
-  FadeInDown,
   FadeOut,
   useAnimatedStyle,
   useSharedValue,
@@ -23,23 +13,17 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
-import { Clock, Mic, Pencil } from "lucide-react-native";
+import { Mic } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
   moderateScale,
-  scale,
-  shadows,
-  spacing,
-  typography,
   useTheme,
   verticalScale,
 } from "@/theme";
 import { SceneTransition } from "@/components/navigation/SceneTransition";
 import { BackButton } from "@/components/ui/BackButton";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
-import { SympnoteSprite } from "@/components/onboarding/SympnoteSprite";
 import { HoldToRecordOverlay } from "@/components/home/HoldToRecordOverlay";
 import { useHoldToRecord } from "@/hooks/useHoldToRecord";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
@@ -47,8 +31,14 @@ import { usePendingRecordingStore } from "@/stores/usePendingRecordingStore";
 import { useProfileStore } from "@/stores/useProfileStore";
 import { hapticLight } from "@/services/haptics";
 
-type Mode = "idle" | "review";
-
+/**
+ * Onboarding step 1 — record. Captures a hold-to-record voice note,
+ * stores it as the pending draft, and pushes to /onboarding/review for
+ * transcript editing + confirmation. Splitting the review surface into
+ * its own route was deliberate: back from the review screen now lands
+ * here (re-record), and back from analyzing/paywall returns to review,
+ * instead of a single screen toggling internal modes.
+ */
 const ScreenFirstRecording: React.FC = () => {
   const router = useRouter();
   const { colors } = useTheme();
@@ -58,13 +48,6 @@ const ScreenFirstRecording: React.FC = () => {
   const personalization = useProfileStore((s) => s.personalization);
   const headline = personalization?.firstRecordingPrompt ?? "What's been going on with you?";
 
-  const [mode, setMode] = useState<Mode>("idle");
-  const [postCapture, setPostCapture] = useState<{
-    transcript: string;
-    durationSec: number;
-    createdAt: string;
-  } | null>(null);
-  const [editValue, setEditValue] = useState("");
   // Educational layer: shown on the very first time the user is on
   // this screen until they successfully begin a hold. After that it
   // disappears for the rest of the session.
@@ -77,9 +60,12 @@ const ScreenFirstRecording: React.FC = () => {
       hapticLight();
     },
     onCommit: ({ transcript, durationSec }) => {
-      setPostCapture({ transcript, durationSec, createdAt: new Date().toISOString() });
-      setEditValue(transcript);
-      setMode("review");
+      usePendingRecordingStore.getState().setDraft({
+        transcript,
+        durationSec,
+        createdAt: new Date().toISOString(),
+      });
+      router.push("/onboarding/review");
     },
   });
 
@@ -89,29 +75,9 @@ const ScreenFirstRecording: React.FC = () => {
     if (holdState.isRecording && !hasHeldOnce) setHasHeldOnce(true);
   }, [holdState.isRecording, hasHeldOnce]);
 
-  const onContinue = () => {
-    if (!postCapture) return;
-    const text = editValue.trim() || postCapture.transcript;
-    usePendingRecordingStore.getState().setDraft({
-      transcript: text,
-      durationSec: postCapture.durationSec,
-      createdAt: postCapture.createdAt,
-    });
-    router.push("/onboarding/paywall");
-  };
-
-  const onReRecord = () => {
-    hapticLight();
-    setMode("idle");
-    setPostCapture(null);
-    setEditValue("");
-  };
-
   return (
     <SceneTransition mode="scale-fade">
       <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
-        {/* Ambient aurora — softens the screen, ties it to the rest
-            of onboarding. Visible in both modes. */}
         <View pointerEvents="none" style={styles.aurora}>
           <LinearGradient
             colors={[colors.accent + "1E", colors.accent + "00"]}
@@ -130,104 +96,31 @@ const ScreenFirstRecording: React.FC = () => {
             <OnboardingProgress value={1} />
           </View>
 
-          {mode === "idle" && (
-            <Animated.View
-              key="idle"
-              entering={FadeIn.duration(280)}
-              exiting={FadeOut.duration(180)}
-              style={styles.flex}
-            >
-              <View style={styles.idleContent}>
-                <Text style={[styles.idleHeadline, { color: colors.textPrimary }]}>{headline}</Text>
-                <Text style={[styles.idleSub, { color: colors.textSecondary }]}>
-                  Speak in your own words. Sympnote keeps your transcript safe on your device.
-                </Text>
-              </View>
+          <Animated.View
+            entering={FadeIn.duration(280)}
+            exiting={FadeOut.duration(180)}
+            style={styles.flex}
+          >
+            <View style={styles.idleContent}>
+              <Text style={[styles.idleHeadline, { color: colors.textPrimary }]}>{headline}</Text>
+              <Text style={[styles.idleSub, { color: colors.textSecondary }]}>
+                Speak in your own words. Sympnote keeps your transcript safe on your device.
+              </Text>
+            </View>
 
-              <View style={styles.holdArea}>
-                <HoldButton
-                  onPressIn={holdHandlers.onPressIn}
-                  onPressOut={holdHandlers.onPressOut}
-                  isRecording={holdState.isRecording}
-                  highlight={!hasHeldOnce}
-                  reduced={reduced}
-                />
-                {!hasHeldOnce && <TeachingTip reduced={reduced} />}
-              </View>
-            </Animated.View>
-          )}
-
-          {mode === "review" && postCapture && (
-            <Animated.View
-              key="review"
-              entering={FadeIn.duration(320)}
-              exiting={FadeOut.duration(180)}
-              style={styles.flex}
-            >
-              <KeyboardAvoidingView
-                behavior={Platform.OS === "ios" ? "padding" : undefined}
-                style={styles.flex}
-              >
-                <ScrollView
-                  contentContainerStyle={styles.reviewScroll}
-                  keyboardShouldPersistTaps="handled"
-                  showsVerticalScrollIndicator={false}
-                >
-                  <Animated.View
-                    entering={FadeInDown.duration(420).easing(Easing.out(Easing.cubic))}
-                    style={[
-                      styles.eyebrow,
-                      {
-                        backgroundColor: colors.accent + "14",
-                        borderColor: colors.accent + "33",
-                      },
-                    ]}
-                  >
-                    <View style={[styles.eyebrowDot, { backgroundColor: colors.accent }]} />
-                    <Text style={[styles.eyebrowText, { color: colors.accent }]}>
-                      YOUR FIRST NOTE
-                    </Text>
-                  </Animated.View>
-
-                  <Animated.Text
-                    entering={FadeInDown.duration(520).delay(80).easing(Easing.out(Easing.cubic))}
-                    style={[styles.headline, { color: colors.textPrimary }]}
-                  >
-                    Your next visit,{"\n"}
-                    <Text style={{ fontStyle: "italic", color: colors.accent }}>
-                      already prepared
-                    </Text>
-                    .
-                  </Animated.Text>
-
-                  <Animated.Text
-                    entering={FadeInDown.duration(520).delay(160).easing(Easing.out(Easing.cubic))}
-                    style={[styles.sub, { color: colors.textSecondary }]}
-                  >
-                    We'll turn what you just said into a clinical note your doctor can act on.
-                  </Animated.Text>
-
-                  <Animated.View
-                    entering={FadeInDown.duration(560).delay(240).easing(Easing.out(Easing.cubic))}
-                  >
-                    <TranscriptQuote
-                      transcript={editValue}
-                      durationSec={postCapture.durationSec}
-                      onChangeText={setEditValue}
-                      onReRecord={onReRecord}
-                    />
-                  </Animated.View>
-                </ScrollView>
-              </KeyboardAvoidingView>
-
-              <View style={styles.ctaArea}>
-                <PrimaryButton label="Make my story doctor-ready" onPress={onContinue} />
-              </View>
-            </Animated.View>
-          )}
+            <View style={styles.holdArea}>
+              <HoldButton
+                onPressIn={holdHandlers.onPressIn}
+                onPressOut={holdHandlers.onPressOut}
+                isRecording={holdState.isRecording}
+                highlight={!hasHeldOnce}
+                reduced={reduced}
+              />
+              {!hasHeldOnce && <TeachingTip />}
+            </View>
+          </Animated.View>
         </SafeAreaView>
 
-        {/* Hold-recording overlay — same one used on home. */}
         <HoldToRecordOverlay
           visible={holdState.isRecording}
           mode="recording"
@@ -239,8 +132,6 @@ const ScreenFirstRecording: React.FC = () => {
     </SceneTransition>
   );
 };
-
-// ── Hold button — large, centered, with a teaching spotlight ──────
 
 interface HoldButtonProps {
   onPressIn: () => void;
@@ -304,13 +195,7 @@ const HoldButton: React.FC<HoldButtonProps> = ({
   );
 };
 
-// ── Teaching tooltip — shown until the user has held once ────────
-
-interface TeachingTipProps {
-  reduced: boolean;
-}
-
-const TeachingTip: React.FC<TeachingTipProps> = ({ reduced }) => {
+const TeachingTip: React.FC = () => {
   const { colors } = useTheme();
   const styles = useStyles();
   return (
@@ -319,7 +204,6 @@ const TeachingTip: React.FC<TeachingTipProps> = ({ reduced }) => {
       exiting={FadeOut.duration(180)}
       style={styles.teachingWrap}
     >
-      {/* <SympnoteSprite pose="listening" reduced={reduced} size={moderateScale(140)} /> */}
       <Text style={[styles.teachingText, { color: colors.textPrimary }]}>
         Press and hold the mic
       </Text>
@@ -328,81 +212,6 @@ const TeachingTip: React.FC<TeachingTipProps> = ({ reduced }) => {
       </Text>
     </Animated.View>
   );
-};
-
-// ── Editorial transcript quote — copied from the old summary ──────
-
-interface TranscriptQuoteProps {
-  transcript: string;
-  durationSec: number;
-  onChangeText: (next: string) => void;
-  onReRecord: () => void;
-}
-
-const TranscriptQuote: React.FC<TranscriptQuoteProps> = ({
-  transcript,
-  durationSec,
-  onChangeText,
-  onReRecord,
-}) => {
-  const { colors } = useTheme();
-  const styles = useStyles();
-  return (
-    <View
-      style={[
-        styles.quoteCard,
-        { backgroundColor: colors.bgSurface, borderColor: colors.border },
-        shadows.card,
-      ]}
-    >
-      <LinearGradient
-        colors={[colors.accent + "18", colors.accent + "00"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={styles.quoteWash}
-      />
-      <Text style={[styles.quoteGlyph, { color: colors.accent + "55" }]}>&ldquo;</Text>
-      <TextInput
-        value={transcript}
-        onChangeText={onChangeText}
-        multiline
-        scrollEnabled
-        textAlignVertical="top"
-        style={[styles.quoteText, styles.quoteInput, { color: colors.textPrimary }]}
-        placeholder="Your words will appear here…"
-        placeholderTextColor={colors.textTertiary}
-      />
-      <View style={[styles.metaRow, { borderTopColor: colors.border }]}>
-        <View style={[styles.metaChip, { backgroundColor: colors.bgMuted }]}>
-          <Mic size={moderateScale(10)} color={colors.textSecondary} strokeWidth={2.2} />
-          <Text style={[styles.metaChipText, { color: colors.textSecondary }]}>
-            {formatDuration(durationSec)}
-          </Text>
-        </View>
-        <View style={[styles.metaChip, { backgroundColor: colors.bgMuted }]}>
-          <Clock size={moderateScale(10)} color={colors.textSecondary} strokeWidth={2.2} />
-          <Text style={[styles.metaChipText, { color: colors.textSecondary }]}>Just now</Text>
-        </View>
-        <View style={{ flex: 1 }} />
-        <Pressable onPress={onReRecord} hitSlop={8}>
-          <Text style={[styles.reRecord, { color: colors.accent }]}>Re-record</Text>
-        </Pressable>
-      </View>
-      <View style={styles.editHintRow}>
-        <Pencil size={moderateScale(10)} color={colors.textTertiary} strokeWidth={2} />
-        <Text style={[styles.editHintText, { color: colors.textTertiary }]}>
-          Tap the text above to edit
-        </Text>
-      </View>
-    </View>
-  );
-};
-
-const formatDuration = (s: number): string => {
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  const rem = s % 60;
-  return rem === 0 ? `${m}m` : `${m}m ${rem}s`;
 };
 
 export default ScreenFirstRecording;
@@ -430,7 +239,6 @@ const useStyles = makeStyles((theme) => ({
     paddingHorizontal: theme.spacing.s6,
     paddingTop: theme.spacing.s2,
   },
-  // ── Idle (pre-record) ───────────────────────────────────────────
   idleContent: {
     paddingHorizontal: theme.spacing.s6,
     paddingTop: theme.spacing.s5,
@@ -505,125 +313,5 @@ const useStyles = makeStyles((theme) => ({
     marginTop: verticalScale(4),
     fontStyle: "italic",
     maxWidth: moderateScale(280),
-  },
-  // ── Review (post-release) ───────────────────────────────────────
-  reviewScroll: {
-    paddingHorizontal: theme.spacing.s6,
-    paddingTop: theme.spacing.s4,
-    paddingBottom: theme.spacing.s6,
-  },
-  eyebrow: {
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(6),
-    paddingHorizontal: scale(10),
-    paddingVertical: verticalScale(5),
-    borderRadius: theme.radius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  eyebrowDot: {
-    width: moderateScale(6),
-    height: moderateScale(6),
-    borderRadius: moderateScale(3),
-  },
-  eyebrowText: {
-    fontFamily: "DMSans_700Bold",
-    fontSize: fontScale(10),
-    letterSpacing: 1.4,
-  },
-  headline: {
-    ...theme.typography.h1,
-    fontFamily: "Fraunces_500Medium",
-    letterSpacing: -0.8,
-    fontSize: fontScale(32),
-    lineHeight: fontScale(38),
-    marginTop: spacing.s4,
-  },
-  sub: {
-    ...theme.typography.body,
-    marginTop: moderateScale(10),
-    marginBottom: theme.spacing.s6,
-    lineHeight: fontScale(22),
-    maxWidth: moderateScale(340),
-  },
-  // ── Quote card ──────────────────────────────────────────────────
-  quoteCard: {
-    position: "relative",
-    paddingHorizontal: moderateScale(18),
-    paddingTop: moderateScale(18),
-    paddingBottom: moderateScale(12),
-    borderRadius: theme.radius.xl,
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: "hidden",
-  },
-  quoteWash: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: verticalScale(70),
-  },
-  quoteGlyph: {
-    fontFamily: "Fraunces_500Medium",
-    fontSize: fontScale(64),
-    lineHeight: fontScale(64),
-    height: fontScale(44),
-    marginTop: -moderateScale(4),
-    marginLeft: -moderateScale(2),
-  },
-  quoteText: {
-    ...theme.typography.body,
-    fontFamily: "Fraunces_400Regular",
-    fontSize: fontScale(17),
-    lineHeight: fontScale(26),
-    letterSpacing: -0.1,
-  },
-  quoteInput: {
-    maxHeight: verticalScale(200),
-    padding: 0,
-    margin: 0,
-    marginTop: moderateScale(4),
-  },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(6),
-    marginTop: verticalScale(14),
-    paddingTop: verticalScale(12),
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  metaChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(4),
-    paddingHorizontal: scale(8),
-    paddingVertical: verticalScale(4),
-    borderRadius: theme.radius.full,
-  },
-  metaChipText: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: fontScale(11),
-    letterSpacing: 0.1,
-  },
-  reRecord: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: fontScale(12),
-    textDecorationLine: "underline",
-  },
-  editHintRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(4),
-    marginTop: verticalScale(8),
-  },
-  editHintText: {
-    ...theme.typography.caption,
-    fontStyle: "italic",
-  },
-  ctaArea: {
-    paddingHorizontal: theme.spacing.s6,
-    paddingTop: theme.spacing.s3,
-    paddingBottom: theme.spacing.s4,
   },
 }));
