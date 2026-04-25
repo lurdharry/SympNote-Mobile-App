@@ -1,13 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-  Alert,
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, {
@@ -43,6 +35,7 @@ import { hapticHeavy } from "../../services/haptics";
 import { uuid } from "../../utils/uuid";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { PAYWALL_PLANS, PlanDef } from "../../constants/plans";
+import { VaultMascot } from "../../components/onboarding/VaultMascot";
 
 const PLANS = PAYWALL_PLANS;
 
@@ -84,10 +77,7 @@ const ScreenPaywall: React.FC = () => {
   };
   const onPrivacy = () => {
     Linking.openURL("https://sympnote.app/privacy").catch(() => {
-      Alert.alert(
-        "Couldn't open Privacy",
-        "Visit sympnote.app/privacy in your browser.",
-      );
+      Alert.alert("Couldn't open Privacy", "Visit sympnote.app/privacy in your browser.");
     });
   };
 
@@ -144,6 +134,19 @@ const ScreenPaywall: React.FC = () => {
 
   const onClose = () => router.back();
 
+  // Any plan that ships with a trialBadge is a free-trial offer —
+  // case-insensitive substring match was the original intent but the
+  // data uses capital-F "Free", which the lowercase `.includes("free")`
+  // missed. Direct truthy check is what we want anyway.
+  const isFreeTrial = !!selectedPlan?.trialBadge;
+
+  // Footer text — combines the today price + auto-renews note into
+  // a single subtle line so the CTA area isn't a stack of four lines.
+  const periodWord = selectedPlan ? selectedPlan.per.replace("per ", "") : "month";
+  const footerLine = isFreeTrial
+    ? `$0 today, then ${selectedPlan?.price ?? ""}/${periodWord} · Auto-renews, cancel anytime`
+    : `${selectedPlan?.price ?? ""}/${periodWord} · Auto-renews, cancel anytime`;
+
   return (
     <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
       <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
@@ -160,12 +163,9 @@ const ScreenPaywall: React.FC = () => {
           </Pressable>
         </View>
 
-        <ScrollView
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.mascotSlot}>
-            <PocketbookMascot reduced={reduced} size={moderateScale(180)} />
+            <VaultMascot reduced={reduced} size={moderateScale(140)} />
           </View>
 
           <Text
@@ -186,13 +186,12 @@ const ScreenPaywall: React.FC = () => {
               {
                 color: colors.textSecondary,
                 textAlign: "center",
-                marginTop: 8,
+                marginTop: 6,
                 paddingHorizontal: spacing.s4,
               },
             ]}
           >
-            Unlimited voice notes, structured into clinical fields every time, with
-            visit briefs ready before you walk in.
+            Unlimited notes. Doctor-ready every visit.
           </Text>
 
           <View style={styles.plans}>
@@ -229,36 +228,29 @@ const ScreenPaywall: React.FC = () => {
         </ScrollView>
 
         <View style={styles.ctaArea}>
-          <Text style={[styles.todayLine, { color: colors.textPrimary }]}>
-            $0 today · Then{" "}
-            {selectedPlan?.price ?? ""}
-            {selectedPlan ? `/${selectedPlan.per.replace("per ", "")}` : ""}
-          </Text>
-          <Text style={[styles.autorenewLine, { color: colors.textTertiary }]}>
-            Auto-renews. Cancel anytime.
+          <Text style={[styles.footerLine, { color: colors.textTertiary }]}>
+            {footerLine}
           </Text>
           <PrimaryButton
-            label={selectedPlan?.trialBadge ? "Start free trial" : "Continue"}
+            label={
+              isFreeTrial
+                ? "Start free trial"
+                : `Subscribe · ${selectedPlan?.price ?? ""}/${periodWord}`
+            }
             onPress={buy}
             loading={loading}
           />
           <View style={styles.legalRow}>
             <Pressable hitSlop={8} onPress={onRestore}>
-              <Text style={[styles.legalLink, { color: colors.textTertiary }]}>
-                Restore
-              </Text>
+              <Text style={[styles.legalLink, { color: colors.textTertiary }]}>Restore</Text>
             </Pressable>
             <View style={[styles.legalDot, { backgroundColor: colors.textTertiary }]} />
             <Pressable hitSlop={8} onPress={onTerms}>
-              <Text style={[styles.legalLink, { color: colors.textTertiary }]}>
-                Terms
-              </Text>
+              <Text style={[styles.legalLink, { color: colors.textTertiary }]}>Terms</Text>
             </Pressable>
             <View style={[styles.legalDot, { backgroundColor: colors.textTertiary }]} />
             <Pressable hitSlop={8} onPress={onPrivacy}>
-              <Text style={[styles.legalLink, { color: colors.textTertiary }]}>
-                Privacy
-              </Text>
+              <Text style={[styles.legalLink, { color: colors.textTertiary }]}>Privacy</Text>
             </Pressable>
           </View>
         </View>
@@ -327,12 +319,7 @@ interface PlanCardProps {
   onSelect: () => void;
 }
 
-const PlanCard: React.FC<PlanCardProps> = ({
-  plan,
-  index,
-  selected,
-  onSelect,
-}) => {
+const PlanCard: React.FC<PlanCardProps> = ({ plan, index, selected, onSelect }) => {
   const { colors } = useTheme();
   const styles = useStyles();
   const opacity = useSharedValue(0);
@@ -375,9 +362,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
           {/* Left column — name + small badge + subline */}
           <View style={{ flex: 1, minWidth: 0 }}>
             <View style={styles.planHeadRow}>
-              <Text style={[styles.planLabel, { color: colors.textPrimary }]}>
-                {plan.label}
-              </Text>
+              <Text style={[styles.planLabel, { color: colors.textPrimary }]}>{plan.label}</Text>
               {plan.trialBadge && (
                 <View
                   style={[
@@ -410,10 +395,7 @@ const PlanCard: React.FC<PlanCardProps> = ({
               )}
             </View>
             {plan.subline && (
-              <Text
-                style={[styles.planSubline, { color: colors.textTertiary }]}
-                numberOfLines={1}
-              >
+              <Text style={[styles.planSubline, { color: colors.textTertiary }]} numberOfLines={1}>
                 {plan.subline}
               </Text>
             )}
@@ -421,12 +403,8 @@ const PlanCard: React.FC<PlanCardProps> = ({
 
           {/* Middle — price stack */}
           <View style={styles.priceStack}>
-            <Text style={[styles.planPrice, { color: colors.textPrimary }]}>
-              {plan.price}
-            </Text>
-            <Text style={[styles.planPer, { color: colors.textTertiary }]}>
-              {plan.per}
-            </Text>
+            <Text style={[styles.planPrice, { color: colors.textPrimary }]}>{plan.price}</Text>
+            <Text style={[styles.planPer, { color: colors.textTertiary }]}>{plan.per}</Text>
           </View>
 
           {/* Right — radio / check */}
@@ -572,15 +550,12 @@ const useStyles = makeStyles((theme) => ({
     paddingBottom: theme.spacing.s3,
     gap: moderateScale(6),
   },
-  todayLine: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: fontScale(13),
-    textAlign: "center",
-  },
-  autorenewLine: {
-    fontFamily: "DMSans_400Regular",
+  footerLine: {
+    fontFamily: "DMSans_500Medium",
     fontSize: fontScale(11),
     textAlign: "center",
+    letterSpacing: 0.1,
+    paddingHorizontal: spacing.s4,
   },
   legalRow: {
     flexDirection: "row",
