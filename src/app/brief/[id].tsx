@@ -1,13 +1,28 @@
-import React, { useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import React, { useState } from "react";
+import {
+  Alert,
+  Modal,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 import { format, parseISO } from "date-fns";
 import {
   ArrowLeft,
   Edit3,
+  FileDown,
+  MessageSquareText,
+  RotateCw,
+  Share2,
+  Sparkles,
   Trash2,
-  Users,
 } from "lucide-react-native";
 import {
   fontScale,
@@ -22,7 +37,14 @@ import {
 import { Button } from "@/components/ui/Button";
 import { useBriefsStore } from "@/stores/useBriefsStore";
 import { useProfileStore } from "@/stores/useProfileStore";
-import { hapticLight } from "@/services/haptics";
+import { useRecordingsStore } from "@/stores/useRecordingsStore";
+import { generateBrief } from "@/services/ai";
+import {
+  formatBriefAsHtml,
+  formatBriefAsText,
+  isBriefContentEmpty,
+} from "@/utils/briefExport";
+import { hapticLight, hapticMedium } from "@/services/haptics";
 
 /**
  * Brief detail screen — the canonical "view this synthesised
@@ -42,21 +64,15 @@ const BriefDetail: React.FC = () => {
 
   const brief = useBriefsStore((s) => s.briefs.find((b) => b.id === id));
   const careTeam = useProfileStore((s) => s.personalization?.careTeam ?? []);
+  const profile = useProfileStore((s) => s.personalization);
   const setClinicianIds = useBriefsStore((s) => s.setClinicianIds);
   const setTitle = useBriefsStore((s) => s.setTitle);
+  const setContent = useBriefsStore((s) => s.setContent);
   const remove = useBriefsStore((s) => s.remove);
+  const recordings = useRecordingsStore((s) => s.recordings);
 
-  const tagged = useMemo(
-    () =>
-      brief
-        ? brief.clinicianIds
-            .map((cid) => careTeam.find((c) => c.id === cid))
-            .filter((c): c is NonNullable<typeof c> => !!c)
-        : [],
-    [brief, careTeam],
-  );
-
-  const [tagSheetOpen, setTagSheetOpen] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [shareSheetOpen, setShareSheetOpen] = useState(false);
 
   if (!brief) {
     return (
@@ -113,12 +129,113 @@ const BriefDetail: React.FC = () => {
     setClinicianIds(brief.id, next);
   };
 
+  const onShare = async () => {
+    hapticLight();
+    try {
+      await Share.share({ message: formatBriefAsText(brief, careTeam) });
+    } catch {
+      // User cancelled or platform error — nothing to do.
+    }
+  };
+
+  const onRegenerate = async () => {
+    if (retrying) return;
+    hapticMedium();
+    setRetrying(true);
+    try {
+      const sources = recordings.filter((r) => brief.sourceRecordingIds.includes(r.id));
+      if (sources.length === 0) {
+        Alert.alert(
+          "No notes to brief",
+          "The notes that fed this brief were removed. Generate a new brief from the Briefs tab.",
+        );
+        return;
+      }
+      const taggedNow = brief.clinicianIds
+        .map((cid) => careTeam.find((c) => c.id === cid))
+        .filter((c): c is NonNullable<typeof c> => !!c);
+      const content = await generateBrief({
+        recordings: sources,
+        windowLabel: brief.title ?? "Selected window",
+        clinicians: taggedNow.length > 0 ? taggedNow : undefined,
+        profile,
+      });
+      setContent(brief.id, content, brief.sourceRecordingIds);
+    } catch (e) {
+      Alert.alert(
+        "Couldn't regenerate",
+        e instanceof Error ? e.message : "Something went wrong.",
+      );
+    } finally {
+      setRetrying(false);
+    }
+  };
+
+  const onExportPdf = async () => {
+    hapticLight();
+    try {
+      const html = formatBriefAsHtml(brief, careTeam);
+      const { uri } = await Print.printToFileAsync({ html });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, {
+          mimeType: "application/pdf",
+          dialogTitle: brief.title ?? "Brief",
+          UTI: "com.adobe.pdf",
+        });
+      } else {
+        Alert.alert(
+          "PDF saved",
+          "Your phone doesn't support sharing here, but the PDF is ready.",
+        );
+      }
+    } catch (e) {
+      Alert.alert(
+        "Couldn't export PDF",
+        e instanceof Error ? e.message : "Something went wrong.",
+      );
+    }
+  };
+
+  const tagged = brief.clinicianIds
+    .map((cid) => careTeam.find((c) => c.id === cid))
+    .filter((c): c is NonNullable<typeof c> => !!c);
+  const empty = isBriefContentEmpty(brief);
+
   return (
     <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
       <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <View style={styles.topBar}>
           <BackBtn onPress={() => router.back()} />
           <View style={{ flex: 1 }} />
+          <Pressable
+            onPress={onRegenerate}
+            disabled={retrying}
+            hitSlop={10}
+            style={[styles.iconBtn, { backgroundColor: colors.bgMuted }]}
+            accessibilityRole="button"
+            accessibilityLabel="Regenerate brief"
+          >
+            <RotateCw
+              size={moderateScale(16)}
+              color={retrying ? colors.textTertiary : colors.textPrimary}
+              strokeWidth={2}
+            />
+          </Pressable>
+          {!empty && (
+            <Pressable
+              onPress={() => {
+                hapticLight();
+                setShareSheetOpen(true);
+              }}
+              hitSlop={10}
+              style={[styles.iconBtn, { backgroundColor: colors.accent }]}
+              accessibilityRole="button"
+              accessibilityLabel="Share or export brief"
+            >
+              <Share2 size={moderateScale(16)} color="#FFFFFF" strokeWidth={2.2} />
+            </Pressable>
+          )}
           <Pressable
             onPress={() => {
               hapticLight();
@@ -156,76 +273,126 @@ const BriefDetail: React.FC = () => {
             </Text>
           </View>
 
-          {/* Audience tag row — multi-select, "Everyone" when empty. */}
-          <Pressable
-            onPress={() => {
-              hapticLight();
-              setTagSheetOpen((v) => !v);
-            }}
-            style={[
-              styles.tagRow,
-              { backgroundColor: colors.bgSurface, borderColor: colors.border },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Edit audience tags"
-          >
-            <Users size={moderateScale(13)} color={colors.textSecondary} strokeWidth={2} />
-            <Text style={[styles.tagLabel, { color: colors.textSecondary }]}>SHARE WITH</Text>
-            <View style={{ flex: 1 }} />
-            <Text style={[styles.tagValue, { color: colors.textPrimary }]}>
-              {tagged.length === 0
-                ? "Everyone"
-                : tagged.length <= 2
-                  ? tagged.map((c) => c.name).join(" · ")
-                  : `${tagged.length} clinicians`}
+          {/* Audience tag — always-visible chips. Tap each to toggle.
+              Empty selection = "Everyone." */}
+          <View style={styles.tagBlock}>
+            <Text style={[styles.tagLabel, { color: colors.textTertiary }]}>
+              TAG WITH CLINICIAN
             </Text>
-          </Pressable>
-
-          {tagSheetOpen && (
-            <View style={[styles.tagSheet, { backgroundColor: colors.bgSurface }]}>
-              <Text style={[styles.tagSheetHint, { color: colors.textTertiary }]}>
-                Pick none for "Everyone." Pick one or more to scope this brief to specific
-                clinicians.
+            {careTeam.length === 0 ? (
+              <Text style={[styles.tagHint, { color: colors.textTertiary }]}>
+                No clinicians on your care team yet — this brief is "for everyone."
               </Text>
-              <View style={styles.chipRow}>
-                {careTeam.map((c) => {
-                  const active = brief.clinicianIds.includes(c.id);
-                  return (
-                    <Pressable
-                      key={c.id}
-                      onPress={() => {
-                        hapticLight();
-                        toggleTag(c.id);
-                      }}
+            ) : (
+              <>
+                <View style={styles.chipRow}>
+                  {/* Everyone chip — active when no clinicians are tagged. */}
+                  <Pressable
+                    onPress={() => {
+                      hapticLight();
+                      setClinicianIds(brief.id, []);
+                    }}
+                    style={[
+                      styles.chip,
+                      {
+                        backgroundColor:
+                          tagged.length === 0 ? colors.accent + "1A" : "transparent",
+                        borderColor: tagged.length === 0 ? colors.accent : colors.border,
+                        borderStyle: tagged.length === 0 ? "solid" : "dashed",
+                      },
+                    ]}
+                  >
+                    <Text
                       style={[
-                        styles.chip,
+                        styles.chipText,
                         {
-                          backgroundColor: active ? colors.accent + "1A" : "transparent",
-                          borderColor: active ? colors.accent : colors.border,
+                          color:
+                            tagged.length === 0 ? colors.accent : colors.textTertiary,
                         },
                       ]}
                     >
-                      <Text
+                      Everyone
+                    </Text>
+                  </Pressable>
+                  {careTeam.map((c) => {
+                    const active = brief.clinicianIds.includes(c.id);
+                    return (
+                      <Pressable
+                        key={c.id}
+                        onPress={() => {
+                          hapticLight();
+                          toggleTag(c.id);
+                        }}
                         style={[
-                          styles.chipText,
-                          { color: active ? colors.accent : colors.textPrimary },
+                          styles.chip,
+                          {
+                            backgroundColor: active
+                              ? colors.accent + "1A"
+                              : "transparent",
+                            borderColor: active ? colors.accent : colors.border,
+                          },
                         ]}
                       >
-                        {c.name}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-                {careTeam.length === 0 && (
-                  <Text style={[styles.tagSheetHint, { color: colors.textTertiary }]}>
-                    No clinicians on your care team yet.
-                  </Text>
-                )}
+                        <Text
+                          style={[
+                            styles.chipText,
+                            { color: active ? colors.accent : colors.textPrimary },
+                          ]}
+                        >
+                          {c.name}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <Text style={[styles.tagHint, { color: colors.textTertiary }]}>
+                  Pick "Everyone" or one or more clinicians. Tap to toggle.
+                </Text>
+              </>
+            )}
+          </View>
+
+          {/* Empty-content state — when AI returned a brief shell with
+              nothing in it, surface a clear retry path instead of a
+              blank page. */}
+          {empty ? (
+            <View
+              style={[
+                styles.emptyCard,
+                { backgroundColor: colors.bgSurface, borderColor: colors.border },
+              ]}
+            >
+              <View style={[styles.emptyIcon, { backgroundColor: colors.accent + "1A" }]}>
+                <Sparkles size={moderateScale(20)} color={colors.accent} strokeWidth={2} />
+              </View>
+              <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
+                The AI didn't have enough to work with
+              </Text>
+              <Text style={[styles.emptySub, { color: colors.textSecondary }]}>
+                {brief.sourceRecordingIds.length === 0
+                  ? "This brief has no source notes. Try generating from a wider window in the Briefs tab."
+                  : "Sometimes the model returns an empty brief. Try regenerating — same notes, fresh attempt."}
+              </Text>
+              <View style={{ marginTop: spacing.s4, gap: spacing.s2 }}>
+                <Button
+                  label={retrying ? "Regenerating…" : "Try again"}
+                  onPress={onRegenerate}
+                  haptic="medium"
+                  disabled={retrying || brief.sourceRecordingIds.length === 0}
+                />
+                <Pressable onPress={onDelete} hitSlop={8}>
+                  <View style={styles.retryRow}>
+                    <RotateCw size={moderateScale(12)} color={colors.error} strokeWidth={2.2} />
+                    <Text style={[styles.retryText, { color: colors.error }]}>
+                      Delete this brief
+                    </Text>
+                  </View>
+                </Pressable>
               </View>
             </View>
-          )}
+          ) : null}
 
-          {/* Brief content sections */}
+          {/* Brief content sections — only render when there's something */}
           {brief.content.summary ? (
             <Section label="SUMMARY" colors={colors} styles={styles}>
               <Text style={[styles.summary, { color: colors.textPrimary }]}>
@@ -323,6 +490,101 @@ const BriefDetail: React.FC = () => {
           <View style={styles.footerSpace} />
         </ScrollView>
       </SafeAreaView>
+
+      {/* Share / export action sheet — two clear options. PDF reads
+          as a clinician-facing report; text share opens the OS share
+          sheet for email / messages / copy. */}
+      <Modal
+        visible={shareSheetOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShareSheetOpen(false)}
+        statusBarTranslucent
+      >
+        <Pressable
+          style={styles.sheetBackdrop}
+          onPress={() => setShareSheetOpen(false)}
+          accessibilityRole="button"
+          accessibilityLabel="Close share menu"
+        >
+          <Pressable
+            style={[styles.sheet, { backgroundColor: colors.bgSurface }]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>
+              Share or export
+            </Text>
+            <Text style={[styles.sheetSub, { color: colors.textSecondary }]}>
+              Pick how you'd like to send this brief.
+            </Text>
+
+            <Pressable
+              onPress={() => {
+                setShareSheetOpen(false);
+                onExportPdf();
+              }}
+              style={[styles.sheetRow, { borderColor: colors.border }]}
+            >
+              <View
+                style={[
+                  styles.sheetIconTile,
+                  { backgroundColor: colors.accent + "1A" },
+                ]}
+              >
+                <FileDown size={moderateScale(18)} color={colors.accent} strokeWidth={2} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={[styles.sheetRowLabel, { color: colors.textPrimary }]}>
+                  Export as PDF
+                </Text>
+                <Text style={[styles.sheetRowSub, { color: colors.textTertiary }]}>
+                  A clinician-ready one-pager. Email it, AirDrop it, save it.
+                </Text>
+              </View>
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                setShareSheetOpen(false);
+                onShare();
+              }}
+              style={[styles.sheetRow, { borderColor: colors.border }]}
+            >
+              <View
+                style={[
+                  styles.sheetIconTile,
+                  { backgroundColor: colors.accent + "1A" },
+                ]}
+              >
+                <MessageSquareText
+                  size={moderateScale(18)}
+                  color={colors.accent}
+                  strokeWidth={2}
+                />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={[styles.sheetRowLabel, { color: colors.textPrimary }]}>
+                  Share as text
+                </Text>
+                <Text style={[styles.sheetRowSub, { color: colors.textTertiary }]}>
+                  Plain text via your phone's share sheet — Messages, email, copy.
+                </Text>
+              </View>
+            </Pressable>
+
+            <Pressable
+              onPress={() => setShareSheetOpen(false)}
+              style={[styles.sheetCancel, { borderColor: colors.border }]}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
+            >
+              <Text style={[styles.sheetCancelText, { color: colors.textSecondary }]}>
+                Cancel
+              </Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 };
@@ -400,35 +662,19 @@ const useStyles = makeStyles((theme) => ({
     fontSize: fontScale(11),
     letterSpacing: 0.2,
   },
-  tagRow: {
+  tagBlock: {
     marginTop: theme.spacing.s4,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(8),
-    paddingHorizontal: scale(14),
-    paddingVertical: verticalScale(11),
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
+    gap: theme.spacing.s2,
   },
   tagLabel: {
     fontFamily: "DMSans_700Bold",
     fontSize: fontScale(10),
-    letterSpacing: 1.2,
+    letterSpacing: 1.4,
   },
-  tagValue: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: fontScale(13),
-    letterSpacing: 0.1,
-  },
-  tagSheet: {
-    marginTop: theme.spacing.s2,
-    padding: theme.spacing.s4,
-    borderRadius: theme.radius.lg,
-    gap: theme.spacing.s2,
-  },
-  tagSheetHint: {
+  tagHint: {
     ...theme.typography.caption,
     fontStyle: "italic",
+    fontSize: fontScale(11),
   },
   chipRow: {
     flexDirection: "row",
@@ -527,6 +773,108 @@ const useStyles = makeStyles((theme) => ({
     lineHeight: fontScale(19),
   },
   footerSpace: { height: theme.spacing.s4 },
+  // ── Share / export modal sheet
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  sheet: {
+    borderTopLeftRadius: theme.radius.xl,
+    borderTopRightRadius: theme.radius.xl,
+    paddingHorizontal: theme.spacing.s5,
+    paddingTop: theme.spacing.s5,
+    paddingBottom: theme.spacing.s8,
+    gap: theme.spacing.s3,
+  },
+  sheetTitle: {
+    fontFamily: "Fraunces_500Medium",
+    fontSize: fontScale(20),
+    letterSpacing: -0.3,
+  },
+  sheetSub: {
+    ...theme.typography.body,
+    fontSize: fontScale(13),
+    lineHeight: fontScale(19),
+    marginBottom: theme.spacing.s2,
+  },
+  sheetRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(12),
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(12),
+    borderRadius: theme.radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  sheetIconTile: {
+    width: moderateScale(42),
+    height: moderateScale(42),
+    borderRadius: moderateScale(12),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sheetRowLabel: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: fontScale(15),
+    letterSpacing: -0.1,
+  },
+  sheetRowSub: {
+    ...theme.typography.caption,
+    fontSize: fontScale(12),
+    lineHeight: fontScale(17),
+    marginTop: 2,
+  },
+  sheetCancel: {
+    alignItems: "center",
+    paddingVertical: verticalScale(12),
+    borderRadius: theme.radius.full,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginTop: theme.spacing.s2,
+  },
+  sheetCancelText: {
+    fontFamily: "DMSans_600SemiBold",
+    fontSize: fontScale(13),
+    letterSpacing: 0.2,
+  },
+  emptyCard: {
+    marginTop: theme.spacing.s5,
+    padding: theme.spacing.s5,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    alignItems: "flex-start",
+  },
+  emptyIcon: {
+    width: moderateScale(44),
+    height: moderateScale(44),
+    borderRadius: moderateScale(12),
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: theme.spacing.s3,
+  },
+  emptyTitle: {
+    fontFamily: "Fraunces_500Medium",
+    fontStyle: "italic",
+    fontSize: fontScale(18),
+    lineHeight: fontScale(24),
+  },
+  emptySub: {
+    ...theme.typography.body,
+    fontSize: fontScale(13),
+    lineHeight: fontScale(19),
+    marginTop: theme.spacing.s2,
+  },
+  retryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(6),
+    paddingVertical: verticalScale(6),
+  },
+  retryText: {
+    fontFamily: "DMSans_600SemiBold",
+    fontSize: fontScale(12),
+    letterSpacing: 0.2,
+  },
 }));
 
 export default BriefDetail;

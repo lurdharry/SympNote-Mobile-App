@@ -3,22 +3,14 @@ import { format, parseISO } from "date-fns";
 import { generateBrief } from "@/services/ai";
 import { useBriefsStore } from "@/stores/useBriefsStore";
 import { useProfileStore } from "@/stores/useProfileStore";
-import { useRecordingsStore } from "@/stores/useRecordingsStore";
-import {
-  type BriefWindowKind,
-  labelForWindow,
-  recordingsInWindow,
-  resolveBriefWindow,
-} from "@/utils/briefSource";
 import { uuid } from "@/utils/uuid";
-import type { Brief } from "@/stores/types";
+import type { Brief, Recording } from "@/stores/types";
 
 export interface GenerateBriefArgs {
-  /** Window scope. "sinceLastBrief" is the simple default; the others
-   *  are explicit overrides. */
-  windowKind: BriefWindowKind;
-  /** Custom range in ms — only used when `windowKind` is "custom". */
-  custom?: { startMs: number; endMs?: number };
+  /** The exact set of notes the user picked to include in this
+   *  brief. Source-picker UI passes them in directly — no implicit
+   *  window resolution at this layer. */
+  recordings: Recording[];
   /** Optional audience tag; empty = "for everyone". */
   clinicianIds?: string[];
   /** Optional appointment link. */
@@ -27,23 +19,24 @@ export interface GenerateBriefArgs {
   title?: string;
 }
 
-const friendlyTitle = (
-  windowLabel: string,
-  startMs: number,
-  endMs: number,
-): string => {
-  const sameYear = new Date(startMs).getFullYear() === new Date(endMs).getFullYear();
-  const startStr = format(new Date(startMs), sameYear ? "MMM d" : "MMM d, yyyy");
-  const endStr = format(new Date(endMs), "MMM d");
-  // For non-custom windows the kind label reads better; custom uses range.
-  return windowLabel === "Custom window" ? `${startStr} – ${endStr}` : windowLabel;
+const autoTitle = (recordings: Recording[]): string => {
+  const sorted = [...recordings].sort(
+    (a, b) => parseISO(a.createdAt).getTime() - parseISO(b.createdAt).getTime(),
+  );
+  const start = parseISO(sorted[0]!.createdAt);
+  const end = parseISO(sorted[sorted.length - 1]!.createdAt);
+  if (start.toDateString() === end.toDateString()) {
+    return format(start, "MMM d");
+  }
+  const sameYear = start.getFullYear() === end.getFullYear();
+  return `${format(start, sameYear ? "MMM d" : "MMM d, yyyy")} – ${format(end, "MMM d")}`;
 };
 
 /**
- * One-shot brief generation — the primary "Generate" action. Resolves
- * the window, picks source recordings, calls the AI, persists the
- * resulting Brief into the store, and returns it. The UI is meant to
- * navigate into the brief detail screen on success.
+ * Brief generation. The caller (the source-picker screen) hands in
+ * the exact recordings to synthesise — this hook owns the AI call,
+ * the persistence, and nothing else. No implicit time-window or
+ * staleness logic; that decision belongs in the picker UI.
  */
 export const useGenerateBrief = () => {
   const profile = useProfileStore((s) => s.personalization);
@@ -51,14 +44,11 @@ export const useGenerateBrief = () => {
 
   return useMutation<Brief, Error, GenerateBriefArgs>({
     mutationFn: async (args) => {
-      const allBriefs = useBriefsStore.getState().briefs;
-      const allRecordings = useRecordingsStore.getState().recordings;
-
-      const window = resolveBriefWindow(args.windowKind, allBriefs, args.custom);
-      const recordings = recordingsInWindow(window, allRecordings);
-
+      const recordings = [...args.recordings].sort(
+        (a, b) => parseISO(a.createdAt).getTime() - parseISO(b.createdAt).getTime(),
+      );
       if (recordings.length === 0) {
-        throw new Error("No notes in this window — record something first.");
+        throw new Error("Pick at least one note to include.");
       }
 
       const clinicianIds = args.clinicianIds ?? [];
@@ -66,11 +56,11 @@ export const useGenerateBrief = () => {
         .map((id) => careTeam.find((c) => c.id === id))
         .filter((c): c is NonNullable<typeof c> => !!c);
 
-      const windowLabel = labelForWindow(window);
+      const title = args.title ?? autoTitle(recordings);
 
       const content = await generateBrief({
         recordings,
-        windowLabel,
+        windowLabel: title,
         clinicians: clinicians.length > 0 ? clinicians : undefined,
         profile,
       });
@@ -87,13 +77,7 @@ export const useGenerateBrief = () => {
         content,
         clinicianIds,
         appointmentId: args.appointmentId,
-        title:
-          args.title ??
-          friendlyTitle(
-            windowLabel,
-            parseISO(oldest).getTime(),
-            parseISO(newest).getTime(),
-          ),
+        title,
       };
 
       useBriefsStore.getState().add(brief);

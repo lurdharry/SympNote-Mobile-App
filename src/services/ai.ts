@@ -2,7 +2,6 @@ import { format, parseISO } from 'date-fns';
 import { sortBy } from 'lodash';
 import type {
   Appointment,
-  AppointmentBrief,
   BriefContent,
   Clinician,
   PersonalizationProfile,
@@ -145,7 +144,7 @@ export async function generateAppointmentSummary(
   });
 }
 
-const EMPTY_BRIEF: AppointmentBrief = {
+const EMPTY_BRIEF: BriefContent = {
   summary: '',
   topConcerns: [],
   timeline: [],
@@ -160,7 +159,7 @@ const asStringArray = (v: unknown): string[] =>
 
 const asLabeledArray = (
   v: unknown,
-): AppointmentBrief['topConcerns'] => {
+): BriefContent['topConcerns'] => {
   if (!Array.isArray(v)) return [];
   return v
     .map((item) => {
@@ -178,7 +177,7 @@ const asLabeledArray = (
 
 const asTimelineArray = (
   v: unknown,
-): AppointmentBrief['timeline'] => {
+): BriefContent['timeline'] => {
   if (!Array.isArray(v)) return [];
   return v
     .map((item) => {
@@ -200,17 +199,67 @@ const stripJsonFence = (text: string): string => {
   return trimmed;
 };
 
-const parseBrief = (text: string): AppointmentBrief => {
-  const raw = JSON.parse(stripJsonFence(text)) as Record<string, unknown>;
-  return {
-    summary: typeof raw.summary === 'string' ? raw.summary.trim() : '',
-    topConcerns: asLabeledArray(raw.topConcerns),
-    timeline: asTimelineArray(raw.timeline),
-    patterns: asStringArray(raw.patterns),
-    medications: asStringArray(raw.medications),
-    questions: asStringArray(raw.questions),
-    flags: asStringArray(raw.flags),
-  };
+/**
+ * Last-ditch JSON extractor — finds the first `{` and the last `}` and
+ * returns the slice between. Catches the case where Gemini prepends a
+ * sentence like "Here's the brief:" before the actual JSON, which
+ * makes a strict JSON.parse fail.
+ */
+const extractJsonObject = (text: string): string | null => {
+  const first = text.indexOf('{');
+  const last = text.lastIndexOf('}');
+  if (first === -1 || last === -1 || last <= first) return null;
+  return text.slice(first, last + 1);
+};
+
+/**
+ * Pull a field from the raw object, accepting common alias spellings.
+ * Gemini occasionally outputs snake_case or shortened keys despite
+ * the schema. Trying a few aliases makes parse hits much more
+ * forgiving.
+ */
+const pick = (raw: Record<string, unknown>, ...keys: string[]): unknown => {
+  for (const k of keys) {
+    if (raw[k] !== undefined) return raw[k];
+  }
+  return undefined;
+};
+
+const buildBrief = (raw: Record<string, unknown>): BriefContent => ({
+  summary: typeof pick(raw, 'summary', 'overview') === 'string'
+    ? (pick(raw, 'summary', 'overview') as string).trim()
+    : '',
+  topConcerns: asLabeledArray(pick(raw, 'topConcerns', 'top_concerns', 'concerns')),
+  timeline: asTimelineArray(pick(raw, 'timeline', 'events')),
+  patterns: asStringArray(pick(raw, 'patterns', 'observations')),
+  medications: asStringArray(pick(raw, 'medications', 'meds')),
+  questions: asStringArray(pick(raw, 'questions', 'questions_to_ask')),
+  flags: asStringArray(pick(raw, 'flags', 'redFlags', 'red_flags')),
+});
+
+/**
+ * Try several strategies to coax JSON out of the model output:
+ *   1. parse the raw text (works when responseMimeType is honoured)
+ *   2. parse after stripping ``` fences
+ *   3. parse the substring between the first `{` and last `}`
+ * Returns null when every strategy fails — the caller surfaces the
+ * empty-state retry UI instead of dumping JSON into the summary.
+ */
+const parseBrief = (text: string): BriefContent | null => {
+  const candidates: string[] = [text.trim(), stripJsonFence(text)];
+  const extracted = extractJsonObject(text);
+  if (extracted) candidates.push(extracted);
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    try {
+      const raw = JSON.parse(candidate) as Record<string, unknown>;
+      if (raw && typeof raw === 'object') return buildBrief(raw);
+    } catch {
+      // try the next strategy
+    }
+  }
+  return null;
 };
 
 const formatAppointmentHeader = (appt: Appointment): string =>
@@ -226,7 +275,7 @@ export async function generateAppointmentBrief(
   appointment: Appointment,
   recordings: Recording[],
   profile?: PersonalizationProfile | null,
-): Promise<AppointmentBrief> {
+): Promise<BriefContent> {
   if (recordings.length === 0) {
     return EMPTY_BRIEF;
   }
@@ -246,13 +295,7 @@ export async function generateAppointmentBrief(
     },
   });
 
-  try {
-    return parseBrief(text);
-  } catch {
-    // Fall back to a shell brief carrying the raw prose. Caller can
-    // retry; in the meantime the user still sees something useful.
-    return { ...EMPTY_BRIEF, summary: text.slice(0, 800) };
-  }
+  return parseBrief(text) ?? { ...EMPTY_BRIEF };
 }
 
 const formatClinicianHeader = (clinician: Clinician): string =>
@@ -269,7 +312,7 @@ export async function generateClinicianBrief(
   clinician: Clinician,
   recordings: Recording[],
   profile?: PersonalizationProfile | null,
-): Promise<AppointmentBrief> {
+): Promise<BriefContent> {
   if (recordings.length === 0) {
     return EMPTY_BRIEF;
   }
@@ -289,11 +332,7 @@ export async function generateClinicianBrief(
     },
   });
 
-  try {
-    return parseBrief(text);
-  } catch {
-    return { ...EMPTY_BRIEF, summary: text.slice(0, 800) };
-  }
+  return parseBrief(text) ?? { ...EMPTY_BRIEF };
 }
 
 interface BriefHeaderArgs {
@@ -341,11 +380,7 @@ export async function generateBrief(args: {
     },
   });
 
-  try {
-    return parseBrief(text);
-  } catch {
-    return { ...EMPTY_BRIEF, summary: text.slice(0, 800) };
-  }
+  return parseBrief(text) ?? { ...EMPTY_BRIEF };
 }
 
 export { GeminiQuotaError };
