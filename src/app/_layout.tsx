@@ -97,6 +97,14 @@ const RootLayout: React.FC = () => {
                   options={{ animation: "slide_from_right" }}
                 />
                 <Stack.Screen
+                  name="brief/new"
+                  options={{
+                    animation: "slide_from_bottom",
+                    presentation: "modal",
+                    gestureEnabled: true,
+                  }}
+                />
+                <Stack.Screen
                   name="settings"
                   options={{
                     animation: "slide_from_right",

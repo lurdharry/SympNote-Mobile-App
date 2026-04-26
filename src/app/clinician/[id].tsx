@@ -26,7 +26,6 @@ import { useProfileStore } from "@/stores/useProfileStore";
 import { useRecordingsStore } from "@/stores/useRecordingsStore";
 import { useAppointmentsStore } from "@/stores/useAppointmentsStore";
 import { useBriefsStore } from "@/stores/useBriefsStore";
-import { useGenerateBrief } from "@/hooks/useGenerateBrief";
 import { unbriefedRecordings } from "@/utils/briefSource";
 import { findSpecialty } from "@/constants/specialties";
 import { hapticLight } from "@/services/haptics";
@@ -89,8 +88,6 @@ const ClinicianDetail: React.FC = () => {
     [clinician, appointments],
   );
 
-  const generate = useGenerateBrief();
-  const [generating, setGenerating] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
   if (!clinician) {
@@ -115,32 +112,15 @@ const ClinicianDetail: React.FC = () => {
   const Icon = spec.Icon;
 
   const onGenerate = () => {
-    if (generating) return;
-    if (unbriefedCount === 0) {
+    if (recordings.length === 0) {
       Alert.alert(
-        "Nothing new to brief",
-        "Record a note first — once you have un-briefed notes, this will synthesise them tagged for this clinician.",
+        "Nothing to brief yet",
+        "Record a note first — once you have something to synthesise, you'll be able to pick which notes go into a brief tagged for this clinician.",
       );
       return;
     }
     hapticLight();
-    setGenerating(true);
-    generate.mutate(
-      { windowKind: "sinceLastBrief", clinicianIds: [clinician.id] },
-      {
-        onSuccess: (b) => {
-          setGenerating(false);
-          router.push(`/brief/${b.id}`);
-        },
-        onError: (err) => {
-          setGenerating(false);
-          Alert.alert(
-            "Couldn't generate",
-            err instanceof Error ? err.message : "Something went wrong.",
-          );
-        },
-      },
-    );
+    router.push("/brief/new");
   };
 
   const onEditSave = (value: { name: string; role: string }) => {
@@ -233,23 +213,22 @@ const ClinicianDetail: React.FC = () => {
           {/* ── Generate CTA ─────────────────────────────────────── */}
           <Pressable
             onPress={onGenerate}
-            disabled={generating}
             style={[
               styles.generateCard,
               { backgroundColor: colors.accent + "12", borderColor: colors.accent + "55" },
             ]}
             accessibilityRole="button"
-            accessibilityLabel={`Generate brief for ${clinician.name}`}
+            accessibilityLabel={`Compose a brief for ${clinician.name}`}
           >
             <Sparkles size={moderateScale(14)} color={colors.accent} strokeWidth={2.2} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.generateLabel, { color: colors.accent }]}>
-                {generating ? "Generating…" : "Generate a brief"}
+                Compose a brief
               </Text>
               <Text style={[styles.generateSub, { color: colors.textSecondary }]}>
                 {unbriefedCount > 0
-                  ? `${unbriefedCount} ${unbriefedCount === 1 ? "note" : "notes"} since your last brief — synthesise tagged for ${clinician.name}.`
-                  : `Synthesise your latest notes tagged for ${clinician.name}.`}
+                  ? `${unbriefedCount} ${unbriefedCount === 1 ? "note" : "notes"} not yet briefed — pick which go in.`
+                  : `Pick the notes to synthesise.`}
               </Text>
             </View>
           </Pressable>

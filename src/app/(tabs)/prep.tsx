@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,7 +20,6 @@ import { useBriefsStore } from "@/stores/useBriefsStore";
 import { useProfileStore } from "@/stores/useProfileStore";
 import { useRecordingsStore } from "@/stores/useRecordingsStore";
 import { unbriefedRecordings } from "@/utils/briefSource";
-import { useGenerateBrief } from "@/hooks/useGenerateBrief";
 import { hapticLight } from "@/services/haptics";
 import type { Brief } from "@/stores/types";
 
@@ -43,36 +42,16 @@ const TabBriefs: React.FC = () => {
   const recordings = useRecordingsStore((s) => s.recordings);
   const unbriefed = unbriefedRecordings(recordings, briefs);
 
-  const generate = useGenerateBrief();
-  const [generating, setGenerating] = useState(false);
-
   const onGenerate = () => {
-    if (generating) return;
-    if (unbriefed.length === 0) {
+    if (recordings.length === 0) {
       Alert.alert(
-        "Nothing to brief",
-        "Record a note first — once you have un-briefed notes, tap Generate to synthesise them.",
+        "Nothing to brief yet",
+        "Record a note first — once you have something to synthesise, tap + to pick which notes go in.",
       );
       return;
     }
     hapticLight();
-    setGenerating(true);
-    generate.mutate(
-      { windowKind: "sinceLastBrief" },
-      {
-        onSuccess: (brief) => {
-          setGenerating(false);
-          router.push(`/brief/${brief.id}`);
-        },
-        onError: (err) => {
-          setGenerating(false);
-          Alert.alert(
-            "Couldn't generate",
-            err instanceof Error ? err.message : "Something went wrong.",
-          );
-        },
-      },
-    );
+    router.push("/brief/new");
   };
 
   const isEmpty = briefs.length === 0;
@@ -92,14 +71,10 @@ const TabBriefs: React.FC = () => {
             </View>
             <Pressable
               onPress={onGenerate}
-              disabled={generating}
               hitSlop={10}
-              style={[
-                styles.headerAdd,
-                { backgroundColor: generating ? colors.bgMuted : colors.accent },
-              ]}
+              style={[styles.headerAdd, { backgroundColor: colors.accent }]}
               accessibilityRole="button"
-              accessibilityLabel="Generate brief"
+              accessibilityLabel="New brief"
             >
               <Plus size={moderateScale(20)} color="#FFFFFF" strokeWidth={2.4} />
             </Pressable>
@@ -127,7 +102,7 @@ const TabBriefs: React.FC = () => {
                 </Text>
                 <View style={{ flex: 1 }} />
                 <Text style={[styles.statusCta, { color: colors.accent }]}>
-                  {generating ? "Generating…" : "Generate ›"}
+                  Pick & generate ›
                 </Text>
               </Pressable>
             )}
