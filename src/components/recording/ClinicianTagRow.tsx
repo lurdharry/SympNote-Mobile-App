@@ -18,6 +18,10 @@ interface ClinicianTagRowProps {
   /** Names of clinicians currently tagged. */
   selected: string[];
   onToggle: (name: string) => void;
+  /** Optional handler that clears the entire selection (resets to
+   *  the implicit "everyone" default). Falls back to clearing each
+   *  selected name through onToggle when not provided. */
+  onClearAll?: () => void;
 }
 
 /**
@@ -31,6 +35,7 @@ export const ClinicianTagRow: React.FC<ClinicianTagRowProps> = ({
   careTeam,
   selected,
   onToggle,
+  onClearAll,
 }) => {
   const { colors } = useTheme();
   const styles = useStyles();
@@ -40,21 +45,39 @@ export const ClinicianTagRow: React.FC<ClinicianTagRowProps> = ({
     selected.some((s) => s.trim().toLowerCase() === name.trim().toLowerCase());
   const generalActive = selected.length === 0;
 
+  const clearAll = () => {
+    if (generalActive) return;
+    hapticLight();
+    if (onClearAll) {
+      onClearAll();
+      return;
+    }
+    // Fallback: toggle each currently-selected name off.
+    selected.forEach((name) => onToggle(name));
+  };
+
   return (
     <View style={{ gap: moderateScale(8) }}>
-      <Text style={[styles.label, { color: colors.textTertiary }]}>
-        ROUTE TO
-      </Text>
+      <Text style={[styles.label, { color: colors.textTertiary }]}>ROUTE TO</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.row}
       >
-        <View
+        {/* "Everyone" is the implicit default when nothing else is
+            picked. Use a dashed-border ghost treatment so it doesn't
+            visually impersonate a manually-selected doctor — that
+            mismatch was reading as "we auto-picked one for you". */}
+        <Pressable
+          onPress={clearAll}
+          accessibilityRole="button"
+          accessibilityLabel="Route to everyone"
+          accessibilityState={{ selected: generalActive }}
           style={[
             styles.chip,
+            styles.chipDefault,
             {
-              backgroundColor: generalActive ? colors.accent + '1A' : colors.bgSurface,
+              backgroundColor: 'transparent',
               borderColor: generalActive ? colors.accent : colors.border,
             },
           ]}
@@ -68,14 +91,14 @@ export const ClinicianTagRow: React.FC<ClinicianTagRowProps> = ({
             style={[
               typography.label,
               {
-                color: generalActive ? colors.accent : colors.textSecondary,
+                color: generalActive ? colors.accent : colors.textTertiary,
                 fontFamily: 'DMSans_600SemiBold',
               },
             ]}
           >
             Everyone
           </Text>
-        </View>
+        </Pressable>
         {careTeam.map((c) => {
           const active = isSelected(c.name);
           return (
@@ -146,6 +169,12 @@ const useStyles = makeStyles(() => ({
     paddingVertical: verticalScale(7),
     borderRadius: 999,
     borderWidth: StyleSheet.hairlineWidth,
+  },
+  chipDefault: {
+    // Dashed border distinguishes the implicit "everyone" default
+    // from a manually-selected doctor (solid border + tinted bg).
+    borderStyle: 'dashed',
+    borderWidth: 1,
   },
   hint: {
     ...{ fontFamily: 'DMSans_400Regular', fontSize: fontScale(11) },

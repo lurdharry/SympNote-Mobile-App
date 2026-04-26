@@ -1,13 +1,13 @@
-import { useMemo } from 'react';
-import { format, isSameDay, parseISO } from 'date-fns';
-import { sortBy } from 'lodash';
-import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
-import { useRecordingsStore } from '@/stores/useRecordingsStore';
-import { topTrendingSymptom } from '@/utils/insights';
-import { timeGreeting } from '@/utils/date';
-import type { DemoEntry } from '@/constants/demo/home';
-import type { Appointment } from '@/stores/types';
-import type { Recording } from '@/stores/types';
+import { useMemo } from "react";
+import { format, isSameDay, parseISO } from "date-fns";
+import { sortBy } from "lodash";
+import { useAppointmentsStore } from "@/stores/useAppointmentsStore";
+import { useRecordingsStore } from "@/stores/useRecordingsStore";
+import { topTrendingSymptom } from "@/utils/insights";
+import { timeGreeting } from "@/utils/date";
+import type { DemoEntry } from "@/constants/demo/home";
+import type { Appointment } from "@/stores/types";
+import type { Recording } from "@/stores/types";
 
 interface HomeDashboard {
   nextAppointment: Appointment | undefined;
@@ -42,14 +42,12 @@ const TRANSCRIPT_PREVIEW_LEN = 110;
 const toDemoEntry = (r: Recording): DemoEntry => {
   const d = parseISO(r.createdAt);
   return {
-    time: format(d, 'hh:mm'),
-    period: format(d, 'a').toUpperCase() as 'AM' | 'PM',
+    time: format(d, "hh:mm"),
+    period: format(d, "a").toUpperCase() as "AM" | "PM",
     text: r.transcript.slice(0, TRANSCRIPT_PREVIEW_LEN),
-    tags: r.tags.slice(0, 2).map((t) => ({ t, c: '#2C6E6B' })),
-    dur: `${Math.floor(r.durationSec / 60)}:${(r.durationSec % 60)
-      .toString()
-      .padStart(2, '0')}`,
-    kind: 'voice',
+    tags: r.tags.slice(0, 2).map((t) => ({ t, c: "#2C6E6B" })),
+    dur: `${Math.floor(r.durationSec / 60)}:${(r.durationSec % 60).toString().padStart(2, "0")}`,
+    kind: "voice",
   };
 };
 
@@ -68,8 +66,7 @@ export const useHomeDashboard = (): HomeDashboard => {
   const nextAppointment = useMemo(() => {
     const now = Date.now();
     const upcoming = appointments.filter(
-      (a) =>
-        a.status === 'upcoming' && parseISO(a.date).getTime() >= now,
+      (a) => a.status === "upcoming" && parseISO(a.date).getTime() >= now,
     );
     return sortBy(upcoming, (a) => parseISO(a.date).getTime())[0];
   }, [appointments]);
@@ -81,9 +78,7 @@ export const useHomeDashboard = (): HomeDashboard => {
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const stale = appointments.filter(
-      (a) =>
-        a.status === 'upcoming' &&
-        parseISO(a.date).getTime() < startOfToday.getTime(),
+      (a) => a.status === "upcoming" && parseISO(a.date).getTime() < startOfToday.getTime(),
     );
     return sortBy(stale, (a) => parseISO(a.date).getTime())[0];
   }, [appointments]);
@@ -97,11 +92,11 @@ export const useHomeDashboard = (): HomeDashboard => {
 
   const nudge = useMemo(() => {
     if (recordings.length < 3) return null;
-    return topTrendingSymptom(recordings, '30d');
+    return topTrendingSymptom(recordings, "30d");
   }, [recordings]);
 
-  const dateEyebrow = format(new Date(), 'EEEE, MMM d');
-  const greeting = timeGreeting().replace('.', '');
+  const dateEyebrow = format(new Date(), "EEEE, MMM d");
+  const greeting = timeGreeting().replace(".", "");
 
   const firstRecording = recordings.length === 1 ? recordings[0]! : null;
 

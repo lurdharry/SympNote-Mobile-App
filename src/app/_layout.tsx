@@ -20,6 +20,7 @@ import { useTheme, lightColors, darkColors } from "../theme";
 import { TransitionProvider } from "../components/navigation/TransitionContext";
 import { RadialWipe } from "../components/navigation/RadialWipe";
 import { queryClient } from "../services/queryClient";
+import { migrateClinicianRefs } from "../utils/migrateClinicianRefs";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -41,6 +42,14 @@ const RootLayout: React.FC = () => {
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
   }, [fontsLoaded]);
+
+  // One-shot reconcile to backfill clinicianId on legacy appointments
+  // and clinicianIds on legacy recordings. Idempotent — runs cheaply
+  // on every app start so users with new data added through older
+  // entry points get patched up too.
+  useEffect(() => {
+    migrateClinicianRefs();
+  }, []);
 
   if (!fontsLoaded) {
     return (
@@ -77,6 +86,14 @@ const RootLayout: React.FC = () => {
                 />
                 <Stack.Screen
                   name="appointment/[id]"
+                  options={{ animation: "slide_from_right" }}
+                />
+                <Stack.Screen
+                  name="clinician/[id]"
+                  options={{ animation: "slide_from_right" }}
+                />
+                <Stack.Screen
+                  name="brief/[id]"
                   options={{ animation: "slide_from_right" }}
                 />
                 <Stack.Screen

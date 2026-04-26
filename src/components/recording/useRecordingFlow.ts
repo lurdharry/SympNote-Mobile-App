@@ -1,14 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { Alert } from "react-native";
-import { SharedValue, useSharedValue } from "react-native-reanimated";
-import {
-  ensureSpeechPermission,
-  startRecognition,
-  describeSpeechError,
-  SpeechHandle,
-} from "../../services/speech";
 import { GeminiQuotaError } from "../../services/ai";
-import { hapticHeavy, hapticLight, hapticMedium } from "../../services/haptics";
+import { hapticLight, hapticMedium } from "../../services/haptics";
 import { useStructureTranscript } from "../../hooks/useStructureTranscript";
 import { Phase, StructuredWithSources } from "./types";
 
@@ -19,48 +12,35 @@ const log = (...args: unknown[]) => {
 
 export type RecordingFlow = {
   phase: Phase;
-  durationSec: number;
-  liveTranscript: string;
   reviewText: string;
   setReviewText: (v: string) => void;
   structured: StructuredWithSources | null;
-  meterSv: SharedValue<number>;
   /** Human-readable error for the review phase (e.g. quota exhausted). */
   reviewError: string | null;
   /** Seconds until retry is allowed. 0 = allowed now. */
   retryInSec: number;
-
-  beginRecording: () => Promise<void>;
-  endRecording: () => Promise<void>;
-  toggleRecording: () => void;
-  skipToTyping: () => void;
-  /**
-   * Enter the flow with an already-captured transcript + duration
-   * (e.g. hold-to-record on home captured audio before navigating
-   * here). Jumps straight to `review` so the user can edit and hit
-   * Continue → AI.
-   */
-  hydrateFromDraft: (draft: { transcript: string; durationSec: number }) => void;
   discardAndRetry: () => void;
   processWithAI: () => Promise<void>;
   setStructuredDone: () => void;
+  /** Drop the AI result and return to the compose surface with the
+   *  typed text intact, so the user can edit and re-process. */
+  goBackToReview: () => void;
 };
 
+/**
+ * Drives the type-only /record flow: compose (`review`) → AI analyze
+ * (`extracting`) → structured preview (`extracted`). Voice capture
+ * was retired from this surface — it lives on the home long-press
+ * FAB now — so this hook holds none of the speech-recognition
+ * machinery it used to.
+ */
 export function useRecordingFlow(): RecordingFlow {
-  const [phase, setPhaseRaw] = useState<Phase>("idle");
-  const [durationSec, setDurationSec] = useState(0);
-  const [liveTranscript, setLiveTranscript] = useState("");
+  const [phase, setPhaseRaw] = useState<Phase>("review");
   const [reviewText, setReviewText] = useState("");
   const [structured, setStructured] = useState<StructuredWithSources | null>(null);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [retryInSec, setRetryInSec] = useState(0);
 
-  const meterSv = useSharedValue(0);
-  const speechRef = useRef<SpeechHandle | null>(null);
-  const startedAtRef = useRef(0);
-  const durationTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Wrap setPhase so we can trace transitions.
   const setPhase = useCallback((next: Phase) => {
     setPhaseRaw((prev) => {
       if (prev !== next) log("phase", prev, "→", next);
@@ -68,159 +48,14 @@ export function useRecordingFlow(): RecordingFlow {
     });
   }, []);
 
-  const stopSpeechIfActive = useCallback(() => {
-    if (speechRef.current) {
-      log("abort active speech handle");
-      speechRef.current.abort();
-      speechRef.current = null;
-    }
-    if (durationTimerRef.current) {
-      clearInterval(durationTimerRef.current);
-      durationTimerRef.current = null;
-    }
-  }, []);
-
-  // Cleanup on unmount ONLY. Empty deps avoid React 19 effect re-runs.
-  useEffect(() => {
-    return () => {
-      log("unmount cleanup");
-      stopSpeechIfActive();
-    };
-  }, [stopSpeechIfActive]);
-
-  // Retry countdown tick while the UI shows a quota wait.
-  useEffect(() => {
-    if (retryInSec <= 0) return;
-    const id = setInterval(() => {
-      setRetryInSec((n) => (n <= 1 ? 0 : n - 1));
-    }, 1000);
-    return () => clearInterval(id);
-  }, [retryInSec]);
-
-  const resetForNewAttempt = useCallback(() => {
-    setLiveTranscript("");
-    setReviewText("");
-    setStructured(null);
-  }, []);
-
-  const beginRecording = useCallback(async () => {
-    if (speechRef.current) {
-      log("begin blocked: speech already active");
-      return;
-    }
-    log("begin: requesting permissions");
-    const perm = await ensureSpeechPermission();
-    if (!perm.granted) {
-      Alert.alert("Permissions needed", perm.reason ?? "Enable microphone and speech in Settings.");
-      return;
-    }
-    hapticHeavy();
-    resetForNewAttempt();
-    startedAtRef.current = Date.now();
-    setDurationSec(0);
-    setPhase("recording");
-    log("begin: starting recognition");
-    try {
-      speechRef.current = startRecognition({
-        onStart: () => log("speech started"),
-        onPartial: (t) => setLiveTranscript(t),
-        onFinal: (t) => {
-          log("speech final:", t.slice(0, 60));
-          setLiveTranscript(t);
-        },
-        onVolume: (v) => {
-          meterSv.value = v;
-        },
-        onError: (code, message) => {
-          log("speech error", code, message);
-          if (code === "no-speech") return;
-          Alert.alert("Speech recognition issue", describeSpeechError(code));
-        },
-        onEnd: () => log("speech ended"),
-      });
-      durationTimerRef.current = setInterval(() => {
-        setDurationSec(Math.floor((Date.now() - startedAtRef.current) / 1000));
-      }, 500);
-    } catch (e) {
-      log("begin: threw", e);
-      speechRef.current = null;
-      setPhase("idle");
-      Alert.alert("Could not start recording", String(e));
-    }
-  }, [meterSv, resetForNewAttempt, setPhase]);
-
-  const endRecording = useCallback(async () => {
-    hapticMedium();
-    if (durationTimerRef.current) {
-      clearInterval(durationTimerRef.current);
-      durationTimerRef.current = null;
-    }
-    const speech = speechRef.current;
-    speechRef.current = null;
-    const duration = Math.round((Date.now() - startedAtRef.current) / 1000);
-    if (!speech) {
-      log("end: no active speech handle");
-      setPhase("idle");
-      return;
-    }
-    log("end: stopping speech (duration:", duration, ")");
-    speech.stop();
-    // Give recognizer a moment to flush a final result event.
-    await new Promise((r) => setTimeout(r, 500));
-    const transcript = (speech.getTranscript() || liveTranscript || "").trim();
-    log("end: transcript length:", transcript.length);
-    if (!transcript || duration < 1) {
-      setPhase("idle");
-      Alert.alert(
-        "Nothing captured",
-        duration < 1
-          ? "Tap the mic, speak a sentence, then tap again to finish."
-          : "We didn't catch any words. Try speaking a bit louder and closer to the mic.",
-      );
-      return;
-    }
-    setReviewText(transcript);
-    setDurationSec(duration);
-    setPhase("review");
-  }, [liveTranscript, setPhase]);
-
-  const toggleRecording = useCallback(() => {
-    if (phase === "idle") void beginRecording();
-    else if (phase === "recording") void endRecording();
-  }, [phase, beginRecording, endRecording]);
-
-  /**
-   * Skip the mic entirely and go straight to the review/edit box. For users
-   * who denied permissions, can't get speech recognition to work, or just
-   * prefer typing.
-   */
-  const skipToTyping = useCallback(() => {
-    resetForNewAttempt();
-    setDurationSec(0);
-    setPhase("review");
-  }, [resetForNewAttempt, setPhase]);
-
-  const hydrateFromDraft = useCallback(
-    (draft: { transcript: string; durationSec: number }) => {
-      stopSpeechIfActive();
-      setLiveTranscript("");
-      setStructured(null);
-      setReviewError(null);
-      setRetryInSec(0);
-      setReviewText(draft.transcript);
-      setDurationSec(draft.durationSec);
-      setPhase("review");
-    },
-    [setPhase, stopSpeechIfActive],
-  );
-
   const discardAndRetry = useCallback(() => {
     hapticLight();
-    resetForNewAttempt();
+    setReviewText("");
+    setStructured(null);
     setReviewError(null);
     setRetryInSec(0);
-    setPhase("idle");
-  }, [resetForNewAttempt, setPhase]);
+    setPhase("review");
+  }, [setPhase]);
 
   const structureMutation = useStructureTranscript();
 
@@ -259,23 +94,23 @@ export function useRecordingFlow(): RecordingFlow {
     setPhase("extracted");
   }, [setPhase]);
 
+  const goBackToReview = useCallback(() => {
+    hapticLight();
+    setReviewError(null);
+    setRetryInSec(0);
+    setPhase("review");
+  }, [setPhase]);
+
   return {
     phase,
-    durationSec,
-    liveTranscript,
     reviewText,
     setReviewText,
     structured,
-    meterSv,
     reviewError,
     retryInSec,
-    beginRecording,
-    endRecording,
-    toggleRecording,
-    skipToTyping,
-    hydrateFromDraft,
     discardAndRetry,
     processWithAI,
     setStructuredDone,
+    goBackToReview,
   };
 }

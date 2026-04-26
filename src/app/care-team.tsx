@@ -19,6 +19,8 @@ import { AddClinicianSheet } from '@/components/onboarding/care-team/AddClinicia
 import { CareTeamEmpty } from '@/components/onboarding/care-team/CareTeamEmpty';
 import { Specialty } from '@/constants/specialties';
 import { useProfileStore } from '@/stores/useProfileStore';
+import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
+import { useRecordingsStore } from '@/stores/useRecordingsStore';
 import { hapticLight, hapticSuccess } from '@/services/haptics';
 
 type EditTarget =
@@ -52,15 +54,58 @@ const ScreenCareTeamManage: React.FC = () => {
   const handleRemove = (index: number) => {
     const c = careTeam[index];
     if (!c) return;
+
+    // Block removal while the clinician still has upcoming appointments
+    // attached. The user has to delete or reassign those visits first
+    // — keeps the data model honest (no clinician → no upcoming visit
+    // makes sense) without us cascade-deleting the user's appointments
+    // out from under them.
+    const upcomingLinked = useAppointmentsStore
+      .getState()
+      .appointments.filter((a) => a.clinicianId === c.id && a.status === "upcoming");
+
+    if (upcomingLinked.length > 0) {
+      const visitWord = upcomingLinked.length === 1 ? "appointment" : "appointments";
+      Alert.alert(
+        `Can't remove ${c.name}`,
+        `${c.name} still has ${upcomingLinked.length} upcoming ${visitWord}. Delete ${
+          upcomingLinked.length === 1 ? "that appointment" : "those appointments"
+        } first, then you can remove this clinician.`,
+        [{ text: "OK", style: "default" }],
+      );
+      return;
+    }
+
     Alert.alert(
       `Remove ${c.name}?`,
-      'Visit briefs will no longer be tailored for this clinician.',
+      "Past visits stay as history but will be unlinked from this clinician. Visit briefs will no longer be tailored for them.",
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Remove',
-          style: 'destructive',
+          text: "Remove",
+          style: "destructive",
           onPress: () => {
+            // Past appointments → keep the row, drop the link.
+            const pastLinked = useAppointmentsStore
+              .getState()
+              .appointments.filter(
+                (a) => a.clinicianId === c.id && a.status !== "upcoming",
+              );
+            for (const a of pastLinked) {
+              useAppointmentsStore
+                .getState()
+                .update(a.id, { clinicianId: undefined });
+            }
+            // Recordings → strip this clinician from the routing list.
+            const linkedRecordings = useRecordingsStore
+              .getState()
+              .recordings.filter((r) => r.clinicianIds?.includes(c.id));
+            for (const r of linkedRecordings) {
+              const remaining = (r.clinicianIds ?? []).filter((id) => id !== c.id);
+              useRecordingsStore.getState().update(r.id, {
+                clinicianIds: remaining.length > 0 ? remaining : undefined,
+              });
+            }
             removeClinician(index);
             hapticSuccess();
           },
@@ -114,13 +159,17 @@ const ScreenCareTeamManage: React.FC = () => {
               <StaggeredList stagger={60}>
                 {careTeam.map((c, i) => (
                   <Pressable
-                    key={`${c.name}-${i}`}
-                    onPress={() => openEdit(i)}
+                    key={c.id}
+                    onPress={() => {
+                      hapticLight();
+                      router.push(`/clinician/${c.id}`);
+                    }}
+                    onLongPress={() => openEdit(i)}
                     accessibilityRole="button"
-                    accessibilityLabel={`Edit ${c.name}`}
+                    accessibilityLabel={`Open brief for ${c.name}`}
                   >
                     <ClinicianCard
-                      clinician={{ id: String(i), name: c.name, role: c.role }}
+                      clinician={{ id: c.id, name: c.name, role: c.role }}
                       onRemove={() => handleRemove(i)}
                     />
                   </Pressable>
