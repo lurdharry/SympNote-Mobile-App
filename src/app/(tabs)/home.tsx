@@ -22,6 +22,9 @@ import { SectionLabel } from "@/components/ui/SectionLabel";
 import { useAppointmentsStore } from "@/stores/useAppointmentsStore";
 import { useProfileStore } from "@/stores/useProfileStore";
 import { useRecordingsStore } from "@/stores/useRecordingsStore";
+import { useBriefsStore } from "@/stores/useBriefsStore";
+import { unbriefedRecordings } from "@/utils/briefSource";
+import { Sparkles } from "lucide-react-native";
 import { GeminiQuotaError } from "@/services/ai";
 import type { Clinician } from "@/stores/types";
 import { uuid } from "@/utils/uuid";
@@ -49,6 +52,10 @@ const TabHome: React.FC = () => {
     lastRecordingAt,
     recentTopTag,
   } = useHomeDashboard();
+
+  const allBriefs = useBriefsStore((s) => s.briefs);
+  const allRecordings = useRecordingsStore((s) => s.recordings);
+  const unbriefedCount = unbriefedRecordings(allRecordings, allBriefs).length;
 
   const markAttended = useAppointmentsStore((s) => s.markAttended);
   const markMissed = useAppointmentsStore((s) => s.markMissed);
@@ -251,6 +258,34 @@ const TabHome: React.FC = () => {
               onAdd={() => router.push("/appointment-new")}
             />
 
+            {unbriefedCount > 0 && (
+              <Pressable
+                onPress={() => {
+                  hapticLight();
+                  router.push("/(tabs)/prep");
+                }}
+                style={[
+                  styles.briefsPeek,
+                  { backgroundColor: colors.accent + "12", borderColor: colors.accent + "55" },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Generate brief from new notes"
+              >
+                <Sparkles
+                  size={moderateScale(14)}
+                  color={colors.accent}
+                  strokeWidth={2.2}
+                />
+                <Text style={[styles.briefsPeekText, { color: colors.accent }]}>
+                  {unbriefedCount} {unbriefedCount === 1 ? "note" : "notes"} ready to brief
+                </Text>
+                <View style={{ flex: 1 }} />
+                <Text style={[styles.briefsPeekCta, { color: colors.accent }]}>
+                  Open Briefs ›
+                </Text>
+              </Pressable>
+            )}
+
             <View style={{ marginTop: spacing.s5 }}>
               <View style={styles.sectionRow}>
                 <SectionLabel label="Today" />
@@ -383,5 +418,25 @@ const useStyles = makeStyles((theme) => ({
     fontSize: fontScale(12),
     letterSpacing: 0.2,
     textAlign: "center",
+  },
+  briefsPeek: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(8),
+    paddingHorizontal: moderateScale(14),
+    paddingVertical: moderateScale(11),
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    marginTop: theme.spacing.s4,
+  },
+  briefsPeekText: {
+    fontFamily: "DMSans_600SemiBold",
+    fontSize: fontScale(12),
+    letterSpacing: 0.1,
+  },
+  briefsPeekCta: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: fontScale(12),
+    letterSpacing: 0.2,
   },
 }));

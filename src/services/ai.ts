@@ -3,6 +3,8 @@ import { sortBy } from 'lodash';
 import type {
   Appointment,
   AppointmentBrief,
+  BriefContent,
+  Clinician,
   PersonalizationProfile,
   Recording,
 } from '@/stores/types';
@@ -249,6 +251,99 @@ export async function generateAppointmentBrief(
   } catch {
     // Fall back to a shell brief carrying the raw prose. Caller can
     // retry; in the meantime the user still sees something useful.
+    return { ...EMPTY_BRIEF, summary: text.slice(0, 800) };
+  }
+}
+
+const formatClinicianHeader = (clinician: Clinician): string =>
+  `Brief for ${clinician.name} (${clinician.role}). The patient may not have a scheduled visit yet — focus on what's been going on so they can act when ready.`;
+
+/**
+ * Generate a structured brief for a clinician — independent of any
+ * scheduled appointment. Uses the same model + system prompt as the
+ * appointment-anchored variant; only the framing changes so the
+ * output reads as "what to tell Dr. X" rather than "for the visit on
+ * Apr 25." Falls back to a shell brief on parse failure.
+ */
+export async function generateClinicianBrief(
+  clinician: Clinician,
+  recordings: Recording[],
+  profile?: PersonalizationProfile | null,
+): Promise<AppointmentBrief> {
+  if (recordings.length === 0) {
+    return EMPTY_BRIEF;
+  }
+  const logs = sortBy(recordings, (r) => parseISO(r.createdAt).getTime())
+    .map(formatLog)
+    .join('\n\n');
+
+  const body = `${formatClinicianHeader(clinician)}\n\nEntries the patient has logged since starting to track:\n\n${logs}`;
+
+  const text = await callGemini(SUMMARY_MODEL, {
+    systemInstruction: { parts: [{ text: BRIEF_SYSTEM_PROMPT }] },
+    contents: [{ parts: [{ text: withContext(body, profile) }] }],
+    generationConfig: {
+      temperature: 0.3,
+      responseMimeType: 'application/json',
+      maxOutputTokens: 2048,
+    },
+  });
+
+  try {
+    return parseBrief(text);
+  } catch {
+    return { ...EMPTY_BRIEF, summary: text.slice(0, 800) };
+  }
+}
+
+interface BriefHeaderArgs {
+  clinicians?: Clinician[];
+  windowLabel: string;
+}
+
+const formatBriefHeader = ({ clinicians, windowLabel }: BriefHeaderArgs): string => {
+  if (clinicians && clinicians.length > 0) {
+    const names = clinicians.map((c) => `${c.name} (${c.role})`).join(', ');
+    return `Brief for ${names}. Window: ${windowLabel}.`;
+  }
+  return `General brief. Window: ${windowLabel}. Audience is unspecified — write so any clinician could read it.`;
+};
+
+/**
+ * Generate a standalone brief — the new first-class entity. Window-
+ * anchored, optional multi-clinician audience tag. Same model and
+ * system prompt as the legacy variants; only the framing differs so
+ * the output reads naturally for the chosen scope.
+ */
+export async function generateBrief(args: {
+  recordings: Recording[];
+  windowLabel: string;
+  clinicians?: Clinician[];
+  profile?: PersonalizationProfile | null;
+}): Promise<BriefContent> {
+  const { recordings, windowLabel, clinicians, profile } = args;
+  if (recordings.length === 0) {
+    return EMPTY_BRIEF;
+  }
+  const logs = sortBy(recordings, (r) => parseISO(r.createdAt).getTime())
+    .map(formatLog)
+    .join('\n\n');
+
+  const body = `${formatBriefHeader({ clinicians, windowLabel })}\n\nNotes the patient logged in this window:\n\n${logs}`;
+
+  const text = await callGemini(SUMMARY_MODEL, {
+    systemInstruction: { parts: [{ text: BRIEF_SYSTEM_PROMPT }] },
+    contents: [{ parts: [{ text: withContext(body, profile) }] }],
+    generationConfig: {
+      temperature: 0.3,
+      responseMimeType: 'application/json',
+      maxOutputTokens: 2048,
+    },
+  });
+
+  try {
+    return parseBrief(text);
+  } catch {
     return { ...EMPTY_BRIEF, summary: text.slice(0, 800) };
   }
 }

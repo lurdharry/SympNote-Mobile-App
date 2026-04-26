@@ -1,58 +1,54 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useState } from "react";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { X as XIcon } from "lucide-react-native";
+import { format, parseISO } from "date-fns";
+import { ArrowLeft, X as XIcon } from "lucide-react-native";
 import { fontScale, makeStyles, moderateScale, useTheme, verticalScale } from "../theme";
-import { IdlePhase } from "../components/recording/IdlePhase";
-import { RecordingPhase } from "../components/recording/RecordingPhase";
 import { ReviewPhase } from "../components/recording/ReviewPhase";
 import { ExtractingPhase } from "../components/recording/ExtractingPhase";
 import { ExtractedPhase } from "../components/recording/ExtractedPhase";
 import { useRecordingFlow } from "../components/recording/useRecordingFlow";
 import { useProfileStore } from "../stores/useProfileStore";
 import { useRecordingsStore } from "../stores/useRecordingsStore";
-import { usePendingRecordingStore } from "../stores/usePendingRecordingStore";
+import { useAppointmentsStore } from "../stores/useAppointmentsStore";
 import { uuid } from "../utils/uuid";
 import { hapticHeavy, hapticLight } from "../services/haptics";
 import { Phase } from "../components/recording/types";
 
 /**
- * Full-screen capture surface — opens over everything so the recording
- * orb and transcript own the device. Four phases progress left→right in
- * the indicator: record → review → analyze → confirm. Idle and recording
- * share the first step; extracting and extracted share the last two so
- * the stepper feels stable rather than jumping.
+ * Type-only compose surface for the in-app /record route. Voice
+ * capture lives on the home long-press FAB; this screen is the
+ * thoughtful-typing path.
+ *
+ * Three phases run left → right in the indicator: write → analyze
+ * → confirm. Back from analyze/confirm returns to write with the
+ * typed text intact, instead of exiting the screen — the previous
+ * single-screen design treated back as "exit" which lost work.
  */
 const RecordModal: React.FC = () => {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useStyles();
-  const { kind, source } = useLocalSearchParams<{ kind?: string; source?: string }>();
   const flow = useRecordingFlow();
   const insets = useSafeAreaInsets();
-  const careTeam = useProfileStore(
-    (s) => s.personalization?.careTeam ?? [],
-  );
 
-  const presetTag = typeof kind === "string" ? kindToTag(kind) : null;
-
-  // When launched from hold-to-record on home, the draft already holds
-  // the captured transcript + duration. Hydrate the review phase once
-  // on mount and clear the draft so re-entry doesn't double-apply.
-  const hydratedRef = useRef(false);
-  useEffect(() => {
-    if (hydratedRef.current) return;
-    if (source !== "home-hold") return;
-    const draft = usePendingRecordingStore.getState().draft;
-    if (!draft) return;
-    hydratedRef.current = true;
-    flow.hydrateFromDraft({
-      transcript: draft.transcript,
-      durationSec: draft.durationSec,
-    });
-    usePendingRecordingStore.getState().clear();
-  }, [source, flow]);
+  const careTeam = useProfileStore((s) => s.personalization?.careTeam ?? []);
+  const recordingsCount = useRecordingsStore((s) => s.recordings.length);
+  const nextAppointment = useAppointmentsStore((s) => {
+    const now = Date.now();
+    const upcoming = s.appointments
+      .filter((a) => a.status === "upcoming" && parseISO(a.date).getTime() >= now)
+      .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
+    return upcoming[0];
+  });
 
   const [selectedClinicians, setSelectedClinicians] = useState<string[]>([]);
   const toggleClinician = useCallback((name: string) => {
@@ -65,31 +61,19 @@ const RecordModal: React.FC = () => {
     });
   }, []);
 
-  useEffect(() => {
-    return () => {
-      if (__DEV__) console.log("[record] unmount");
-    };
-  }, []);
-
   const save = () => {
     if (!flow.structured || !flow.reviewText) return;
     const tags = Array.from(
-      new Set(
-        [...(presetTag ? [presetTag] : []), ...flow.structured.symptoms.slice(0, 2)].filter(
-          Boolean,
-        ),
-      ),
+      new Set(flow.structured.symptoms.slice(0, 2).filter(Boolean)),
     );
     useRecordingsStore.getState().add({
       id: uuid(),
       createdAt: new Date().toISOString(),
-      durationSec: flow.durationSec,
+      durationSec: 0,
       transcript: flow.reviewText.trim(),
       structured: flow.structured,
       tags,
-      ...(selectedClinicians.length > 0
-        ? { clinicianNames: selectedClinicians }
-        : {}),
+      ...(selectedClinicians.length > 0 ? { clinicianNames: selectedClinicians } : {}),
     });
     hapticHeavy();
     router.back();
@@ -100,84 +84,105 @@ const RecordModal: React.FC = () => {
     router.back();
   };
 
-  const kindLabel = kindToLabel(kind);
-  const title = titleForPhase(flow.phase, kind);
-  const titleVisible = flow.phase !== "extracting" && flow.phase !== "recording";
+  // The header back/close affordance behaves differently per phase:
+  // on the compose surface it exits the screen, but on analyze/confirm
+  // it returns to compose with the typed text preserved so the user
+  // can refine before re-processing.
+  const onTopBarBack = () => {
+    if (flow.phase === "review") {
+      close();
+    } else {
+      flow.goBackToReview();
+    }
+  };
+
+  const mastheadDate = format(new Date(), "EEE · MMM d · yyyy").toUpperCase();
+  const mastheadIssue = `NO. ${String(recordingsCount + 1).padStart(3, "0")}`;
+  // Personalise the headline only when the next appointment is
+  // actually linked to a Clinician on the care team — otherwise the
+  // appointment's loose `doctorName` (e.g. legacy "hh") could
+  // mismatch the chip row at the end of the flow.
+  const linkedClinician =
+    nextAppointment?.clinicianId !== undefined
+      ? careTeam.find((c) => c.id === nextAppointment.clinicianId)
+      : undefined;
+  const headline = linkedClinician
+    ? `A note for\nDr. ${lastName(linkedClinician.name)}.`
+    : "Today's\nnote.";
+  const subhead = linkedClinician
+    ? "Whatever you write becomes structured fields ready for the visit."
+    : "Whatever you write becomes structured fields for your record.";
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
       <View
         style={[
           styles.safe,
-          {
-            paddingTop: insets.top + verticalScale(6),
-            paddingBottom: insets.bottom,
-          },
+          { paddingTop: insets.top + verticalScale(6), paddingBottom: insets.bottom },
         ]}
       >
         <View style={styles.topBar}>
-          <PhaseIndicator phase={flow.phase} />
           <Pressable
-            onPress={close}
+            onPress={onTopBarBack}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="Close"
-            style={[styles.close, { backgroundColor: colors.bgMuted }]}
+            accessibilityLabel={flow.phase === "review" ? "Close" : "Back to compose"}
+            style={[styles.backBtn, { backgroundColor: colors.bgMuted }]}
           >
-            <XIcon size={18} color={colors.textPrimary} strokeWidth={2} />
+            {flow.phase === "review" ? (
+              <XIcon size={18} color={colors.textPrimary} strokeWidth={2} />
+            ) : (
+              <ArrowLeft size={18} color={colors.textPrimary} strokeWidth={2} />
+            )}
           </Pressable>
+          <PhaseIndicator phase={flow.phase} />
+          <View style={{ width: moderateScale(32) }} />
         </View>
 
-        {titleVisible && (
-          <View style={styles.titleArea}>
-            {kindLabel && (
-              <Text style={[styles.kindEyebrow, { color: colors.accent }]}>{kindLabel}</Text>
-            )}
-            <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={2}>
-              {title}
-            </Text>
-          </View>
+        {flow.phase === "review" && (
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={styles.flex}
+          >
+            <ScrollView
+              contentContainerStyle={styles.bodyScroll}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <ReviewPhase
+                text={flow.reviewText}
+                onChange={flow.setReviewText}
+                onProcess={flow.processWithAI}
+                onDiscard={flow.discardAndRetry}
+                error={flow.reviewError}
+                retryInSec={flow.retryInSec}
+                mastheadDate={mastheadDate}
+                mastheadIssue={mastheadIssue}
+                headline={headline}
+                subhead={subhead}
+              />
+            </ScrollView>
+          </KeyboardAvoidingView>
         )}
 
-        <ScrollView
-          contentContainerStyle={styles.bodyScroll}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {flow.phase === "idle" && (
-            <IdlePhase onStart={flow.beginRecording} onTypeInstead={flow.skipToTyping} />
-          )}
-
-          {flow.phase === "recording" && (
-            <RecordingPhase
-              meterSv={flow.meterSv}
-              liveTranscript={flow.liveTranscript}
-              durationSec={flow.durationSec}
-              onStop={flow.endRecording}
-            />
-          )}
-
-          {flow.phase === "review" && (
-            <ReviewPhase
-              text={flow.reviewText}
-              onChange={flow.setReviewText}
-              durationSec={flow.durationSec}
-              onProcess={flow.processWithAI}
-              onDiscard={flow.discardAndRetry}
-              error={flow.reviewError}
-              retryInSec={flow.retryInSec}
-            />
-          )}
-
-          {flow.phase === "extracting" && (
+        {flow.phase === "extracting" && (
+          <ScrollView
+            contentContainerStyle={styles.bodyScroll}
+            showsVerticalScrollIndicator={false}
+          >
             <ExtractingPhase
               structured={flow.structured}
               transcript={flow.reviewText}
               onDone={flow.setStructuredDone}
             />
-          )}
+          </ScrollView>
+        )}
 
-          {flow.phase === "extracted" && flow.structured && (
+        {flow.phase === "extracted" && flow.structured && (
+          <ScrollView
+            contentContainerStyle={styles.bodyScroll}
+            showsVerticalScrollIndicator={false}
+          >
             <ExtractedPhase
               structured={flow.structured}
               onSave={save}
@@ -185,27 +190,23 @@ const RecordModal: React.FC = () => {
               selectedClinicians={selectedClinicians}
               onToggleClinician={toggleClinician}
             />
-          )}
-        </ScrollView>
+          </ScrollView>
+        )}
       </View>
     </View>
   );
 };
 
 // ─── Phase indicator ──────────────────────────────────────────────────────
-// Four visible steps. Idle + recording = step 1 (capture). Review = 2.
-// Extracting = 3 (analyze). Extracted = 4 (confirm). Privacy lives outside
-// the stepper because it's a consent gate, not a capture step.
 
-const STEP_ORDER: { label: string; phases: Phase[] }[] = [
-  { label: "Capture", phases: ["idle", "recording"] },
-  { label: "Review", phases: ["review"] },
-  { label: "Analyze", phases: ["extracting"] },
-  { label: "Confirm", phases: ["extracted"] },
+const STEP_ORDER: { label: string; phase: Phase }[] = [
+  { label: "Write", phase: "review" },
+  { label: "Analyze", phase: "extracting" },
+  { label: "Confirm", phase: "extracted" },
 ];
 
 const indexForPhase = (phase: Phase): number => {
-  const idx = STEP_ORDER.findIndex((step) => step.phases.includes(phase));
+  const idx = STEP_ORDER.findIndex((step) => step.phase === phase);
   return idx === -1 ? 0 : idx;
 };
 
@@ -229,10 +230,13 @@ const PhaseIndicator: React.FC<{ phase: Phase }> = ({ phase }) => {
                     : isPast
                       ? colors.accent + "66"
                       : colors.border,
-                  width: isActive ? moderateScale(18) : moderateScale(6),
+                  width: isActive ? moderateScale(20) : moderateScale(6),
                 },
               ]}
             />
+            {isActive && (
+              <Text style={[styles.stepLabel, { color: colors.accent }]}>{step.label}</Text>
+            )}
           </View>
         );
       })}
@@ -240,59 +244,23 @@ const PhaseIndicator: React.FC<{ phase: Phase }> = ({ phase }) => {
   );
 };
 
-// ─── Title helpers ────────────────────────────────────────────────────────
-
-function kindToTag(raw: string): string | null {
-  const k = raw.toLowerCase();
-  if (k === "medication" || k === "meds" || k === "med") return "meds";
-  if (k === "symptom" || k === "symptoms") return "symptom";
-  if (k === "side-effect" || k === "sideeffect" || k === "side_effect") return "side-effect";
-  return null;
-}
-
-function kindToLabel(raw?: string): string | null {
-  if (!raw) return null;
-  const k = raw.toLowerCase();
-  if (k === "medication" || k === "meds" || k === "med") return "Medication";
-  if (k === "symptom" || k === "symptoms") return "Symptom";
-  if (k === "side-effect" || k === "sideeffect" || k === "side_effect") return "Side effect";
-  return null;
-}
-
-/**
- * Phase-adaptive headline. Guides the user through the flow instead of
- * repeating the same static title across every step. Idle borrows the
- * kind when set so it reads purposeful ("Note your symptom") rather
- * than generic.
- */
-function titleForPhase(phase: Phase, rawKind?: string): string {
-  const kind = kindToLabel(rawKind);
-  switch (phase) {
-    case "review":
-      return "Check what we heard";
-    case "extracted":
-      return "Does this look right?";
-    case "idle":
-    case "recording":
-    case "extracting":
-    case "privacy":
-    default:
-      if (kind) return `Note your ${kind.toLowerCase()}`;
-      return "What's going on?";
-  }
-}
+const lastName = (full: string): string => {
+  const parts = full.trim().split(/\s+/);
+  return parts[parts.length - 1] ?? full;
+};
 
 export default RecordModal;
 
 const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },
   safe: { flex: 1 },
+  flex: { flex: 1 },
   topBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: theme.spacing.s6,
-    paddingTop: theme.spacing.s4,
+    paddingTop: theme.spacing.s2,
     paddingBottom: theme.spacing.s3,
     gap: moderateScale(12),
   },
@@ -300,40 +268,30 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: moderateScale(6),
+    justifyContent: "center",
+    gap: moderateScale(8),
   },
   stepperCell: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: moderateScale(6),
   },
   stepDot: {
     height: moderateScale(6),
     borderRadius: moderateScale(3),
   },
-  close: {
+  stepLabel: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: fontScale(10),
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+  },
+  backBtn: {
     width: moderateScale(32),
     height: moderateScale(32),
     borderRadius: moderateScale(16),
     alignItems: "center",
     justifyContent: "center",
-  },
-  titleArea: {
-    paddingHorizontal: theme.spacing.s6,
-    paddingTop: theme.spacing.s2,
-    paddingBottom: theme.spacing.s3,
-  },
-  kindEyebrow: {
-    ...theme.typography.label,
-    fontFamily: "DMSans_700Bold",
-    fontSize: fontScale(11),
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    marginBottom: 4,
-  },
-  title: {
-    ...theme.typography.h1,
-    fontSize: fontScale(28),
-    lineHeight: fontScale(34),
   },
   bodyScroll: {
     flexGrow: 1,

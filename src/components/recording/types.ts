@@ -1,12 +1,11 @@
 import { StructuredEntry } from '../../stores/types';
 
-export type Phase =
-  | 'privacy'
-  | 'idle'
-  | 'recording'
-  | 'review'
-  | 'extracting'
-  | 'extracted';
+/**
+ * The /record screen is now type-only — voice capture lives on the
+ * home long-press FAB. Three phases: write (compose), analyze (AI
+ * structuring), confirm (structured fields preview).
+ */
+export type Phase = 'review' | 'extracting' | 'extracted';
 
 // Explicit — only the 5 fields that get flying-word treatment in the
 // recording flow. Keep narrow so `fieldValue`'s switch stays exhaustive.

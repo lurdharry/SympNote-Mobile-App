@@ -64,18 +64,24 @@ const AppointmentNew: React.FC = () => {
   const [pickerMode, setPickerMode] = useState<"date" | "time" | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [appointmentEnabled, setAppointmentEnabled] = useState(true);
+  // Track which clinician is selected by id so the appointment links
+  // to a real care-team member instead of a loose name string. New
+  // additions via the sheet supply a fresh id below.
+  const [clinicianId, setClinicianId] = useState<string | undefined>(existing?.clinicianId);
 
   const canSave = doctorName.trim().length > 0 && appointmentEnabled;
   const selectedName = doctorName.trim().toLowerCase();
 
   const pickClinician = (c: StoreClinician) => {
     hapticLight();
+    setClinicianId(c.id);
     setDoctorName(c.name);
     setSpecialty(c.role);
   };
 
   const handleSheetAdd = (value: { name: string; role: string }) => {
-    addClinicianToStore(value);
+    const created = addClinicianToStore(value);
+    setClinicianId(created.id);
     setDoctorName(value.name);
     setSpecialty(value.role);
   };
@@ -88,6 +94,7 @@ const AppointmentNew: React.FC = () => {
     if (isEdit && existing) {
       useAppointmentsStore.getState().update(existing.id, {
         title,
+        clinicianId,
         doctorName: trimmedDoc,
         specialty: trimmedSpec,
         date: when.toISOString(),
@@ -96,6 +103,7 @@ const AppointmentNew: React.FC = () => {
       useAppointmentsStore.getState().add({
         id: uuid(),
         title,
+        clinicianId,
         doctorName: trimmedDoc,
         specialty: trimmedSpec,
         date: when.toISOString(),

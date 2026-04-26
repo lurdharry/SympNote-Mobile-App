@@ -121,8 +121,7 @@ const ScreenFirstRecordingReview: React.FC = () => {
                 style={[styles.headline, { color: colors.textPrimary }]}
               >
                 Your next visit,{"\n"}
-                <Text style={{ fontStyle: "italic", color: colors.accent }}>already prepared</Text>
-                .
+                <Text style={{ fontStyle: "italic", color: colors.accent }}>already prepared</Text>.
               </Animated.Text>
 
               <Animated.Text
@@ -206,9 +205,6 @@ const TranscriptQuote: React.FC<TranscriptQuoteProps> = ({
           <Text style={[styles.metaChipText, { color: colors.textSecondary }]}>Just now</Text>
         </View>
         <View style={{ flex: 1 }} />
-        <Pressable onPress={onReRecord} hitSlop={8}>
-          <Text style={[styles.reRecord, { color: colors.accent }]}>Re-record</Text>
-        </Pressable>
       </View>
       <View style={styles.editHintRow}>
         <Pencil size={moderateScale(10)} color={colors.textTertiary} strokeWidth={2} />

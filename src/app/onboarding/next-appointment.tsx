@@ -64,7 +64,12 @@ const ScreenNextAppointment: React.FC = () => {
   const styles = useStyles();
   const setAnswer = useProfileStore((s) => s.setOnboardingAnswer);
 
-  const lead = useProfileStore((s): LeadClinician => {
+  // Prefer personalization.careTeam[0] (which has an id assigned by
+  // the care-team step / persist migration) over the raw onboarding
+  // answer so we can attach `clinicianId` to the new appointment.
+  const lead = useProfileStore((s): LeadClinician & { id?: string } => {
+    const fromPersonalization = s.personalization?.careTeam[0];
+    if (fromPersonalization) return fromPersonalization;
     const answers = s.onboardingAnswers as Record<string, unknown>;
     const team = Array.isArray(answers.careTeam) ? (answers.careTeam as LeadClinician[]) : [];
     return team[0] ?? {};
@@ -131,6 +136,7 @@ const ScreenNextAppointment: React.FC = () => {
     useAppointmentsStore.getState().add({
       id: uuid(),
       title: lead.name ? `Visit with ${lead.name}` : "Upcoming visit",
+      clinicianId: lead.id,
       doctorName: lead.name ?? "Your clinician",
       specialty: lead.role ?? "General",
       date: when.toISOString(),

@@ -33,6 +33,7 @@ import { SPECIALTIES, Specialty } from "@/constants/specialties";
 import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
 import { useProfileStore } from "@/stores/useProfileStore";
 import { buildPersonalizationProfile } from "@/utils/personalization";
+import { uuid } from "@/utils/uuid";
 import { hapticLight } from "@/services/haptics";
 
 const QUICK_ADD_IDS = [
@@ -148,7 +149,19 @@ const ScreenCareTeam: React.FC = () => {
 
   const onContinue = () => {
     const trimmedName = nameDraft.trim();
-    const careTeam = addingRole && trimmedName ? [{ name: trimmedName, role: addingRole }] : [];
+    const careTeam =
+      addingRole && trimmedName
+        ? [
+            {
+              id: uuid(),
+              name: trimmedName,
+              role: addingRole,
+              brief: null,
+              briefGeneratedAt: null,
+              briefSourceRecordingIds: [],
+            },
+          ]
+        : [];
     setAnswer("careTeam", careTeam);
 
     const answers = useProfileStore.getState().onboardingAnswers;
