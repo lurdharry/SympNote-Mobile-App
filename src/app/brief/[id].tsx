@@ -229,11 +229,11 @@ const BriefDetail: React.FC = () => {
                 setShareSheetOpen(true);
               }}
               hitSlop={10}
-              style={[styles.iconBtn, { backgroundColor: colors.accent }]}
+              style={[styles.iconBtn, { backgroundColor: colors.bgMuted }]}
               accessibilityRole="button"
               accessibilityLabel="Share or export brief"
             >
-              <Share2 size={moderateScale(16)} color="#FFFFFF" strokeWidth={2.2} />
+              <Share2 size={moderateScale(16)} color={colors.textPrimary} strokeWidth={2} />
             </Pressable>
           )}
           <Pressable

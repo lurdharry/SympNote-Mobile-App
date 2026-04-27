@@ -32,7 +32,7 @@ const ScreenQualifier: React.FC = () => {
   const styles = useStyles();
 
   const { step, current, answers, typing, questions, answer, skip, back } = useQualifierFlow(
-    () => router.push("/onboarding/focus"),
+    () => router.push("/onboarding/health-context"),
   );
 
   const scrollRef = useRef<ScrollView>(null);

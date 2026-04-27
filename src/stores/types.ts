@@ -196,6 +196,28 @@ export type AgeBand =
   | '50-64'
   | '65-plus';
 
+/**
+ * Sex assigned at birth. The second-largest clinical prior after age —
+ * many symptoms (chest pain, fatigue, abdominal) read differently
+ * across sexes. `prefer-not` is a real answer, not the absence of
+ * one; the AI treats it as "no constraint" rather than guessing.
+ */
+export type SexAssigned = 'female' | 'male' | 'intersex' | 'prefer-not';
+
+/**
+ * Pregnancy status — only relevant when sex is 'female'. Surfaced as
+ * a follow-up on the health-context screen for that branch only.
+ * 'unknown' covers both "I don't know" and "didn't ask."
+ */
+export type PregnancyStatus = 'yes' | 'no' | 'possibly' | 'unknown';
+
+/**
+ * How the user expects to use the app. Calibrates UX defaults (daily
+ * prompt vs ambient) and the AI's narrative tone (continuous vs
+ * episodic). Not clinical — purely a preference.
+ */
+export type TrackingStyle = 'daily' | 'episodic' | 'mixed';
+
 export type FocusArea =
   | 'investigate'
   | 'upcoming-visit'
@@ -246,13 +268,25 @@ export interface Clinician {
 export interface PersonalizationProfile {
   /** Broad age bucket — biggest single clinical prior for the AI. */
   ageBand: AgeBand;
+  /** Sex assigned at birth — second-largest clinical prior. */
+  sex: SexAssigned;
+  /** Only meaningful when `sex === 'female'`; defaults to 'unknown'. */
+  pregnancyStatus: PregnancyStatus;
   /**
    * User-selected conditions (e.g. "Asthma", "Migraines") plus any
    * free-text additions. Used in AI context as baseline calibration.
    */
   knownConditions: string[];
+  /**
+   * Allergies — separate field from conditions because they carry
+   * different clinical weight (drug/contrast-agent decisions ride on
+   * them) and the user reports them differently. Empty array = none.
+   */
+  allergies: string[];
   /** Goals for this tracking — multi-select on the Focus screen. */
   focus: FocusArea[];
+  /** How the user plans to log — calibrates daily-prompt UX + tone. */
+  trackingStyle: TrackingStyle;
   careTeam: Clinician[];
   /** First-recording mic-area copy, tailored to dominant focus. */
   firstRecordingPrompt: string;

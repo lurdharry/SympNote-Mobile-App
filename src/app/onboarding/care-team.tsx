@@ -168,12 +168,14 @@ const ScreenCareTeam: React.FC = () => {
     const profile = buildPersonalizationProfile(answers, answers.focus, careTeam);
     useProfileStore.getState().setPersonalization(profile);
 
-    if (careTeam.length === 0) {
-      setAnswer("nextAppointment", "none");
-      router.push("/onboarding/summary");
-      return;
-    }
-    router.push("/onboarding/next-appointment");
+    // Brief-first flow — the appointment step has been retired.
+    // Users add visits later from the Briefs / appointment-new flows
+    // when it actually matters; onboarding stays focused on tracking.
+    // Routes straight to the recording surface — first-brief shows
+    // the synthesis loop in real time, so an explainer screen would
+    // be redundant.
+    setAnswer("nextAppointment", "none");
+    router.push("/onboarding/summary");
   };
 
   // Disable Continue when a specialty is picked but the clinician's
@@ -397,7 +399,11 @@ const ScreenCareTeam: React.FC = () => {
           </ScrollView>
 
           <View style={styles.ctaSlot}>
-            <PrimaryButton label={"Continue"} onPress={onContinue} disabled={pendingNameRequired} />
+            <PrimaryButton
+              label="Save my care team"
+              onPress={onContinue}
+              disabled={pendingNameRequired}
+            />
 
             <View style={styles.privacyRow}>
               <Lock size={moderateScale(14)} color={colors.accent} strokeWidth={2.4} />
