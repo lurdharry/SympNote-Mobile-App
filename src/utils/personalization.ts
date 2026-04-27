@@ -1,9 +1,11 @@
 import type {
   AgeBand,
+  AllergyEntry,
   Clinician,
   FocusArea,
   PersonalizationProfile,
   PregnancyStatus,
+  PrepGap,
   SexAssigned,
   TrackingStyle,
 } from '@/stores/types';
@@ -25,6 +27,7 @@ const AGE_BANDS: readonly AgeBand[] = ['teen', '18-29', '30-49', '50-64', '65-pl
 const SEXES: readonly SexAssigned[] = ['female', 'male', 'intersex', 'prefer-not'];
 const PREGNANCY: readonly PregnancyStatus[] = ['yes', 'no', 'possibly', 'unknown'];
 const TRACKING: readonly TrackingStyle[] = ['daily', 'episodic', 'mixed'];
+const PREP_GAPS: readonly PrepGap[] = ['often', 'sometimes', 'occasional', 'rare'];
 
 const FOCI: readonly FocusArea[] = [
   'investigate',
@@ -85,6 +88,48 @@ const coerceConditions = (raw: unknown): string[] => {
   return [];
 };
 
+/**
+ * Coerce the allergies answer into AllergyEntry[]. Accepts:
+ *  - structured form: AllergyEntry[] from the dynamic walk
+ *  - legacy flat form: string[] of categories (pre-v4 callers)
+ * Specifics within a category are de-duped; the entries themselves
+ * preserve insertion order (the order the user selected categories
+ * on health-context).
+ */
+const coerceAllergies = (raw: unknown): AllergyEntry[] => {
+  if (!Array.isArray(raw)) return [];
+  const out: AllergyEntry[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    if (typeof item === 'string' && item.length > 0) {
+      if (seen.has(item)) continue;
+      seen.add(item);
+      out.push({ category: item, specifics: [] });
+      continue;
+    }
+    if (
+      item &&
+      typeof item === 'object' &&
+      typeof (item as AllergyEntry).category === 'string'
+    ) {
+      const e = item as AllergyEntry;
+      if (seen.has(e.category)) continue;
+      seen.add(e.category);
+      const specifics = Array.isArray(e.specifics)
+        ? Array.from(
+            new Set(
+              e.specifics.filter(
+                (v): v is string => typeof v === 'string' && v.length > 0,
+              ),
+            ),
+          )
+        : [];
+      out.push({ category: e.category, specifics });
+    }
+  }
+  return out;
+};
+
 const dominantFocus = (list: FocusArea[]): FocusArea =>
   FOCUS_PRIORITY.find((f) => list.includes(f)) ?? list[0] ?? 'general';
 
@@ -123,9 +168,10 @@ export const buildPersonalizationProfile = (
   const sex = coerce(answers.sex, SEXES, 'prefer-not');
   const pregnancyStatus = coerce(answers.pregnancyStatus, PREGNANCY, 'unknown');
   const knownConditions = coerceConditions(answers.knownConditions);
-  const allergies = coerceConditions(answers.allergies);
+  const allergies = coerceAllergies(answers.allergies);
   const trackingStyle = coerce(answers.trackingStyle, TRACKING, 'mixed');
   const focus = coerceFocusList(focusRaw);
+  const prepGap = coerce(answers.prepGap, PREP_GAPS, 'sometimes');
 
   return {
     ageBand,
@@ -136,6 +182,7 @@ export const buildPersonalizationProfile = (
     focus,
     trackingStyle,
     careTeam,
+    prepGap,
     firstRecordingPrompt: pickFirstRecordingPrompt(focus),
   };
 };
