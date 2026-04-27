@@ -13,7 +13,8 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
-import { CheckCircle2, Sparkles } from "lucide-react-native";
+import { CheckCircle2, Lock, Sparkles } from "lucide-react-native";
+import { BlurView } from "expo-blur";
 import {
   fontScale,
   makeStyles,
@@ -318,7 +319,7 @@ const ScreenFirstBrief: React.FC = () => {
                 </Pressable>
               )}
               <PrimaryButton
-                label={previewContent ? "Continue" : "See my plan"}
+                label={previewContent ? "Lock it in" : "See my plan"}
                 onPress={onContinue}
               />
             </View>
@@ -516,70 +517,108 @@ const BriefReveal: React.FC<{
         </Animated.View>
       ) : null}
 
-      {questions.length > 0 ? (
-        <Animated.View
-          entering={FadeInDown.delay(d(280)).duration(420).easing(Easing.out(Easing.cubic))}
-          style={[
-            styles.revealCard,
-            { backgroundColor: colors.bgSurface, borderColor: colors.border },
-            shadows.card,
-          ]}
-        >
-          <Text style={[styles.previewEyebrow, { color: colors.accent }]}>
-            ASK YOUR DOCTOR
-          </Text>
-          <View style={styles.questionsList}>
-            {questions.map((q, i) => (
-              <View key={`q-${i}`} style={styles.questionRow}>
-                <CheckCircle2
-                  size={moderateScale(14)}
-                  color={colors.accent}
-                  strokeWidth={2.2}
-                />
-                <Text
-                  style={[styles.questionText, { color: colors.textPrimary }]}
-                  numberOfLines={3}
-                >
-                  {q}
-                </Text>
+      {/* Locked section — questions + patterns sit behind a soft blur
+          and a "Subscribe to unlock" badge. The user sees enough shape
+          to know there's content without being able to read it. The
+          structured header above and the insights count below stay
+          crisp so the value is teased, not hidden entirely. */}
+      {(questions.length > 0 || patterns.length > 0) && (
+        <View style={styles.lockedSection}>
+          {questions.length > 0 ? (
+            <Animated.View
+              entering={FadeInDown.delay(d(280)).duration(420).easing(Easing.out(Easing.cubic))}
+              style={[
+                styles.revealCard,
+                { backgroundColor: colors.bgSurface, borderColor: colors.border },
+                shadows.card,
+              ]}
+            >
+              <Text style={[styles.previewEyebrow, { color: colors.accent }]}>
+                ASK YOUR DOCTOR
+              </Text>
+              <View style={styles.questionsList}>
+                {questions.map((q, i) => (
+                  <View key={`q-${i}`} style={styles.questionRow}>
+                    <CheckCircle2
+                      size={moderateScale(14)}
+                      color={colors.accent}
+                      strokeWidth={2.2}
+                    />
+                    <Text
+                      style={[styles.questionText, { color: colors.textPrimary }]}
+                      numberOfLines={3}
+                    >
+                      {q}
+                    </Text>
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
-          {content.questions.length > questions.length ? (
-            <Text style={[styles.questionsMore, { color: colors.textTertiary }]}>
-              +{content.questions.length - questions.length} more inside
-            </Text>
+              {content.questions.length > questions.length ? (
+                <Text style={[styles.questionsMore, { color: colors.textTertiary }]}>
+                  +{content.questions.length - questions.length} more inside
+                </Text>
+              ) : null}
+            </Animated.View>
           ) : null}
-        </Animated.View>
-      ) : null}
 
-      {patterns.length > 0 ? (
-        <Animated.View
-          entering={FadeInDown.delay(d(480)).duration(420).easing(Easing.out(Easing.cubic))}
-          style={[
-            styles.revealCard,
-            { backgroundColor: colors.bgSurface, borderColor: colors.border },
-            shadows.card,
-          ]}
-        >
-          <Text style={[styles.previewEyebrow, { color: colors.accent }]}>
-            PATTERNS WE NOTICED
-          </Text>
-          <View style={styles.questionsList}>
-            {patterns.map((p, i) => (
-              <View key={`p-${i}`} style={styles.questionRow}>
-                <View style={[styles.patternDot, { backgroundColor: colors.accent }]} />
-                <Text
-                  style={[styles.questionText, { color: colors.textPrimary }]}
-                  numberOfLines={3}
-                >
-                  {p}
-                </Text>
+          {patterns.length > 0 ? (
+            <Animated.View
+              entering={FadeInDown.delay(d(480)).duration(420).easing(Easing.out(Easing.cubic))}
+              style={[
+                styles.revealCard,
+                { backgroundColor: colors.bgSurface, borderColor: colors.border },
+                shadows.card,
+              ]}
+            >
+              <Text style={[styles.previewEyebrow, { color: colors.accent }]}>
+                PATTERNS WE NOTICED
+              </Text>
+              <View style={styles.questionsList}>
+                {patterns.map((p, i) => (
+                  <View key={`p-${i}`} style={styles.questionRow}>
+                    <View style={[styles.patternDot, { backgroundColor: colors.accent }]} />
+                    <Text
+                      style={[styles.questionText, { color: colors.textPrimary }]}
+                      numberOfLines={3}
+                    >
+                      {p}
+                    </Text>
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
-        </Animated.View>
-      ) : null}
+            </Animated.View>
+          ) : null}
+
+          {/* Frosted blur over the cards — readers see shape, not text.
+              `intensity` is tuned to obscure copy without flattening the
+              card silhouettes entirely (still feels like content, just
+              gated). */}
+          <BlurView
+            intensity={42}
+            tint="light"
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+
+          {/* Centered lock badge — the unlock CTA inside the blur. The
+              tap target is the bottom Continue button, not this badge,
+              but the badge tells the user where the door is. */}
+          <Animated.View
+            entering={FadeIn.delay(d(560)).duration(360)}
+            pointerEvents="none"
+            style={styles.lockBadgeWrap}
+          >
+            <View
+              style={[styles.lockBadge, { backgroundColor: colors.accent }]}
+            >
+              <Lock size={moderateScale(12)} color="#FFFFFF" strokeWidth={2.4} />
+              <Text style={styles.lockBadgeText}>
+                Subscribe to see your doctor questions
+              </Text>
+            </View>
+          </Animated.View>
+        </View>
+      )}
 
       <Animated.View
         entering={FadeInDown.delay(d(640)).duration(420).easing(Easing.out(Easing.cubic))}
@@ -831,6 +870,37 @@ const useStyles = makeStyles((theme) => ({
     fontFamily: "DMSans_700Bold",
     fontSize: fontScale(11),
     letterSpacing: 0.3,
+  },
+  // ── Locked tease (questions + patterns behind blur + badge)
+  lockedSection: {
+    position: "relative",
+    gap: moderateScale(10),
+    borderRadius: theme.radius.lg,
+    overflow: "hidden",
+  },
+  lockBadgeWrap: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  lockBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(8),
+    paddingHorizontal: moderateScale(14),
+    paddingVertical: moderateScale(10),
+    borderRadius: theme.radius.full,
+    ...theme.shadows.accentGlow,
+  },
+  lockBadgeText: {
+    color: "#FFFFFF",
+    fontFamily: "DMSans_700Bold",
+    fontSize: fontScale(12),
+    letterSpacing: -0.05,
   },
   // ── CTA
   cta: {

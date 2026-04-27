@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, {
@@ -55,22 +55,9 @@ const ScreenFirstRecording: React.FC = () => {
 
   const { state: holdState, handlers: holdHandlers } = useHoldToRecord({
     holdThresholdMs: 500,
-    // 10s floor: short recordings produce thin briefs, which torpedo
-    // the aha and the paywall conversion that depends on it. The
-    // previous 1s floor allowed "uhh, my head hurts" to commit, and
-    // the AI had nothing to work with.
-    minCommitDurationMs: 10000,
+    minCommitDurationMs: 1000,
     onShortTap: () => {
       hapticLight();
-    },
-    onDiscard: (reason) => {
-      hapticLight();
-      if (reason === "too-short") {
-        Alert.alert(
-          "Tell us a bit more",
-          "Hold for at least 10 seconds. Sympnote builds your brief from what you say — the more you share, the sharper it lands.",
-        );
-      }
     },
     onCommit: ({ transcript, durationSec }) => {
       // Build the typed personalization from raw onboarding answers
@@ -229,10 +216,10 @@ const TeachingTip: React.FC = () => {
       style={styles.teachingWrap}
     >
       <Text style={[styles.teachingText, { color: colors.textPrimary }]}>
-        Hold for ~10 seconds
+        Press and hold the mic
       </Text>
       <Text style={[styles.teachingHint, { color: colors.textSecondary }]}>
-        Tell us your symptom, when it started, how it feels. The more you share, the sharper your brief.
+        Release when you're done. Sympnote keeps it safe on your device.
       </Text>
     </Animated.View>
   );

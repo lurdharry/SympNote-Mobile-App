@@ -97,9 +97,7 @@ const TabHome: React.FC = () => {
 
   const { state: holdState, handlers: holdHandlers } = useHoldToRecord({
     holdThresholdMs: 500,
-    // 10s floor — short recordings produce thin briefs; we'd rather
-    // ask for a few more seconds than save junk.
-    minCommitDurationMs: 10000,
+    minCommitDurationMs: 1000,
     onShortTap: () => {
       if (!requireEntitlement()) return;
       hapticLight();
@@ -107,11 +105,7 @@ const TabHome: React.FC = () => {
     },
     onDiscard: (reason) => {
       hapticLight();
-      showToast(
-        reason === "too-short"
-          ? "Hold for at least 10 seconds — your brief is built from this."
-          : "Didn't catch that",
-      );
+      showToast(reason === "too-short" ? "Hold a little longer" : "Didn't catch that");
     },
     onCommit,
   });
