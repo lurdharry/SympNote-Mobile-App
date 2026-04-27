@@ -22,7 +22,7 @@ import {
   useTheme,
   verticalScale,
 } from "@/theme";
-import { useProfileStore } from "@/stores/useProfileStore";
+import { useCareTeam, useProfileStore } from "@/stores/useProfileStore";
 import { useRecordingsStore } from "@/stores/useRecordingsStore";
 import { useAppointmentsStore } from "@/stores/useAppointmentsStore";
 import { useBriefsStore } from "@/stores/useBriefsStore";
@@ -53,7 +53,7 @@ const ClinicianDetail: React.FC = () => {
   const clinician = useProfileStore((s) =>
     s.personalization?.careTeam.find((c) => c.id === id),
   );
-  const careTeam = useProfileStore((s) => s.personalization?.careTeam ?? []);
+  const careTeam = useCareTeam();
   const updateClinicianStore = useProfileStore((s) => s.updateClinician);
   const recordings = useRecordingsStore((s) => s.recordings);
   const appointments = useAppointmentsStore((s) => s.appointments);

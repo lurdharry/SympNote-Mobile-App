@@ -27,6 +27,8 @@ import {
 import { SceneTransition } from "@/components/navigation/SceneTransition";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
+import { RedFlagAlert } from "@/components/clinical/RedFlagAlert";
+import { StructuredHeaderCard } from "@/components/clinical/StructuredHeaderCard";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { usePendingRecordingStore } from "@/stores/usePendingRecordingStore";
 import { generateBrief, structureTranscript } from "@/services/ai";
@@ -118,6 +120,10 @@ const ScreenFirstBrief: React.FC = () => {
   const [phase, setPhase] = useState<Phase>("loading");
   const [briefId, setBriefId] = useState<string | null>(null);
   const [previewContent, setPreviewContent] = useState<BriefContent | null>(null);
+  // Structured fields from `structureTranscript` — drive the
+  // "your note, parsed" header card in BriefReveal. Visceral
+  // counterpart to the brief's interpretive cards.
+  const [previewStructured, setPreviewStructured] = useState<StructuredEntry | null>(null);
 
   // Defensive — if a user lands here with no draft AND no already-run
   // artifacts, bounce back. Runs once on mount only.
@@ -142,6 +148,7 @@ const ScreenFirstBrief: React.FC = () => {
     ) {
       setBriefId(existing.pendingBrief.id);
       setPreviewContent(existing.pendingBrief.content);
+      setPreviewStructured(existing.pendingRecording.structured);
       setPhase("ready");
       return;
     }
@@ -204,11 +211,14 @@ const ScreenFirstBrief: React.FC = () => {
       // a successful subscribe — see the wide-scope commit pipeline.
       usePendingRecordingStore.getState().setArtifacts(fullRecording, brief);
 
-      if (!cancelled && brief) {
-        setBriefId(brief.id);
-        setPreviewContent(brief.content);
+      if (!cancelled) {
+        setPreviewStructured(structured);
+        if (brief) {
+          setBriefId(brief.id);
+          setPreviewContent(brief.content);
+        }
+        setPhase("ready");
       }
-      if (!cancelled) setPhase("ready");
     };
 
     run();
@@ -283,6 +293,7 @@ const ScreenFirstBrief: React.FC = () => {
             ) : previewContent ? (
               <BriefReveal
                 content={previewContent}
+                structured={previewStructured}
                 reduced={reduced}
                 colors={colors}
                 styles={styles}
@@ -393,18 +404,25 @@ const LoadingOrb: React.FC<{
 };
 
 // ─── Brief reveal — sequenced multi-card payoff ─────────────────────────
-// Three cards animate in over ~700ms: the top concern, doctor questions
-// the user can ask, and an insights footer counting what came out of
-// the brief. Designed to make the AI's output feel substantial before
-// the paywall appears, not a single-line preview.
+// Sequence: structured header (the AI's parsed reading of the user's
+// own words) → red-flag alert (when present) → ASK YOUR DOCTOR
+// (questions) → PATTERNS (when present) → insights count-up pill.
+//
+// The structured header replaces the older "TOP CONCERN" card. From
+// a single recording the brief's topConcerns/patterns are partly
+// forced; the structured fields (severity, body system, symptoms,
+// urgency) come straight from what the user just said and read as
+// "AI is reading my words" — the harder visceral hit that earns the
+// paywall ask. Same component drives /record's confirm phase so the
+// onboarding aha matches what every later recording will look like.
 
 const BriefReveal: React.FC<{
   content: BriefContent;
+  structured: StructuredEntry | null;
   reduced: boolean;
   colors: ReturnType<typeof useTheme>["colors"];
   styles: ReturnType<typeof useStyles>;
-}> = ({ content, reduced, colors, styles }) => {
-  const top = content.topConcerns[0];
+}> = ({ content, structured, reduced, colors, styles }) => {
   const questions = content.questions.slice(0, 3);
   const patterns = content.patterns.slice(0, 2);
   const totalInsights =
@@ -415,48 +433,17 @@ const BriefReveal: React.FC<{
 
   const d = (n: number) => (reduced ? 0 : n);
 
-  // Typewriter on the top concern label — character-by-character
-  // reveal after the first card fades in. Mirrors the hook screen's
-  // headline typewriter for cinematic continuity.
-  const topLabel = top?.label ?? "";
-  const [typed, setTyped] = useState(reduced ? topLabel : "");
-  useEffect(() => {
-    if (reduced || !topLabel) {
-      setTyped(topLabel);
-      return;
-    }
-    setTyped("");
-    // Wait for the card's FadeInDown (60ms delay + 420ms duration)
-    // to finish before we start typing.
-    const startDelay = setTimeout(() => {
-      let i = 0;
-      const id = setInterval(() => {
-        i += 1;
-        setTyped(topLabel.slice(0, i));
-        if (i >= topLabel.length) clearInterval(id);
-      }, 28);
-      typewriterRef.current = id;
-    }, 480);
-    return () => {
-      clearTimeout(startDelay);
-      if (typewriterRef.current) clearInterval(typewriterRef.current);
-    };
-  }, [topLabel, reduced]);
-  const typewriterRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   // Count-up on the insights total — pill fades in at ~640ms, then
   // the number ticks from 0 to total over 700ms (~30 frames). Single
-  // animated number lands harder than four micro-counters; the
-  // breakdown reads as detail noise compared to one big number.
+  // animated number lands harder than four micro-counters.
   const [countProgress, setCountProgress] = useState(reduced ? 1 : 0);
+  const countUpRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => {
     if (reduced) {
       setCountProgress(1);
       return;
     }
     setCountProgress(0);
-    // Wait for the pill's FadeInDown (640ms delay + 420ms duration)
-    // before starting the count-up.
     const startDelay = setTimeout(() => {
       const start = Date.now();
       const dur = 700;
@@ -473,41 +460,25 @@ const BriefReveal: React.FC<{
       if (countUpRef.current) clearInterval(countUpRef.current);
     };
   }, [totalInsights, reduced]);
-  const countUpRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const animatedCount = Math.round(countProgress * totalInsights);
+
+  // Show the structured-fields card whenever we have meaningful data
+  // (any of severity, body system, or symptoms). Falls back to the
+  // brief summary if the structuring call failed but the brief one
+  // succeeded — keeps the first slot occupied either way.
+  const hasStructured =
+    !!structured &&
+    (structured.severity > 0 ||
+      structured.bodySystem.length > 0 ||
+      structured.symptoms.length > 0);
 
   return (
     <View style={styles.revealStack}>
-      {top ? (
+      {hasStructured && structured ? (
         <Animated.View
           entering={FadeInDown.delay(d(60)).duration(420).easing(Easing.out(Easing.cubic))}
-          style={[
-            styles.revealCard,
-            { backgroundColor: colors.bgSurface, borderColor: colors.accent + "55" },
-            shadows.card,
-          ]}
         >
-          <LinearGradient
-            colors={[colors.accent + "14", colors.accent + "00"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={styles.previewWash}
-            pointerEvents="none"
-          />
-          <Text style={[styles.previewEyebrow, { color: colors.accent }]}>
-            TOP CONCERN
-          </Text>
-          <Text style={[styles.previewTitle, { color: colors.textPrimary }]}>
-            {typed}
-            {!reduced && typed.length < topLabel.length ? (
-              <Text style={{ color: colors.accent }}>▍</Text>
-            ) : null}
-          </Text>
-          {top.detail && typed.length >= topLabel.length ? (
-            <Text style={[styles.previewBody, { color: colors.textSecondary }]}>
-              {top.detail}
-            </Text>
-          ) : null}
+          <StructuredHeaderCard structured={structured} />
         </Animated.View>
       ) : content.summary ? (
         <Animated.View
@@ -534,6 +505,14 @@ const BriefReveal: React.FC<{
           >
             {content.summary}
           </Text>
+        </Animated.View>
+      ) : null}
+
+      {structured && structured.redFlags.length > 0 ? (
+        <Animated.View
+          entering={FadeInDown.delay(d(180)).duration(420).easing(Easing.out(Easing.cubic))}
+        >
+          <RedFlagAlert items={structured.redFlags} />
         </Animated.View>
       ) : null}
 

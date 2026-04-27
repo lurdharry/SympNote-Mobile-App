@@ -36,7 +36,7 @@ import {
 } from "@/theme";
 import { Button } from "@/components/ui/Button";
 import { useBriefsStore } from "@/stores/useBriefsStore";
-import { useProfileStore } from "@/stores/useProfileStore";
+import { useCareTeam, useProfileStore } from "@/stores/useProfileStore";
 import { useRecordingsStore } from "@/stores/useRecordingsStore";
 import { usePendingRecordingStore } from "@/stores/usePendingRecordingStore";
 import { generateBrief } from "@/services/ai";
@@ -73,7 +73,7 @@ const BriefDetail: React.FC = () => {
     s.pendingBrief?.id === id ? s.pendingBrief : null,
   );
   const brief = persistedBrief ?? pendingBrief;
-  const careTeam = useProfileStore((s) => s.personalization?.careTeam ?? []);
+  const careTeam = useCareTeam();
   const profile = useProfileStore((s) => s.personalization);
   const setClinicianIds = useBriefsStore((s) => s.setClinicianIds);
   const setTitle = useBriefsStore((s) => s.setTitle);

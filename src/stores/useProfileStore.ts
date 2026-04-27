@@ -244,3 +244,28 @@ export const useProfileStore = create<State & Actions>()(
     },
   ),
 );
+
+/**
+ * Frozen empty fallback for the care-team selector. Without this, an
+ * inline `?? []` in `useProfileStore((s) => s.careTeam ?? [])` returns
+ * a brand-new `[]` reference on every store tick when personalization
+ * is null — Zustand sees a different result each snapshot and React
+ * re-renders forever ("Maximum update depth exceeded").
+ *
+ * Hold the empty case at a stable ref so the selector returns the
+ * same value until real data arrives.
+ */
+const EMPTY_CARETEAM: readonly Clinician[] = Object.freeze([]);
+
+/**
+ * Reactive care-team selector. Always use this hook — never inline
+ * `useProfileStore((s) => s.personalization?.careTeam ?? [])` in
+ * components. The inline fallback creates a fresh `[]` on every call
+ * and triggers an infinite re-render loop while personalization is
+ * null (during onboarding before the paywall commits, or for any
+ * legacy state).
+ */
+export const useCareTeam = (): Clinician[] =>
+  useProfileStore(
+    (s) => s.personalization?.careTeam ?? EMPTY_CARETEAM,
+  ) as Clinician[];

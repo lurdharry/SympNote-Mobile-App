@@ -16,7 +16,7 @@ import { ReviewPhase } from "../components/recording/ReviewPhase";
 import { ExtractingPhase } from "../components/recording/ExtractingPhase";
 import { ExtractedPhase } from "../components/recording/ExtractedPhase";
 import { useRecordingFlow } from "../components/recording/useRecordingFlow";
-import { useProfileStore } from "../stores/useProfileStore";
+import { useCareTeam } from "../stores/useProfileStore";
 import { useRecordingsStore } from "../stores/useRecordingsStore";
 import { useAppointmentsStore } from "../stores/useAppointmentsStore";
 import { uuid } from "../utils/uuid";
@@ -47,7 +47,7 @@ const RecordModal: React.FC = () => {
   // happens after all hook calls below to satisfy rules-of-hooks.
   const { entitled } = useEntitlement();
 
-  const careTeam = useProfileStore((s) => s.personalization?.careTeam ?? []);
+  const careTeam = useCareTeam();
   const recordingsCount = useRecordingsStore((s) => s.recordings.length);
   const nextAppointment = useAppointmentsStore((s) => {
     const now = Date.now();

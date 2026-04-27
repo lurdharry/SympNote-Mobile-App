@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import { generateBrief } from "@/services/ai";
 import { useBriefsStore } from "@/stores/useBriefsStore";
-import { useProfileStore } from "@/stores/useProfileStore";
+import { useCareTeam, useProfileStore } from "@/stores/useProfileStore";
 import { uuid } from "@/utils/uuid";
 import type { Brief, Recording } from "@/stores/types";
 
@@ -40,7 +40,7 @@ const autoTitle = (recordings: Recording[]): string => {
  */
 export const useGenerateBrief = () => {
   const profile = useProfileStore((s) => s.personalization);
-  const careTeam = useProfileStore((s) => s.personalization?.careTeam ?? []);
+  const careTeam = useCareTeam();
 
   return useMutation<Brief, Error, GenerateBriefArgs>({
     mutationFn: async (args) => {

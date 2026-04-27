@@ -119,6 +119,14 @@ export function usePaywallPurchase(mode: PaywallMode = "onboarding") {
       hapticHeavy();
       if (mode === "onboarding") {
         setCrafting(true);
+        // Onboarding-commit semantics: "the first brief saves to a
+        // fresh slate." Wipe any prior briefs / recordings before
+        // committing so the home screen shows only the just-generated
+        // pair. Without this, repeat test sessions (or any path that
+        // re-enters onboarding) accumulate briefs in the persisted
+        // store. Gate mode does NOT wipe — real users have history.
+        useRecordingsStore.setState({ recordings: [] });
+        useBriefsStore.setState({ briefs: [] });
         await commitDraft();
         complete();
         router.replace("/(tabs)/home");
@@ -147,6 +155,9 @@ export function usePaywallPurchase(mode: PaywallMode = "onboarding") {
       .setSubscription("trial", addDays(new Date(), 3).toISOString());
     if (mode === "onboarding") {
       setCrafting(true);
+      // Same fresh-slate semantics as buy() — see comment there.
+      useRecordingsStore.setState({ recordings: [] });
+      useBriefsStore.setState({ briefs: [] });
       await commitDraft();
       complete();
       router.replace("/(tabs)/home");
