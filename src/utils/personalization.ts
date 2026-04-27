@@ -3,6 +3,9 @@ import type {
   Clinician,
   FocusArea,
   PersonalizationProfile,
+  PregnancyStatus,
+  SexAssigned,
+  TrackingStyle,
 } from '@/stores/types';
 
 /**
@@ -19,6 +22,9 @@ export interface RawOnboardingAnswers {
 }
 
 const AGE_BANDS: readonly AgeBand[] = ['teen', '18-29', '30-49', '50-64', '65-plus'];
+const SEXES: readonly SexAssigned[] = ['female', 'male', 'intersex', 'prefer-not'];
+const PREGNANCY: readonly PregnancyStatus[] = ['yes', 'no', 'possibly', 'unknown'];
+const TRACKING: readonly TrackingStyle[] = ['daily', 'episodic', 'mixed'];
 
 const FOCI: readonly FocusArea[] = [
   'investigate',
@@ -114,13 +120,21 @@ export const buildPersonalizationProfile = (
   careTeam: Clinician[],
 ): PersonalizationProfile => {
   const ageBand = coerce(answers.ageBand, AGE_BANDS, '30-49');
+  const sex = coerce(answers.sex, SEXES, 'prefer-not');
+  const pregnancyStatus = coerce(answers.pregnancyStatus, PREGNANCY, 'unknown');
   const knownConditions = coerceConditions(answers.knownConditions);
+  const allergies = coerceConditions(answers.allergies);
+  const trackingStyle = coerce(answers.trackingStyle, TRACKING, 'mixed');
   const focus = coerceFocusList(focusRaw);
 
   return {
     ageBand,
+    sex,
+    pregnancyStatus,
     knownConditions,
+    allergies,
     focus,
+    trackingStyle,
     careTeam,
     firstRecordingPrompt: pickFirstRecordingPrompt(focus),
   };

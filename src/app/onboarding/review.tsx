@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -66,13 +67,33 @@ const ScreenFirstRecordingReview: React.FC = () => {
       durationSec: draft.durationSec,
       createdAt: draft.createdAt,
     });
-    router.push("/onboarding/paywall");
+    // Route through the first-brief screen so the user sees the AI
+    // synthesise their note before hitting the paywall — the aha
+    // moment that earns the subscription ask.
+    router.push("/onboarding/first-brief");
   };
 
-  const onReRecord = () => {
-    hapticLight();
-    usePendingRecordingStore.getState().clear();
-    router.back();
+  // Tapping the back arrow on this screen used to silently dump the
+  // user back at the mic, losing their transcript. Confirm before
+  // discarding so the destructive path is deliberate — and tell them
+  // exactly what happens.
+  const onBack = () => {
+    Alert.alert(
+      "Discard this note?",
+      "You'll go back to record again — your transcript will be lost.",
+      [
+        { text: "Keep editing", style: "cancel" },
+        {
+          text: "Discard",
+          style: "destructive",
+          onPress: () => {
+            hapticLight();
+            usePendingRecordingStore.getState().clear();
+            router.back();
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -89,7 +110,7 @@ const ScreenFirstRecordingReview: React.FC = () => {
 
         <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
           <View style={styles.topBar}>
-            <BackButton onPress={() => router.back()} />
+            <BackButton onPress={onBack} />
             <View style={{ width: 40 }} />
           </View>
           <View style={styles.progressSlot}>
@@ -138,7 +159,6 @@ const ScreenFirstRecordingReview: React.FC = () => {
                   transcript={editValue}
                   durationSec={draft.durationSec}
                   onChangeText={setEditValue}
-                  onReRecord={onReRecord}
                 />
               </Animated.View>
             </ScrollView>
@@ -157,14 +177,12 @@ interface TranscriptQuoteProps {
   transcript: string;
   durationSec: number;
   onChangeText: (next: string) => void;
-  onReRecord: () => void;
 }
 
 const TranscriptQuote: React.FC<TranscriptQuoteProps> = ({
   transcript,
   durationSec,
   onChangeText,
-  onReRecord,
 }) => {
   const { colors } = useTheme();
   const styles = useStyles();

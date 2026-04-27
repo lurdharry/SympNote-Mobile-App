@@ -20,9 +20,9 @@ import { FocusCard } from "@/components/onboarding/focus/FocusCard";
 import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
 
 const ctaLabel = (count: number): string => {
-  if (count === 0) return "Tell us what you're tracking";
-  if (count === 1) return "Continue";
-  return `Continue · ${count} selected`;
+  if (count === 0) return "Pick at least one";
+  if (count === 1) return "Set my goal";
+  return `Set my goals · ${count}`;
 };
 
 const ScreenFocus: React.FC = () => {

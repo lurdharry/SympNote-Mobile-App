@@ -1,5 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { format, parseISO } from "date-fns";
@@ -53,6 +63,7 @@ const NewBrief: React.FC = () => {
   const careTeam = useProfileStore((s) => s.personalization?.careTeam ?? []);
   const generate = useGenerateBrief();
 
+  const [title, setTitle] = useState("");
   const [range, setRange] = useState<DateRange>("30d");
   const [selectedClinicianIds, setSelectedClinicianIds] = useState<string[]>([]);
   const [selectedRecordingIds, setSelectedRecordingIds] = useState<Set<string>>(new Set());
@@ -114,10 +125,12 @@ const NewBrief: React.FC = () => {
       return;
     }
     setGenerating(true);
+    const trimmedTitle = title.trim();
     generate.mutate(
       {
         recordings: picked,
         clinicianIds: selectedClinicianIds,
+        title: trimmedTitle.length > 0 ? trimmedTitle : undefined,
       },
       {
         onSuccess: (brief) => {
@@ -160,10 +173,15 @@ const NewBrief: React.FC = () => {
           <View style={{ flex: 1 }} />
         </View>
 
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          showsVerticalScrollIndicator={false}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.flex}
         >
+          <ScrollView
+            contentContainerStyle={styles.scroll}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
           <Text style={[styles.eyebrow, { color: colors.accent }]}>NEW BRIEF</Text>
           <Text style={[styles.title, { color: colors.textPrimary }]}>
             Pick the notes to{"\n"}synthesise.
@@ -172,6 +190,30 @@ const NewBrief: React.FC = () => {
             Combine several recordings into one summary. The AI reads all picked notes and
             distils them — top concerns, patterns, questions, the lot.
           </Text>
+
+          {/* ── Title (optional) ────────────────────────────────── */}
+          <View style={styles.filterBlock}>
+            <Text style={[styles.filterLabel, { color: colors.textTertiary }]}>
+              TITLE · OPTIONAL
+            </Text>
+            <View
+              style={[
+                styles.titleField,
+                { backgroundColor: colors.bgSurface, borderColor: colors.border },
+              ]}
+            >
+              <TextInput
+                value={title}
+                onChangeText={setTitle}
+                placeholder="e.g. Knee flare-up · Pre-Smith visit"
+                placeholderTextColor={colors.textTertiary}
+                style={[styles.titleInput, { color: colors.textPrimary }]}
+                returnKeyType="done"
+                maxLength={60}
+                accessibilityLabel="Brief title"
+              />
+            </View>
+          </View>
 
           {/* ── Date range filter ───────────────────────────────── */}
           <View style={styles.filterBlock}>
@@ -306,16 +348,17 @@ const NewBrief: React.FC = () => {
               ))
             )}
           </View>
-        </ScrollView>
+          </ScrollView>
 
-        <View style={styles.ctaArea}>
-          <Button
-            label={ctaLabel}
-            onPress={onGenerate}
-            haptic="medium"
-            disabled={generating || selectedCount === 0}
-          />
-        </View>
+          <View style={styles.ctaArea}>
+            <Button
+              label={ctaLabel}
+              onPress={onGenerate}
+              haptic="medium"
+              disabled={generating || selectedCount === 0}
+            />
+          </View>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
   );
@@ -389,6 +432,7 @@ export default NewBrief;
 const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },
   safe: { flex: 1 },
+  flex: { flex: 1 },
   topBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -435,6 +479,19 @@ const useStyles = makeStyles((theme) => ({
     fontFamily: "DMSans_700Bold",
     fontSize: fontScale(10),
     letterSpacing: 1.4,
+  },
+  titleField: {
+    paddingHorizontal: scale(14),
+    paddingVertical: verticalScale(10),
+    borderRadius: theme.radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  titleInput: {
+    fontFamily: "Fraunces_400Regular",
+    fontSize: fontScale(15),
+    lineHeight: fontScale(20),
+    padding: 0,
+    margin: 0,
   },
   chipRow: {
     flexDirection: "row",

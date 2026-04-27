@@ -7,7 +7,6 @@ import {
   Droplet,
   Droplets,
   Flame,
-  Flower2,
   HeartPulse,
   Ribbon,
   Shield,
@@ -65,11 +64,14 @@ export interface Question {
 }
 
 /**
- * The two qualifier questions. Every answer gives the AI a hard
- * clinical prior it cannot infer from voice transcripts alone:
+ * The qualifier questions. Each answer gives the AI a hard clinical
+ * prior it cannot infer from voice transcripts alone:
  *
  *  Q1 — Age band. The single biggest axis for clinical reasoning.
- *  Q2 — Known conditions. The baseline the AI should interpret new
+ *  Q2 — Sex assigned at birth. Equally large axis — chest pain,
+ *       fatigue, abdominal symptoms all read differently across
+ *       sexes. Skippable for users who'd rather not share.
+ *  Q3 — Known conditions. The baseline the AI should interpret new
  *       entries against.
  *
  * Everything else (summary style, reminder cadence, time-of-day
@@ -91,6 +93,19 @@ export const QUESTIONS: Question[] = [
     ],
   },
   {
+    id: 'sex',
+    profileKey: 'sex',
+    ask: 'And the sex on your medical records?',
+    hint: "Some symptoms — chest pain, fatigue, abdominal — read very differently across sexes. Skip if you'd rather not share.",
+    skippable: true,
+    options: [
+      { t: 'Female',             v: 'female',      Icon: HeartPulse, tint: '#E07A5F' },
+      { t: 'Male',               v: 'male',        Icon: HeartPulse, tint: '#2C6E6B' },
+      { t: 'Intersex',           v: 'intersex',    Icon: Sparkles,   tint: '#6CA4A0' },
+      { t: 'Prefer not to say',  v: 'prefer-not',  Icon: Shield,     tint: '#8A8A8A' },
+    ],
+  },
+  {
     id: 'conditions',
     profileKey: 'knownConditions',
     ask: 'Any known conditions or meds worth noting?',
@@ -102,7 +117,6 @@ export const QUESTIONS: Question[] = [
       { t: 'High blood pressure',     v: 'hypertension',  Icon: HeartPulse, tint: '#E07A5F' },
       { t: 'High cholesterol',        v: 'cholesterol',   Icon: Droplets,   tint: '#C88A4A' },
       { t: 'Diabetes',                v: 'diabetes',      Icon: Droplet,    tint: '#C88A4A' },
-      { t: 'Allergies',               v: 'allergies',     Icon: Flower2,    tint: '#F6C06A' },
       { t: 'Acid reflux',             v: 'gerd',          Icon: Flame,      tint: '#E07A5F' },
       { t: 'Depression or anxiety',   v: 'depression',    Icon: Brain,      tint: '#6CA4A0' },
       { t: 'Arthritis',               v: 'arthritis',     Icon: Bone,       tint: '#8A6A4A' },
