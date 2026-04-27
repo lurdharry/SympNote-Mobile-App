@@ -21,6 +21,7 @@ import { TransitionProvider } from "../components/navigation/TransitionContext";
 import { RadialWipe } from "../components/navigation/RadialWipe";
 import { queryClient } from "../services/queryClient";
 import { migrateClinicianRefs } from "../utils/migrateClinicianRefs";
+import { EntitlementProvider } from "../contexts/EntitlementContext";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -43,14 +44,6 @@ const RootLayout: React.FC = () => {
     if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
   }, [fontsLoaded]);
 
-  // One-shot reconcile to backfill clinicianId on legacy appointments
-  // and clinicianIds on legacy recordings. Idempotent — runs cheaply
-  // on every app start so users with new data added through older
-  // entry points get patched up too.
-  useEffect(() => {
-    migrateClinicianRefs();
-  }, []);
-
   if (!fontsLoaded) {
     return (
       <View
@@ -67,71 +60,72 @@ const RootLayout: React.FC = () => {
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
           <TransitionProvider>
-            <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
-              <StatusBar style={isDark ? "light" : "dark"} />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  animation: "fade",
-                  animationDuration: 250,
-                  contentStyle: { backgroundColor: colors.bgPrimary },
-                }}
-              >
-                <Stack.Screen name="index" />
-                <Stack.Screen name="onboarding" options={{ animation: "fade" }} />
-                <Stack.Screen name="(tabs)" options={{ animation: "fade" }} />
-                <Stack.Screen
-                  name="recording/[id]"
-                  options={{ animation: "slide_from_right" }}
-                />
-                <Stack.Screen
-                  name="appointment/[id]"
-                  options={{ animation: "slide_from_right" }}
-                />
-                <Stack.Screen
-                  name="clinician/[id]"
-                  options={{ animation: "slide_from_right" }}
-                />
-                <Stack.Screen
-                  name="brief/[id]"
-                  options={{ animation: "slide_from_right" }}
-                />
-                <Stack.Screen
-                  name="brief/new"
-                  options={{
-                    animation: "slide_from_bottom",
-                    presentation: "modal",
-                    gestureEnabled: true,
-                  }}
-                />
-                <Stack.Screen
-                  name="settings"
-                  options={{
-                    animation: "slide_from_right",
-                  }}
-                />
-                <Stack.Screen
-                  name="record"
-                  options={{
+            <EntitlementProvider>
+              <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
+                <StatusBar style={isDark ? "light" : "dark"} />
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
                     animation: "fade",
-                    presentation: "fullScreenModal",
+                    animationDuration: 250,
+                    contentStyle: { backgroundColor: colors.bgPrimary },
                   }}
-                />
-                <Stack.Screen
-                  name="appointment-new"
-                  options={{
-                    animation: "slide_from_right",
-                  }}
-                />
-              </Stack>
-              <RadialWipe />
-            </View>
+                >
+                  <Stack.Screen name="index" />
+                  <Stack.Screen name="onboarding" options={{ animation: "fade" }} />
+                  <Stack.Screen name="(tabs)" options={{ animation: "fade" }} />
+                  <Stack.Screen name="recording/[id]" options={{ animation: "slide_from_right" }} />
+                  <Stack.Screen
+                    name="appointment/[id]"
+                    options={{ animation: "slide_from_right" }}
+                  />
+                  <Stack.Screen name="clinician/[id]" options={{ animation: "slide_from_right" }} />
+                  <Stack.Screen name="brief/[id]" options={{ animation: "slide_from_right" }} />
+                  <Stack.Screen
+                    name="brief/new"
+                    options={{
+                      animation: "slide_from_bottom",
+                      presentation: "modal",
+                      gestureEnabled: true,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="paywall"
+                    options={{
+                      animation: "slide_from_bottom",
+                      presentation: "modal",
+                      gestureEnabled: true,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="settings"
+                    options={{
+                      animation: "slide_from_right",
+                    }}
+                  />
+                  <Stack.Screen
+                    name="record"
+                    options={{
+                      animation: "fade",
+                      presentation: "fullScreenModal",
+                    }}
+                  />
+                  <Stack.Screen
+                    name="appointment-new"
+                    options={{
+                      animation: "slide_from_right",
+                    }}
+                  />
+                </Stack>
+                <RadialWipe />
+              </View>
+            </EntitlementProvider>
           </TransitionProvider>
         </SafeAreaProvider>
       </QueryClientProvider>
     </GestureHandlerRootView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   root: { flex: 1 },

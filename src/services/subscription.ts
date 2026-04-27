@@ -32,8 +32,37 @@ export async function purchase(planId: Plan['id']): Promise<{ ok: true }> {
   return { ok: true };
 }
 
+export type RestoreResult =
+  | { restored: true; status: 'trial' | 'active'; trialEndsAt: string | null }
+  | { restored: false };
+
+/**
+ * Restore previously-purchased subscription. App Store / Play Store
+ * require this affordance on every paywall — without it, App Review
+ * will reject the submission. Currently mocked to "no purchases
+ * found" because the RevenueCat SDK is not yet wired; this matches
+ * the shape the real call will return so swap-in is mechanical.
+ *
+ * Real implementation when RevenueCat lands:
+ *   const customerInfo = await Purchases.restorePurchases();
+ *   const sub = customerInfo.entitlements.active['plus'];
+ *   if (sub) {
+ *     setSubscription(sub.willRenew ? 'active' : 'trial', sub.expirationDate);
+ *     return { restored: true, status: ..., trialEndsAt: ... };
+ *   }
+ *   return { restored: false };
+ */
+export async function restorePurchases(): Promise<RestoreResult> {
+  await new Promise((r) => setTimeout(r, 1200));
+  // Mocked. The real RevenueCat call goes here. See comment above.
+  return { restored: false };
+}
+
 export function isEntitled(): boolean {
-  if (__DEV__) return true;
+  // No dev bypass: the in-app paywall gate has to be testable in
+  // development. Use the dev "skip paywall" affordance on the
+  // onboarding paywall (which sets the trial status) when seeding
+  // an entitled state for local testing.
   const { subscriptionStatus } = useProfileStore.getState();
   return subscriptionStatus === 'trial' || subscriptionStatus === 'active';
 }
