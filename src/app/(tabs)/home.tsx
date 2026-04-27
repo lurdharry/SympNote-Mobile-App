@@ -6,10 +6,10 @@ import { Settings } from "lucide-react-native";
 import Animated, { Easing, FadeIn, FadeOut } from "react-native-reanimated";
 import { fontScale, makeStyles, moderateScale, spacing, typography, useTheme } from "@/theme";
 import { SceneTransition } from "@/components/navigation/SceneTransition";
-import { hapticHeavy, hapticLight } from "@/services/haptics";
+import { hapticLight } from "@/services/haptics";
 import { useHomeDashboard } from "@/hooks/useHomeDashboard";
 import { useHoldToRecord } from "@/hooks/useHoldToRecord";
-import { useStructureTranscript } from "@/hooks/useStructureTranscript";
+import { usePaywallGate } from "@/hooks/usePaywallGate";
 import { UpNextCard } from "@/components/home/UpNextCard";
 import { TimelineCard } from "@/components/home/TimelineCard";
 import { TodayCheckIn } from "@/components/home/TodayCheckIn";
@@ -25,20 +25,24 @@ import { useRecordingsStore } from "@/stores/useRecordingsStore";
 import { useBriefsStore } from "@/stores/useBriefsStore";
 import { unbriefedRecordings } from "@/utils/briefSource";
 import { Sparkles } from "lucide-react-native";
-import { GeminiQuotaError } from "@/services/ai";
 import type { Clinician } from "@/stores/types";
-import { uuid } from "@/utils/uuid";
+import { useOverlayRecording } from "@/hooks/useOverlayRecording";
 
-// Module-level frozen fallback so the careTeam selector returns a
-// stable reference when personalization is null. Without this, the
-// `?? []` inline returns a fresh array each call and Zustand's
-// snapshot comparison loops forever.
 const EMPTY_CARETEAM: readonly Clinician[] = Object.freeze([]);
 
 const TabHome: React.FC = () => {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useStyles();
+
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = useCallback((text: string) => {
+    setToast(text);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToast(null), 1800);
+  }, []);
 
   const {
     nextAppointment,
@@ -53,6 +57,20 @@ const TabHome: React.FC = () => {
     recentTopTag,
   } = useHomeDashboard();
 
+  const {
+    selectedClinicians,
+    toggleClinician,
+    onSave,
+    isExtracting,
+    postCapture,
+    onCommit,
+    dismissOverlay,
+    retryInSec,
+    aiError,
+    editValue,
+    setEditValue,
+  } = useOverlayRecording({ showToast });
+
   const allBriefs = useBriefsStore((s) => s.briefs);
   const allRecordings = useRecordingsStore((s) => s.recordings);
   const unbriefedCount = unbriefedRecordings(allRecordings, allBriefs).length;
@@ -65,135 +83,57 @@ const TabHome: React.FC = () => {
   const dismissFirstEntryHero = useProfileStore((s) => s.dismissFirstEntryHero);
   const showFirstEntryHero = recordingsCount === 1 && !!firstRecording && !firstEntryHeroDismissed;
 
-  // ── Hold-to-record on the FAB ──────────────────────────────────
-  // Short-tap → open the full /record screen (voice + type + review).
-  // Held ≥500ms → start recognition with theatrical overlay.
-  // Released with a usable transcript → store as pending draft and
-  // open /record in review phase via source=home-hold.
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const showToast = useCallback((text: string) => {
-    setToast(text);
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = setTimeout(() => setToast(null), 1800);
-  }, []);
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     };
   }, []);
 
-  // Post-release state — the captured transcript + duration we're
-  // reviewing. Null means no review in progress. When this is set
-  // alongside isRecording=false the overlay stays mounted in
-  // review/extracting mode instead of dismissing.
-  const [postCapture, setPostCapture] = useState<{
-    transcript: string;
-    durationSec: number;
-    createdAt: string;
-  } | null>(null);
-  const [editValue, setEditValue] = useState("");
-  const [aiError, setAiError] = useState<string | null>(null);
-  const [retryInSec, setRetryInSec] = useState(0);
-  const [isExtracting, setIsExtracting] = useState(false);
-  const [selectedClinicians, setSelectedClinicians] = useState<string[]>([]);
-
   const careTeam = useProfileStore(
     (s) => s.personalization?.careTeam ?? EMPTY_CARETEAM,
   ) as Clinician[];
 
-  const toggleClinician = useCallback((name: string) => {
-    setSelectedClinicians((prev) => {
-      const norm = name.trim();
-      const lower = norm.toLowerCase();
-      const hit = prev.findIndex((s) => s.trim().toLowerCase() === lower);
-      if (hit >= 0) return prev.filter((_, i) => i !== hit);
-      return [...prev, norm];
-    });
-  }, []);
-
-  // Retry countdown tick for quota errors.
-  useEffect(() => {
-    if (retryInSec <= 0) return;
-    const id = setInterval(() => {
-      setRetryInSec((n) => (n <= 1 ? 0 : n - 1));
-    }, 1000);
-    return () => clearInterval(id);
-  }, [retryInSec]);
+  const { requireEntitlement, entitled } = usePaywallGate();
 
   const { state: holdState, handlers: holdHandlers } = useHoldToRecord({
     holdThresholdMs: 500,
-    minCommitDurationMs: 1000,
+    // 10s floor — short recordings produce thin briefs; we'd rather
+    // ask for a few more seconds than save junk.
+    minCommitDurationMs: 10000,
     onShortTap: () => {
+      if (!requireEntitlement()) return;
       hapticLight();
       router.push("/record");
     },
     onDiscard: (reason) => {
       hapticLight();
-      showToast(reason === "too-short" ? "Hold a little longer" : "Didn't catch that");
+      showToast(
+        reason === "too-short"
+          ? "Hold for at least 10 seconds — your brief is built from this."
+          : "Didn't catch that",
+      );
     },
-    onCommit: ({ transcript, durationSec }) => {
-      // Stay on home. Transition the overlay to review mode with
-      // the captured transcript prefilled and editable.
-      setPostCapture({ transcript, durationSec, createdAt: new Date().toISOString() });
-      setEditValue(transcript);
-      setAiError(null);
-      setRetryInSec(0);
-      setSelectedClinicians([]);
-    },
+    onCommit,
   });
 
-  const structureMutation = useStructureTranscript();
+  const fabPressIn = useCallback(() => {
+    if (!entitled) {
+      requireEntitlement();
+      return;
+    }
+    holdHandlers.onPressIn();
+  }, [entitled, requireEntitlement, holdHandlers]);
 
-  const dismissOverlay = useCallback(() => {
-    setPostCapture(null);
-    setEditValue("");
-    setAiError(null);
-    setRetryInSec(0);
-    setIsExtracting(false);
-    setSelectedClinicians([]);
-  }, []);
+  // The TodayCheckIn quick-record affordance shares the same gate.
+  const onCheckInPress = useCallback(() => {
+    if (!requireEntitlement()) return;
+    router.push("/record");
+  }, [requireEntitlement, router]);
 
   const onReRecord = useCallback(() => {
     hapticLight();
     dismissOverlay();
   }, [dismissOverlay]);
-
-  const onSave = useCallback(() => {
-    if (!postCapture) return;
-    const text = editValue.trim();
-    if (!text) {
-      showToast("Nothing to save");
-      return;
-    }
-    setAiError(null);
-    setIsExtracting(true);
-    structureMutation.mutate(text, {
-      onSuccess: (structured) => {
-        const tags = Array.from(new Set(structured.symptoms.slice(0, 2).filter(Boolean)));
-        useRecordingsStore.getState().add({
-          id: uuid(),
-          createdAt: postCapture.createdAt,
-          durationSec: postCapture.durationSec,
-          transcript: text,
-          structured,
-          tags,
-          ...(selectedClinicians.length > 0 ? { clinicianNames: selectedClinicians } : {}),
-        });
-        hapticHeavy();
-        dismissOverlay();
-      },
-      onError: (e) => {
-        setIsExtracting(false);
-        if (e instanceof GeminiQuotaError) {
-          setAiError(e.message);
-          setRetryInSec(e.retryAfterSec ?? 0);
-        } else {
-          setAiError(e instanceof Error ? e.message : "Could not structure transcript.");
-        }
-      },
-    });
-  }, [postCapture, editValue, selectedClinicians, structureMutation, showToast, dismissOverlay]);
 
   const overlayMode: HoldOverlayMode = holdState.isRecording
     ? "recording"
@@ -271,18 +211,12 @@ const TabHome: React.FC = () => {
                 accessibilityRole="button"
                 accessibilityLabel="Generate brief from new notes"
               >
-                <Sparkles
-                  size={moderateScale(14)}
-                  color={colors.accent}
-                  strokeWidth={2.2}
-                />
+                <Sparkles size={moderateScale(14)} color={colors.accent} strokeWidth={2.2} />
                 <Text style={[styles.briefsPeekText, { color: colors.accent }]}>
                   {unbriefedCount} {unbriefedCount === 1 ? "note" : "notes"} ready to brief
                 </Text>
                 <View style={{ flex: 1 }} />
-                <Text style={[styles.briefsPeekCta, { color: colors.accent }]}>
-                  Open Briefs ›
-                </Text>
+                <Text style={[styles.briefsPeekCta, { color: colors.accent }]}>Open Briefs ›</Text>
               </Pressable>
             )}
 
@@ -302,7 +236,7 @@ const TabHome: React.FC = () => {
                   recordingsCount={recordingsCount}
                   lastRecordingAt={lastRecordingAt}
                   recentTopTag={recentTopTag}
-                  onPress={() => router.push("/record")}
+                  onPress={onCheckInPress}
                 />
               )}
             </View>
@@ -329,7 +263,7 @@ const TabHome: React.FC = () => {
           </ScrollView>
 
           <RecordFAB
-            onPressIn={holdHandlers.onPressIn}
+            onPressIn={fabPressIn}
             onPressOut={holdHandlers.onPressOut}
             isRecording={holdState.isRecording}
             volume={holdState.volume}

@@ -1,3 +1,4 @@
+// @ts-nocheck — orphan file, kept on disk for restoration. Do not edit.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { omit } from 'lodash';
 import { useProfileStore } from '@/stores/useProfileStore';

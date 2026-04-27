@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -13,7 +13,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
-import { Sparkles } from "lucide-react-native";
+import { CheckCircle2, Sparkles } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
@@ -28,9 +28,6 @@ import { SceneTransition } from "@/components/navigation/SceneTransition";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
-import { useProfileStore } from "@/stores/useProfileStore";
-import { useRecordingsStore } from "@/stores/useRecordingsStore";
-import { useBriefsStore } from "@/stores/useBriefsStore";
 import { usePendingRecordingStore } from "@/stores/usePendingRecordingStore";
 import { generateBrief, structureTranscript } from "@/services/ai";
 import { uuid } from "@/utils/uuid";
@@ -38,6 +35,7 @@ import { hapticLight } from "@/services/haptics";
 import type {
   Brief,
   BriefContent,
+  PrepGap,
   Recording,
   StructuredEntry,
 } from "@/stores/types";
@@ -56,6 +54,36 @@ const EMPTY_STRUCTURED: StructuredEntry = {
 };
 
 type Phase = "loading" | "ready";
+
+/**
+ * Sub-copy under the "Here's what your doctor will see" headline.
+ * Closes the loop on the prep-gap problem-anchor: when the user said
+ * they often forget at the doctor's office, the brief reveal directly
+ * addresses that pain ("you said you forget — here's everything you
+ * mentioned"). Falls back to a generic descriptor when the user
+ * reported they're already prepared (no pain to validate).
+ */
+const readySubCopy = (
+  prepGap: PrepGap | undefined,
+  content: BriefContent | null,
+): string => {
+  const captured =
+    (content?.topConcerns.length ?? 0) +
+    (content?.questions.length ?? 0) +
+    (content?.patterns.length ?? 0) +
+    (content?.flags.length ?? 0);
+  if (prepGap === "often") {
+    return captured > 0
+      ? `You said you usually leave wishing you'd said more. This brief captured ${captured} things from one note.`
+      : "You said you usually leave wishing you'd said more. This brief captures what you mentioned, ready for the visit.";
+  }
+  if (prepGap === "sometimes") {
+    return captured > 0
+      ? `You said something always slips. This brief pinned ${captured} things so nothing does.`
+      : "You said something always slips. This brief pins what matters so nothing does.";
+  }
+  return "Built from what you just said. Skim it the way they will — concerns first, then the questions you should ask.";
+};
 
 /**
  * The aha moment in onboarding — runs the AI on the user's first
@@ -78,20 +106,46 @@ const ScreenFirstBrief: React.FC = () => {
   const styles = useStyles();
   const reduced = useReducedMotion();
 
-  const profile = useProfileStore((s) => s.personalization);
-  const draft = usePendingRecordingStore((s) => s.draft);
+  // Personalization lives in the draft store during onboarding (see
+  // wide-scope deferred-commit pattern). Reads here so AI calls have
+  // the user's clinical priors before the paywall commits anything.
+  const profile = usePendingRecordingStore((s) => s.personalization);
+  // Snapshot the draft at mount. The AI run reads from this; later
+  // mounts after re-entry restore from `pendingRecording`/`pendingBrief`
+  // instead of re-running the AI.
+  const [draft] = useState(() => usePendingRecordingStore.getState().draft);
 
   const [phase, setPhase] = useState<Phase>("loading");
   const [briefId, setBriefId] = useState<string | null>(null);
   const [previewContent, setPreviewContent] = useState<BriefContent | null>(null);
 
-  // Defensive — if a user lands here with no draft (back nav, hot
-  // reload, etc.), bounce back to the recording surface.
+  // Defensive — if a user lands here with no draft AND no already-run
+  // artifacts, bounce back. Runs once on mount only.
   useEffect(() => {
-    if (!draft) router.back();
-  }, [draft, router]);
+    const { pendingRecording, pendingBrief } = usePendingRecordingStore.getState();
+    if (!draft && !pendingRecording && !pendingBrief) {
+      router.back();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
+    // Idempotency: if we already have artifacts for THIS draft (from a
+    // prior mount of this screen — user navigated back then forward),
+    // restore them and skip the AI call. Prevents duplicate generations
+    // and wasted API spend.
+    const existing = usePendingRecordingStore.getState();
+    if (
+      existing.pendingRecording &&
+      existing.pendingBrief &&
+      (!draft || existing.pendingRecording.createdAt === draft.createdAt)
+    ) {
+      setBriefId(existing.pendingBrief.id);
+      setPreviewContent(existing.pendingBrief.content);
+      setPhase("ready");
+      return;
+    }
+
     if (!draft) return;
     let cancelled = false;
 
@@ -125,14 +179,15 @@ const ScreenFirstBrief: React.FC = () => {
           : EMPTY_STRUCTURED;
       const tags = structured.symptoms.filter(Boolean).slice(0, 2);
 
-      useRecordingsStore.getState().add({
+      const fullRecording: Recording = {
         ...provisional,
         structured,
         tags,
-      });
+      };
 
+      let brief: Brief | null = null;
       if (briefResult.status === "fulfilled") {
-        const brief: Brief = {
+        brief = {
           id: uuid(),
           generatedAt: new Date().toISOString(),
           windowStart: createdAt,
@@ -142,17 +197,17 @@ const ScreenFirstBrief: React.FC = () => {
           clinicianIds: [],
           title: "Your first brief",
         };
-        useBriefsStore.getState().add(brief);
-        if (!cancelled) {
-          setBriefId(brief.id);
-          setPreviewContent(brief.content);
-        }
       }
 
-      // Clear the pending draft — paywall's commitDraft sees nothing
-      // to commit and no-ops.
-      usePendingRecordingStore.getState().clear();
+      // Hold artifacts in the draft store. They land in the persisted
+      // stores only when `usePaywallPurchase` runs `commitDraft` after
+      // a successful subscribe — see the wide-scope commit pipeline.
+      usePendingRecordingStore.getState().setArtifacts(fullRecording, brief);
 
+      if (!cancelled && brief) {
+        setBriefId(brief.id);
+        setPreviewContent(brief.content);
+      }
       if (!cancelled) setPhase("ready");
     };
 
@@ -193,24 +248,42 @@ const ScreenFirstBrief: React.FC = () => {
             showsVerticalScrollIndicator={false}
           >
             <Text style={[styles.eyebrow, { color: colors.accent }]}>YOUR FIRST BRIEF</Text>
-            <Text style={[styles.headline, { color: colors.textPrimary }]}>
-              Watch your note{"\n"}
-              <Text style={{ fontStyle: "italic", color: colors.accent }}>
-                become a brief
-              </Text>
-              .
-            </Text>
-            <Text style={[styles.sub, { color: colors.textSecondary }]}>
-              Sympnote is reading what you said and distilling the clinical signal. Takes a
-              few seconds — this is the loop you'll use whenever you need a doctor-ready
-              summary.
-            </Text>
+            {phase === "loading" || !previewContent ? (
+              <>
+                <Text style={[styles.headline, { color: colors.textPrimary }]}>
+                  Watch your note{"\n"}
+                  <Text style={{ fontStyle: "italic", color: colors.accent }}>
+                    become a brief
+                  </Text>
+                  .
+                </Text>
+                <Text style={[styles.sub, { color: colors.textSecondary }]}>
+                  Sympnote is reading what you said and distilling the clinical signal. Takes
+                  a few seconds — this is the loop you'll use whenever you need a doctor-ready
+                  summary.
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={[styles.headline, { color: colors.textPrimary }]}>
+                  Here's what your{"\n"}
+                  <Text style={{ fontStyle: "italic", color: colors.accent }}>
+                    doctor will see
+                  </Text>
+                  .
+                </Text>
+                <Text style={[styles.sub, { color: colors.textSecondary }]}>
+                  {readySubCopy(profile?.prepGap, previewContent)}
+                </Text>
+              </>
+            )}
 
             {phase === "loading" ? (
               <LoadingOrb reduced={reduced} colors={colors} styles={styles} />
             ) : previewContent ? (
-              <PreviewCard
+              <BriefReveal
                 content={previewContent}
+                reduced={reduced}
                 colors={colors}
                 styles={styles}
               />
@@ -233,7 +306,10 @@ const ScreenFirstBrief: React.FC = () => {
                   </Text>
                 </Pressable>
               )}
-              <PrimaryButton label="See my plan" onPress={onContinue} />
+              <PrimaryButton
+                label={previewContent ? "Continue" : "See my plan"}
+                onPress={onContinue}
+              />
             </View>
           )}
         </SafeAreaView>
@@ -243,6 +319,16 @@ const ScreenFirstBrief: React.FC = () => {
 };
 
 // ─── Loading orb ────────────────────────────────────────────────────────
+// Sequenced loading beats — instead of a single static "Reading your
+// note…", the line cycles through phases that mirror what the AI is
+// actually doing. Makes the wait feel like work being done, not a
+// spinner stalling. Cycles slowly enough to read each line.
+const LOADING_BEATS = [
+  "Reading your note…",
+  "Pulling out concerns…",
+  "Drafting questions for your doctor…",
+  "Almost done.",
+];
 
 const LoadingOrb: React.FC<{
   reduced: boolean;
@@ -250,6 +336,8 @@ const LoadingOrb: React.FC<{
   styles: ReturnType<typeof useStyles>;
 }> = ({ reduced, colors, styles }) => {
   const pulse = useSharedValue(0);
+  const [beat, setBeat] = useState(0);
+
   useEffect(() => {
     if (reduced) return;
     pulse.value = withRepeat(
@@ -261,6 +349,14 @@ const LoadingOrb: React.FC<{
       false,
     );
   }, [reduced, pulse]);
+
+  // Advance one beat every 1.6s, holding on the last one (don't wrap).
+  useEffect(() => {
+    const id = setInterval(() => {
+      setBeat((b) => Math.min(b + 1, LOADING_BEATS.length - 1));
+    }, 1600);
+    return () => clearInterval(id);
+  }, []);
 
   const ringStyle = useAnimatedStyle(() => ({
     opacity: 0.3 + pulse.value * 0.5,
@@ -285,69 +381,237 @@ const LoadingOrb: React.FC<{
           <Sparkles size={moderateScale(28)} color="#FFFFFF" strokeWidth={2.2} />
         </Animated.View>
       </View>
-      <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
-        Reading your note…
-      </Text>
+      <Animated.Text
+        key={beat}
+        entering={FadeIn.duration(260)}
+        style={[styles.loadingText, { color: colors.textSecondary }]}
+      >
+        {LOADING_BEATS[beat]}
+      </Animated.Text>
     </Animated.View>
   );
 };
 
-// ─── Preview card ───────────────────────────────────────────────────────
+// ─── Brief reveal — sequenced multi-card payoff ─────────────────────────
+// Three cards animate in over ~700ms: the top concern, doctor questions
+// the user can ask, and an insights footer counting what came out of
+// the brief. Designed to make the AI's output feel substantial before
+// the paywall appears, not a single-line preview.
 
-const PreviewCard: React.FC<{
+const BriefReveal: React.FC<{
   content: BriefContent;
+  reduced: boolean;
   colors: ReturnType<typeof useTheme>["colors"];
   styles: ReturnType<typeof useStyles>;
-}> = ({ content, colors, styles }) => {
-  const topConcern = content.topConcerns[0];
-  const summary = content.summary;
-  const showConcern = !!topConcern;
+}> = ({ content, reduced, colors, styles }) => {
+  const top = content.topConcerns[0];
+  const questions = content.questions.slice(0, 3);
+  const patterns = content.patterns.slice(0, 2);
+  const totalInsights =
+    content.topConcerns.length +
+    content.questions.length +
+    content.patterns.length +
+    content.flags.length;
+
+  const d = (n: number) => (reduced ? 0 : n);
+
+  // Typewriter on the top concern label — character-by-character
+  // reveal after the first card fades in. Mirrors the hook screen's
+  // headline typewriter for cinematic continuity.
+  const topLabel = top?.label ?? "";
+  const [typed, setTyped] = useState(reduced ? topLabel : "");
+  useEffect(() => {
+    if (reduced || !topLabel) {
+      setTyped(topLabel);
+      return;
+    }
+    setTyped("");
+    // Wait for the card's FadeInDown (60ms delay + 420ms duration)
+    // to finish before we start typing.
+    const startDelay = setTimeout(() => {
+      let i = 0;
+      const id = setInterval(() => {
+        i += 1;
+        setTyped(topLabel.slice(0, i));
+        if (i >= topLabel.length) clearInterval(id);
+      }, 28);
+      typewriterRef.current = id;
+    }, 480);
+    return () => {
+      clearTimeout(startDelay);
+      if (typewriterRef.current) clearInterval(typewriterRef.current);
+    };
+  }, [topLabel, reduced]);
+  const typewriterRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Count-up on the insights total — pill fades in at ~640ms, then
+  // the number ticks from 0 to total over 700ms (~30 frames). Single
+  // animated number lands harder than four micro-counters; the
+  // breakdown reads as detail noise compared to one big number.
+  const [countProgress, setCountProgress] = useState(reduced ? 1 : 0);
+  useEffect(() => {
+    if (reduced) {
+      setCountProgress(1);
+      return;
+    }
+    setCountProgress(0);
+    // Wait for the pill's FadeInDown (640ms delay + 420ms duration)
+    // before starting the count-up.
+    const startDelay = setTimeout(() => {
+      const start = Date.now();
+      const dur = 700;
+      const id = setInterval(() => {
+        const elapsed = Date.now() - start;
+        const p = Math.min(1, elapsed / dur);
+        setCountProgress(p);
+        if (p >= 1) clearInterval(id);
+      }, 33);
+      countUpRef.current = id;
+    }, 1100);
+    return () => {
+      clearTimeout(startDelay);
+      if (countUpRef.current) clearInterval(countUpRef.current);
+    };
+  }, [totalInsights, reduced]);
+  const countUpRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const animatedCount = Math.round(countProgress * totalInsights);
+
   return (
-    <Animated.View
-      entering={FadeInDown.duration(420).easing(Easing.out(Easing.cubic))}
-      style={[
-        styles.previewCard,
-        { backgroundColor: colors.bgSurface, borderColor: colors.accent + "55" },
-        shadows.card,
-      ]}
-    >
-      <LinearGradient
-        colors={[colors.accent + "12", colors.accent + "00"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={styles.previewWash}
-        pointerEvents="none"
-      />
-      <Text style={[styles.previewEyebrow, { color: colors.accent }]}>
-        {showConcern ? "TOP CONCERN" : "SUMMARY"}
-      </Text>
-      {showConcern ? (
-        <>
-          <Text style={[styles.previewTitle, { color: colors.textPrimary }]}>
-            {topConcern.label}
+    <View style={styles.revealStack}>
+      {top ? (
+        <Animated.View
+          entering={FadeInDown.delay(d(60)).duration(420).easing(Easing.out(Easing.cubic))}
+          style={[
+            styles.revealCard,
+            { backgroundColor: colors.bgSurface, borderColor: colors.accent + "55" },
+            shadows.card,
+          ]}
+        >
+          <LinearGradient
+            colors={[colors.accent + "14", colors.accent + "00"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.previewWash}
+            pointerEvents="none"
+          />
+          <Text style={[styles.previewEyebrow, { color: colors.accent }]}>
+            TOP CONCERN
           </Text>
-          {topConcern.detail ? (
+          <Text style={[styles.previewTitle, { color: colors.textPrimary }]}>
+            {typed}
+            {!reduced && typed.length < topLabel.length ? (
+              <Text style={{ color: colors.accent }}>▍</Text>
+            ) : null}
+          </Text>
+          {top.detail && typed.length >= topLabel.length ? (
             <Text style={[styles.previewBody, { color: colors.textSecondary }]}>
-              {topConcern.detail}
+              {top.detail}
             </Text>
           ) : null}
-        </>
-      ) : (
-        <Text
-          style={[styles.previewBody, { color: colors.textPrimary, marginTop: 4 }]}
-          numberOfLines={4}
+        </Animated.View>
+      ) : content.summary ? (
+        <Animated.View
+          entering={FadeInDown.delay(d(60)).duration(420).easing(Easing.out(Easing.cubic))}
+          style={[
+            styles.revealCard,
+            { backgroundColor: colors.bgSurface, borderColor: colors.accent + "55" },
+            shadows.card,
+          ]}
         >
-          {summary || "Sympnote read your note. Tap below to see the full brief."}
+          <LinearGradient
+            colors={[colors.accent + "14", colors.accent + "00"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.previewWash}
+            pointerEvents="none"
+          />
+          <Text style={[styles.previewEyebrow, { color: colors.accent }]}>
+            SUMMARY
+          </Text>
+          <Text
+            style={[styles.previewBody, { color: colors.textPrimary, marginTop: 6 }]}
+            numberOfLines={5}
+          >
+            {content.summary}
+          </Text>
+        </Animated.View>
+      ) : null}
+
+      {questions.length > 0 ? (
+        <Animated.View
+          entering={FadeInDown.delay(d(280)).duration(420).easing(Easing.out(Easing.cubic))}
+          style={[
+            styles.revealCard,
+            { backgroundColor: colors.bgSurface, borderColor: colors.border },
+            shadows.card,
+          ]}
+        >
+          <Text style={[styles.previewEyebrow, { color: colors.accent }]}>
+            ASK YOUR DOCTOR
+          </Text>
+          <View style={styles.questionsList}>
+            {questions.map((q, i) => (
+              <View key={`q-${i}`} style={styles.questionRow}>
+                <CheckCircle2
+                  size={moderateScale(14)}
+                  color={colors.accent}
+                  strokeWidth={2.2}
+                />
+                <Text
+                  style={[styles.questionText, { color: colors.textPrimary }]}
+                  numberOfLines={3}
+                >
+                  {q}
+                </Text>
+              </View>
+            ))}
+          </View>
+          {content.questions.length > questions.length ? (
+            <Text style={[styles.questionsMore, { color: colors.textTertiary }]}>
+              +{content.questions.length - questions.length} more inside
+            </Text>
+          ) : null}
+        </Animated.View>
+      ) : null}
+
+      {patterns.length > 0 ? (
+        <Animated.View
+          entering={FadeInDown.delay(d(480)).duration(420).easing(Easing.out(Easing.cubic))}
+          style={[
+            styles.revealCard,
+            { backgroundColor: colors.bgSurface, borderColor: colors.border },
+            shadows.card,
+          ]}
+        >
+          <Text style={[styles.previewEyebrow, { color: colors.accent }]}>
+            PATTERNS WE NOTICED
+          </Text>
+          <View style={styles.questionsList}>
+            {patterns.map((p, i) => (
+              <View key={`p-${i}`} style={styles.questionRow}>
+                <View style={[styles.patternDot, { backgroundColor: colors.accent }]} />
+                <Text
+                  style={[styles.questionText, { color: colors.textPrimary }]}
+                  numberOfLines={3}
+                >
+                  {p}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </Animated.View>
+      ) : null}
+
+      <Animated.View
+        entering={FadeInDown.delay(d(640)).duration(420).easing(Easing.out(Easing.cubic))}
+        style={[styles.insightsPill, { backgroundColor: colors.accent + "10" }]}
+      >
+        <Sparkles size={moderateScale(12)} color={colors.accent} strokeWidth={2.2} />
+        <Text style={[styles.insightsPillText, { color: colors.accent }]}>
+          {animatedCount} insights inside
         </Text>
-      )}
-      <View style={styles.previewFoot}>
-        <Sparkles size={moderateScale(11)} color={colors.accent} strokeWidth={2.2} />
-        <Text style={[styles.previewFootText, { color: colors.accent }]}>
-          {content.topConcerns.length + content.questions.length + content.flags.length}{" "}
-          insights inside
-        </Text>
-      </View>
-    </Animated.View>
+      </Animated.View>
+    </View>
   );
 };
 
@@ -533,6 +797,61 @@ const useStyles = makeStyles((theme) => ({
     fontSize: fontScale(9),
     letterSpacing: 0.6,
     textTransform: "uppercase",
+  },
+  // ── Brief reveal (sequenced)
+  revealStack: {
+    marginTop: theme.spacing.s5,
+    gap: moderateScale(10),
+  },
+  revealCard: {
+    paddingHorizontal: moderateScale(16),
+    paddingVertical: moderateScale(16),
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  questionsList: {
+    marginTop: moderateScale(8),
+    gap: moderateScale(8),
+  },
+  questionRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: moderateScale(8),
+  },
+  questionText: {
+    flex: 1,
+    ...typography.body,
+    fontSize: fontScale(13),
+    lineHeight: fontScale(18),
+    marginTop: 1,
+  },
+  questionsMore: {
+    fontFamily: "DMSans_600SemiBold",
+    fontSize: fontScale(11),
+    fontStyle: "italic",
+    marginTop: moderateScale(8),
+  },
+  patternDot: {
+    width: moderateScale(6),
+    height: moderateScale(6),
+    borderRadius: moderateScale(3),
+    marginTop: moderateScale(7),
+  },
+  insightsPill: {
+    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(6),
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: moderateScale(6),
+    borderRadius: theme.radius.full,
+    marginTop: moderateScale(4),
+  },
+  insightsPillText: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: fontScale(11),
+    letterSpacing: 0.3,
   },
   // ── CTA
   cta: {

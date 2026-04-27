@@ -35,9 +35,7 @@ export const PaywallFooter: React.FC<PaywallFooterProps> = ({ selectedPlan, load
     try {
       const result = await restorePurchases();
       if (result.restored) {
-        useProfileStore
-          .getState()
-          .setSubscription(result.status, result.trialEndsAt);
+        useProfileStore.getState().setSubscription(result.status, result.trialEndsAt);
         Alert.alert(
           "Subscription restored",
           "We've reactivated your Sympnote Plus access on this device.",

@@ -5,6 +5,7 @@ import {
   Heart,
   Info,
   Lock,
+  RotateCcw,
   Sparkles,
   Trash2,
   User as UserIcon,
@@ -22,6 +23,7 @@ import type {
   SubscriptionStatus,
 } from '@/stores/types';
 import { exportUserData } from '@/services/export';
+import { restorePurchases } from '@/services/subscription';
 
 type IconRef = typeof UserIcon;
 
@@ -131,13 +133,9 @@ const profileRows = (
         : 'None added',
     onPress: () => router.push('/care-team'),
   },
-  {
-    Icon: Heart,
-    label:
-      personalization && personalization.focus.length > 1 ? 'Focus areas' : 'Focus area',
-    value: personalization ? formatFocus(personalization.focus) : 'Not set',
-    onPress: () => router.push('/onboarding/focus'),
-  },
+  // Focus row dropped: the onboarding focus screen is orphaned (moved
+  // to _unused), and there's no in-app replacement yet. Restore this
+  // row when a contextual prompt or settings editor for focus ships.
 ];
 
 /**
@@ -203,10 +201,50 @@ export const useSettingsSections = (): SettingsSection[] => {
           badge: isEntitled ? 'PLUS' : undefined,
           onPress: () => {
             if (isEntitled) openManageSubscription();
-            else router.push('/onboarding/paywall');
+            // Use the in-app gate paywall (dismissible) for users who
+            // are already past onboarding. The onboarding paywall is
+            // hard-gated and would lock them out.
+            else router.push('/paywall');
           },
+        },
+        {
+          Icon: RotateCcw,
+          label: 'Restore purchases',
+          value: 'Recover a previous subscription',
+          onPress: handleRestore,
         },
       ],
     },
   ];
+};
+
+/**
+ * Settings-level Restore handler. Mirrors the paywall's restore
+ * behavior so users who never see a paywall can still recover a
+ * subscription tied to this Apple ID. Required for App Review on
+ * subscription apps.
+ */
+const handleRestore = async () => {
+  try {
+    const result = await restorePurchases();
+    if (result.restored) {
+      useProfileStore
+        .getState()
+        .setSubscription(result.status, result.trialEndsAt);
+      Alert.alert(
+        'Subscription restored',
+        "We've reactivated your Sympnote Plus access on this device.",
+      );
+    } else {
+      Alert.alert(
+        'No purchases found',
+        "We couldn't find an active subscription on this Apple ID. If you believe this is wrong, contact support@sympnote.app.",
+      );
+    }
+  } catch (e) {
+    Alert.alert(
+      "Couldn't restore",
+      e instanceof Error ? e.message : 'Something went wrong reaching the App Store.',
+    );
+  }
 };

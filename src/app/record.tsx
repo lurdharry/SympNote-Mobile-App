@@ -22,6 +22,8 @@ import { useAppointmentsStore } from "../stores/useAppointmentsStore";
 import { uuid } from "../utils/uuid";
 import { hapticHeavy, hapticLight } from "../services/haptics";
 import { Phase } from "../components/recording/types";
+import { useEntitlement } from "../contexts/EntitlementContext";
+import { LockedView } from "../components/paywall/LockedView";
 
 /**
  * Type-only compose surface for the in-app /record route. Voice
@@ -39,6 +41,11 @@ const RecordModal: React.FC = () => {
   const styles = useStyles();
   const flow = useRecordingFlow();
   const insets = useSafeAreaInsets();
+  // View-level gate. The home FAB pre-checks entitlement, but a user
+  // can also land here via deep link or stack restoration after a
+  // trial expiry — so the screen guards itself. The early return
+  // happens after all hook calls below to satisfy rules-of-hooks.
+  const { entitled } = useEntitlement();
 
   const careTeam = useProfileStore((s) => s.personalization?.careTeam ?? []);
   const recordingsCount = useRecordingsStore((s) => s.recordings.length);
@@ -112,6 +119,15 @@ const RecordModal: React.FC = () => {
   const subhead = linkedClinician
     ? "Whatever you write becomes structured fields ready for the visit."
     : "Whatever you write becomes structured fields for your record.";
+
+  if (!entitled) {
+    return (
+      <LockedView
+        title="Recording is paid"
+        description="Capture new notes — voice or text — with a Sympnote subscription. Your existing notes stay readable."
+      />
+    );
+  }
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>

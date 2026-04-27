@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, {
@@ -28,8 +28,8 @@ import { HoldToRecordOverlay } from "@/components/home/HoldToRecordOverlay";
 import { useHoldToRecord } from "@/hooks/useHoldToRecord";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { usePendingRecordingStore } from "@/stores/usePendingRecordingStore";
-import { useProfileStore } from "@/stores/useProfileStore";
 import { hapticLight } from "@/services/haptics";
+import { buildPersonalizationProfile } from "@/utils/personalization";
 
 /**
  * Onboarding step 1 — record. Captures a hold-to-record voice note,
@@ -45,7 +45,7 @@ const ScreenFirstRecording: React.FC = () => {
   const styles = useStyles();
   const reduced = useReducedMotion();
 
-  const personalization = useProfileStore((s) => s.personalization);
+  const personalization = usePendingRecordingStore((s) => s.personalization);
   const headline = personalization?.firstRecordingPrompt ?? "What's been going on with you?";
 
   // Educational layer: shown on the very first time the user is on
@@ -55,11 +55,35 @@ const ScreenFirstRecording: React.FC = () => {
 
   const { state: holdState, handlers: holdHandlers } = useHoldToRecord({
     holdThresholdMs: 500,
-    minCommitDurationMs: 1000,
+    // 10s floor: short recordings produce thin briefs, which torpedo
+    // the aha and the paywall conversion that depends on it. The
+    // previous 1s floor allowed "uhh, my head hurts" to commit, and
+    // the AI had nothing to work with.
+    minCommitDurationMs: 10000,
     onShortTap: () => {
       hapticLight();
     },
+    onDiscard: (reason) => {
+      hapticLight();
+      if (reason === "too-short") {
+        Alert.alert(
+          "Tell us a bit more",
+          "Hold for at least 10 seconds. Sympnote builds your brief from what you say — the more you share, the sharper it lands.",
+        );
+      }
+    },
     onCommit: ({ transcript, durationSec }) => {
+      // Build the typed personalization from raw onboarding answers
+      // before pushing to review/first-brief — the AI patient context
+      // and downstream copy callbacks (paywall hero, first-brief sub)
+      // all read from `personalization`. We hold this in the draft
+      // store (non-persisted) until the paywall commits everything
+      // on subscribe — see the wide-scope commit pipeline.
+      const { answers, setPersonalization } = usePendingRecordingStore.getState();
+      setPersonalization(
+        buildPersonalizationProfile(answers, answers.focus, []),
+      );
+
       usePendingRecordingStore.getState().setDraft({
         transcript,
         durationSec,
@@ -93,7 +117,7 @@ const ScreenFirstRecording: React.FC = () => {
             <View style={{ width: 40 }} />
           </View>
           <View style={styles.progressSlot}>
-            <OnboardingProgress value={0.9} />
+            <OnboardingProgress value={0.7} />
           </View>
 
           <Animated.View
@@ -205,10 +229,10 @@ const TeachingTip: React.FC = () => {
       style={styles.teachingWrap}
     >
       <Text style={[styles.teachingText, { color: colors.textPrimary }]}>
-        Press and hold the mic
+        Hold for ~10 seconds
       </Text>
       <Text style={[styles.teachingHint, { color: colors.textSecondary }]}>
-        Release when you're done. Sympnote keeps it safe on your device.
+        Tell us your symptom, when it started, how it feels. The more you share, the sharper your brief.
       </Text>
     </Animated.View>
   );

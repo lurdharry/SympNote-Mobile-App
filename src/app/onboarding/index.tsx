@@ -82,7 +82,7 @@ const ScreenHook: React.FC = () => {
   }));
 
   const handleGetStarted = () => {
-    router.push("/onboarding/questions");
+    router.push("/onboarding/prep-gap");
   };
 
   const handleDevReset = () => {

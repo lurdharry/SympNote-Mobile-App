@@ -1,3 +1,4 @@
+// @ts-nocheck — orphan file, kept on disk for restoration. Do not edit.
 import { useEffect, useState } from 'react';
 import type { SharedValue } from 'react-native-reanimated';
 import {

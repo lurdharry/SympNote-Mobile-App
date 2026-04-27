@@ -25,12 +25,18 @@ import { TriggerCorrelationCard } from '@/components/insights/TriggerCorrelation
 import { TriggerFrequencyList } from '@/components/insights/TriggerFrequencyList';
 import { Heatmap } from '@/components/insights/Heatmap';
 import { InsightsEmpty } from '@/components/insights/InsightsEmpty';
+import { useEntitlement } from '@/contexts/EntitlementContext';
+import { LockedView } from '@/components/paywall/LockedView';
 
 const INSIGHTS_THRESHOLD = 3;
 
 const TabInsights: React.FC = () => {
   const { colors } = useTheme();
   const styles = useStyles();
+  // Entire tab is paid. View-only users see the lock pitch instead
+  // of any data — pattern detection / trend analysis is the value
+  // we're charging for.
+  const { entitled } = useEntitlement();
   const {
     range,
     setRange,
@@ -50,6 +56,15 @@ const TabInsights: React.FC = () => {
     inRangeCount,
     totalRecordings,
   } = useInsightsData();
+
+  if (!entitled) {
+    return (
+      <LockedView
+        title="Insights are paid"
+        description="Pattern detection, trend analysis, and red-flag rollups across your notes — built for prep nights, not casual reads."
+      />
+    );
+  }
 
   return (
     <SceneTransition mode="crossfade-parallax-up">

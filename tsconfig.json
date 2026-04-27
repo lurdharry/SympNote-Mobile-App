@@ -17,6 +17,7 @@
   ],
   "exclude": [
     "node_modules",
-    "src/app/onboarding/_unused"
+    "src/app/onboarding/_unused",
+    "src/hooks/_unused"
   ]
 }

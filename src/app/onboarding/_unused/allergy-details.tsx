@@ -1,3 +1,4 @@
+// @ts-nocheck — orphan file, kept on disk for restoration. Do not edit.
 import React, { useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -33,10 +34,7 @@ import {
 } from "@/components/onboarding/AllergySpecificMascots";
 import { useProfileStore } from "@/stores/useProfileStore";
 import { hapticLight } from "@/services/haptics";
-import {
-  ALLERGY_CATEGORY_LABELS,
-  ALLERGY_SPECIFICS,
-} from "@/constants/onboarding";
+import { ALLERGY_CATEGORY_LABELS, ALLERGY_SPECIFICS } from "@/constants/onboarding";
 import type { AllergyEntry } from "@/stores/types";
 
 /**
@@ -176,12 +174,8 @@ const ScreenAllergyDetails: React.FC = () => {
   };
 
   const advance = (specifics: string[]) => {
-    const current: AllergyEntry[] = Array.isArray(existing)
-      ? (existing as AllergyEntry[])
-      : [];
-    const merged = current.map((e) =>
-      e.category === category ? { ...e, specifics } : e,
-    );
+    const current: AllergyEntry[] = Array.isArray(existing) ? (existing as AllergyEntry[]) : [];
+    const merged = current.map((e) => (e.category === category ? { ...e, specifics } : e));
     if (!current.some((e) => e.category === category)) {
       merged.push({ category, specifics });
     }
@@ -224,12 +218,7 @@ const ScreenAllergyDetails: React.FC = () => {
         <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
           <View style={styles.topBar}>
             <BackButton onPress={() => router.back()} />
-            <View
-              style={[
-                styles.counterPill,
-                { backgroundColor: colors.bgMuted },
-              ]}
-            >
+            <View style={[styles.counterPill, { backgroundColor: colors.bgMuted }]}>
               <Text style={[styles.counterText, { color: colors.textSecondary }]}>
                 {`${i + 1} / ${total}`}
               </Text>
@@ -249,15 +238,9 @@ const ScreenAllergyDetails: React.FC = () => {
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              <Text style={[styles.eyebrow, { color: colors.accent }]}>
-                {copy.eyebrow}
-              </Text>
-              <Text style={[styles.headline, { color: colors.textPrimary }]}>
-                {copy.headline}
-              </Text>
-              <Text style={[styles.sub, { color: colors.textSecondary }]}>
-                {copy.sub}
-              </Text>
+              <Text style={[styles.eyebrow, { color: colors.accent }]}>{copy.eyebrow}</Text>
+              <Text style={[styles.headline, { color: colors.textPrimary }]}>{copy.headline}</Text>
+              <Text style={[styles.sub, { color: colors.textSecondary }]}>{copy.sub}</Text>
 
               {presets.length > 0 && (
                 <View style={styles.grid}>
@@ -275,9 +258,7 @@ const ScreenAllergyDetails: React.FC = () => {
                           style={[
                             styles.card,
                             {
-                              backgroundColor: active
-                                ? colors.accent + "12"
-                                : colors.bgSurface,
+                              backgroundColor: active ? colors.accent + "12" : colors.bgSurface,
                               borderColor: active ? colors.accent : colors.border,
                               borderWidth: active ? 1.5 : StyleSheet.hairlineWidth,
                             },
@@ -290,21 +271,13 @@ const ScreenAllergyDetails: React.FC = () => {
                             style={[
                               styles.checkPip,
                               {
-                                backgroundColor: active
-                                  ? colors.accent
-                                  : "transparent",
-                                borderColor: active
-                                  ? colors.accent
-                                  : colors.border,
+                                backgroundColor: active ? colors.accent : "transparent",
+                                borderColor: active ? colors.accent : colors.border,
                               },
                             ]}
                           >
                             {active && (
-                              <Check
-                                size={moderateScale(9)}
-                                color="#FFFFFF"
-                                strokeWidth={3.4}
-                              />
+                              <Check size={moderateScale(9)} color="#FFFFFF" strokeWidth={3.4} />
                             )}
                           </View>
                           <View style={styles.mascotSlot}>
@@ -314,9 +287,7 @@ const ScreenAllergyDetails: React.FC = () => {
                             style={[
                               styles.cardLabel,
                               {
-                                color: active
-                                  ? colors.accent
-                                  : colors.textPrimary,
+                                color: active ? colors.accent : colors.textPrimary,
                               },
                             ]}
                             numberOfLines={2}
@@ -351,25 +322,13 @@ const ScreenAllergyDetails: React.FC = () => {
                       >
                         <CustomMascot size={moderateScale(28)} />
                         <Text
-                          style={[
-                            styles.customChipText,
-                            { color: colors.accent },
-                          ]}
+                          style={[styles.customChipText, { color: colors.accent }]}
                           numberOfLines={1}
                         >
                           {customLabel(value)}
                         </Text>
-                        <View
-                          style={[
-                            styles.customRemove,
-                            { backgroundColor: colors.accent },
-                          ]}
-                        >
-                          <X
-                            size={moderateScale(11)}
-                            color="#FFFFFF"
-                            strokeWidth={3}
-                          />
+                        <View style={[styles.customRemove, { backgroundColor: colors.accent }]}>
+                          <X size={moderateScale(11)} color="#FFFFFF" strokeWidth={3} />
                         </View>
                       </Pressable>
                     </Animated.View>
@@ -403,9 +362,7 @@ const ScreenAllergyDetails: React.FC = () => {
                   style={[
                     styles.addBtn,
                     {
-                      backgroundColor: draft.trim()
-                        ? colors.accent
-                        : colors.bgMuted,
+                      backgroundColor: draft.trim() ? colors.accent : colors.bgMuted,
                     },
                   ]}
                   accessibilityRole="button"
@@ -426,14 +383,8 @@ const ScreenAllergyDetails: React.FC = () => {
           <View style={styles.cta}>
             <PrimaryButton label={ctaLabel} onPress={onContinue} />
             {showSkipPill && (
-              <Pressable
-                onPress={onSkip}
-                style={styles.skipBtn}
-                accessibilityRole="button"
-              >
-                <Text style={[styles.skipText, { color: colors.textTertiary }]}>
-                  Not sure
-                </Text>
+              <Pressable onPress={onSkip} style={styles.skipBtn} accessibilityRole="button">
+                <Text style={[styles.skipText, { color: colors.textTertiary }]}>Not sure</Text>
               </Pressable>
             )}
           </View>
