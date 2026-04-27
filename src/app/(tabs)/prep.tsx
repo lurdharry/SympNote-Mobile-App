@@ -17,7 +17,7 @@ import {
 } from "@/theme";
 import { SceneTransition } from "@/components/navigation/SceneTransition";
 import { useBriefsStore } from "@/stores/useBriefsStore";
-import { useProfileStore } from "@/stores/useProfileStore";
+import { useCareTeam } from "@/stores/useProfileStore";
 import { useRecordingsStore } from "@/stores/useRecordingsStore";
 import { unbriefedRecordings } from "@/utils/briefSource";
 import { hapticLight } from "@/services/haptics";
@@ -38,7 +38,7 @@ const TabBriefs: React.FC = () => {
   const styles = useStyles();
 
   const briefs = useBriefsStore((s) => s.briefs);
-  const careTeam = useProfileStore((s) => s.personalization?.careTeam ?? []);
+  const careTeam = useCareTeam();
   const recordings = useRecordingsStore((s) => s.recordings);
   const unbriefed = unbriefedRecordings(recordings, briefs);
 

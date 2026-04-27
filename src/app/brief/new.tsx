@@ -27,7 +27,7 @@ import {
 } from "@/theme";
 import { Button } from "@/components/ui/Button";
 import { useBriefsStore } from "@/stores/useBriefsStore";
-import { useProfileStore } from "@/stores/useProfileStore";
+import { useCareTeam } from "@/stores/useProfileStore";
 import { useRecordingsStore } from "@/stores/useRecordingsStore";
 import { unbriefedRecordings } from "@/utils/briefSource";
 import { useGenerateBrief } from "@/hooks/useGenerateBrief";
@@ -61,7 +61,7 @@ const NewBrief: React.FC = () => {
 
   const allRecordings = useRecordingsStore((s) => s.recordings);
   const allBriefs = useBriefsStore((s) => s.briefs);
-  const careTeam = useProfileStore((s) => s.personalization?.careTeam ?? []);
+  const careTeam = useCareTeam();
   const generate = useGenerateBrief();
   const { requireEntitlement } = usePaywallGate();
 

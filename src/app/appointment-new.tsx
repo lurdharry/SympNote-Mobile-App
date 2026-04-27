@@ -23,7 +23,7 @@ import { AddClinicianSheet } from "@/components/onboarding/care-team/AddClinicia
 import { AppointmentBlock } from "@/components/onboarding/care-team/AppointmentBlock";
 import { findSpecialty, type Specialty } from "@/constants/specialties";
 import { useAppointmentsStore } from "@/stores/useAppointmentsStore";
-import { useProfileStore } from "@/stores/useProfileStore";
+import { useCareTeam, useProfileStore } from "@/stores/useProfileStore";
 import { hapticLight, hapticSuccess } from "@/services/haptics";
 import { uuid } from "@/utils/uuid";
 import type { Clinician as StoreClinician } from "@/stores/types";
@@ -41,7 +41,7 @@ const AppointmentNew: React.FC = () => {
   const { colors } = useTheme();
   const styles = useStyles();
 
-  const careTeam = useProfileStore((s) => s.personalization?.careTeam ?? []);
+  const careTeam = useCareTeam();
   const addClinicianToStore = useProfileStore((s) => s.addClinician);
 
   const existing = useAppointmentsStore((s) => (editId ? s.getById(editId) : undefined));

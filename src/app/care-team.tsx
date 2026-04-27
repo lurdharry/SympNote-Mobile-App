@@ -18,7 +18,7 @@ import { ClinicianCard } from '@/components/onboarding/care-team/ClinicianCard';
 import { AddClinicianSheet } from '@/components/onboarding/care-team/AddClinicianSheet';
 import { CareTeamEmpty } from '@/components/onboarding/care-team/CareTeamEmpty';
 import { Specialty } from '@/constants/specialties';
-import { useProfileStore } from '@/stores/useProfileStore';
+import { useCareTeam, useProfileStore } from '@/stores/useProfileStore';
 import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { useRecordingsStore } from '@/stores/useRecordingsStore';
 import { hapticLight, hapticSuccess } from '@/services/haptics';
@@ -32,7 +32,7 @@ const ScreenCareTeamManage: React.FC = () => {
   const { colors } = useTheme();
   const styles = useStyles();
 
-  const careTeam = useProfileStore((s) => s.personalization?.careTeam ?? []);
+  const careTeam = useCareTeam();
   const addClinician = useProfileStore((s) => s.addClinician);
   const updateClinician = useProfileStore((s) => s.updateClinician);
   const removeClinician = useProfileStore((s) => s.removeClinician);
