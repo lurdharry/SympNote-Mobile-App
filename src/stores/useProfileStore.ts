@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { mmkvStorage } from "./mmkv";
 import {
-  AppointmentBrief,
+  BriefContent,
   Clinician,
   PersonalizationProfile,
   SubscriptionStatus,
@@ -64,7 +64,7 @@ type Actions = {
    */
   setClinicianBrief: (
     clinicianId: string,
-    brief: AppointmentBrief,
+    brief: BriefContent,
     sourceRecordingIds: string[],
   ) => void;
   /** Drop a clinician's current brief — lets the user start fresh. */
@@ -227,34 +227,7 @@ export const useProfileStore = create<State & Actions>()(
     {
       name: "profile",
       storage: createJSONStorage(() => mmkvStorage),
-      version: 3,
-      migrate: (persisted, version) => {
-        // v0 → v1: pre-existing migration target (none captured).
-        // v1 → v2: backfill `id` on every Clinician in careTeam so
-        // appointments + recordings can reference them stably.
-        // v2 → v3: backfill brief / briefGeneratedAt / briefSourceRecordingIds
-        // on every Clinician — briefs now live on the clinician
-        // (not the appointment) so the user can get a brief for any
-        // clinician regardless of whether a visit is scheduled.
-        let s = persisted as State;
-        if (version < 2 && s.personalization) {
-          const careTeam = s.personalization.careTeam.map((c) => ({
-            ...c,
-            id: (c as Clinician).id ?? uuid(),
-          }));
-          s = { ...s, personalization: { ...s.personalization, careTeam } };
-        }
-        if (version < 3 && s.personalization) {
-          const careTeam = s.personalization.careTeam.map((c) => ({
-            ...c,
-            brief: (c as Clinician).brief ?? null,
-            briefGeneratedAt: (c as Clinician).briefGeneratedAt ?? null,
-            briefSourceRecordingIds: (c as Clinician).briefSourceRecordingIds ?? [],
-          }));
-          s = { ...s, personalization: { ...s.personalization, careTeam } };
-        }
-        return s;
-      },
+      version: 5,
     },
   ),
 );

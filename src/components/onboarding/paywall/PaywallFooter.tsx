@@ -1,8 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { Alert, Linking, Pressable, Text, View } from "react-native";
 import { fontScale, makeStyles, moderateScale, useTheme, verticalScale } from "../../../theme";
 import { PrimaryButton } from "../../ui/PrimaryButton";
 import { PlanDef } from "../../../constants/plans";
+import { restorePurchases } from "../../../services/subscription";
+import { useProfileStore } from "../../../stores/useProfileStore";
+import { hapticLight } from "../../../services/haptics";
 
 interface PaywallFooterProps {
   selectedPlan: PlanDef | undefined;
@@ -13,17 +16,46 @@ interface PaywallFooterProps {
 export const PaywallFooter: React.FC<PaywallFooterProps> = ({ selectedPlan, loading, onBuy }) => {
   const { colors } = useTheme();
   const styles = useStyles();
+  const [restoring, setRestoring] = useState(false);
 
   const perDuration = `${selectedPlan?.price ?? ""} ${
     selectedPlan ? `/${selectedPlan.per.replace("per ", "")}` : ""
   }`;
   const isFreeTrial = !!selectedPlan?.trialBadge;
 
-  const onRestore = () => {
-    Alert.alert(
-      "Restore purchases",
-      "We'll check the App Store for an active Sympnote Plus subscription tied to this Apple ID.",
-    );
+  // App Review requires a working Restore Purchases path on every
+  // paywall. Calls into the (currently mocked) subscription service;
+  // when RevenueCat is wired this becomes the real recover path.
+  // Success flips entitlement via the profile store, which the
+  // EntitlementContext picks up reactively — no navigation needed.
+  const onRestore = async () => {
+    if (restoring) return;
+    setRestoring(true);
+    hapticLight();
+    try {
+      const result = await restorePurchases();
+      if (result.restored) {
+        useProfileStore
+          .getState()
+          .setSubscription(result.status, result.trialEndsAt);
+        Alert.alert(
+          "Subscription restored",
+          "We've reactivated your Sympnote Plus access on this device.",
+        );
+      } else {
+        Alert.alert(
+          "No purchases found",
+          "We couldn't find an active subscription on this Apple ID. If you believe this is wrong, contact support@sympnote.app.",
+        );
+      }
+    } catch (e) {
+      Alert.alert(
+        "Couldn't restore",
+        e instanceof Error ? e.message : "Something went wrong reaching the App Store.",
+      );
+    } finally {
+      setRestoring(false);
+    }
   };
   const onTerms = () => {
     Linking.openURL("https://sympnote.app/terms").catch(() => {
@@ -52,8 +84,10 @@ export const PaywallFooter: React.FC<PaywallFooterProps> = ({ selectedPlan, load
         loading={loading}
       />
       <View style={styles.legalRow}>
-        <Pressable hitSlop={8} onPress={onRestore}>
-          <Text style={[styles.legalLink, { color: colors.textTertiary }]}>Restore</Text>
+        <Pressable hitSlop={8} onPress={onRestore} disabled={restoring}>
+          <Text style={[styles.legalLink, { color: colors.textTertiary }]}>
+            {restoring ? "Restoring…" : "Restore"}
+          </Text>
         </Pressable>
         <View style={[styles.legalDot, { backgroundColor: colors.textTertiary }]} />
         <Pressable hitSlop={8} onPress={onTerms}>
