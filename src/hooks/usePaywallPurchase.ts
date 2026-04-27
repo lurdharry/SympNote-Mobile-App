@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Alert } from "react-native";
 import { useRouter } from "expo-router";
+import { addDays } from "date-fns";
 import { Plan, purchase } from "../services/subscription";
 import { structureTranscript } from "../services/ai";
 import { useProfileStore } from "../stores/useProfileStore";
@@ -23,13 +24,27 @@ const EMPTY_STRUCTURED: StructuredEntry = {
   urgency: "routine",
 };
 
+export type PaywallMode = "onboarding" | "gate";
+
 /**
- * Drives the paywall's purchase flow: handles the mock RevenueCat call,
- * structures any pending draft recording, completes onboarding, and
- * routes to home. `crafting` flips on after a successful purchase to
- * cover the post-purchase summarisation step with an overlay.
+ * Drives the paywall's purchase flow.
+ *
+ *  - `onboarding` mode: handles the mock RevenueCat call, structures
+ *    any pending draft recording from the first-recording step,
+ *    flips `onboardingComplete`, and routes to home.
+ *  - `gate` mode: rendered by the in-app `/paywall` modal route or
+ *    inside a `<LockedView>` when the user lost entitlement after
+ *    onboarding. Just transacts and dismisses (router.back) so the
+ *    user lands on whatever screen triggered the gate. The reactive
+ *    EntitlementContext will pick up the status change and unmount
+ *    any `<LockedView>` instances on its own.
+ *
+ * `crafting` flips on after a successful onboarding purchase to cover
+ * the post-purchase summarisation step with an overlay; in gate mode
+ * the purchase mock returns fast enough that the spinner alone is
+ * sufficient and crafting stays false.
  */
-export function usePaywallPurchase() {
+export function usePaywallPurchase(mode: PaywallMode = "onboarding") {
   const router = useRouter();
   const complete = useProfileStore((s) => s.completeOnboarding);
   const personalization = useProfileStore((s) => s.personalization);
@@ -65,10 +80,17 @@ export function usePaywallPurchase() {
     try {
       await purchase(planId);
       hapticHeavy();
-      setCrafting(true);
-      await commitDraft();
-      complete();
-      router.replace("/(tabs)/home");
+      if (mode === "onboarding") {
+        setCrafting(true);
+        await commitDraft();
+        complete();
+        router.replace("/(tabs)/home");
+      } else {
+        // Gate purchase: dismiss back to the screen that triggered
+        // the modal. The reactive EntitlementContext flips `entitled`
+        // to true and any LockedView placeholders auto-unmount.
+        if (router.canGoBack()) router.back();
+      }
     } catch (e) {
       setCrafting(false);
       Alert.alert("Purchase failed", String(e));
@@ -79,10 +101,21 @@ export function usePaywallPurchase() {
 
   const skipDev = async () => {
     if (!__DEV__) return;
-    setCrafting(true);
-    await commitDraft();
-    complete();
-    router.replace("/(tabs)/home");
+    // Grant a 3-day trial so the skipped session lands in an entitled
+    // state — otherwise every dev who taps this hits the in-app gate
+    // on the next brief generation, which isn't what "skip paywall"
+    // should mean during local development.
+    useProfileStore
+      .getState()
+      .setSubscription("trial", addDays(new Date(), 3).toISOString());
+    if (mode === "onboarding") {
+      setCrafting(true);
+      await commitDraft();
+      complete();
+      router.replace("/(tabs)/home");
+    } else if (router.canGoBack()) {
+      router.back();
+    }
   };
 
   return { loading, crafting, buy, skipDev };
