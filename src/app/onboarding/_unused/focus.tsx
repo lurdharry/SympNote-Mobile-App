@@ -1,3 +1,4 @@
+// @ts-nocheck — orphan file, kept on disk for restoration. Do not edit.
 import React, { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";

@@ -111,6 +111,17 @@ Content rules:
 
 If the entries are too thin to fill a field honestly, leave it as an empty array (or empty string for summary). Never pad. Never fabricate.`;
 
+const SEX_DESCRIPTIONS: Record<PersonalizationProfile['sex'], string | null> = {
+  female:
+    'Female (assigned at birth). Many symptoms — chest pain, fatigue, abdominal — read differently across sexes. Weight reproductive, hormonal, and pelvic context where relevant.',
+  male:
+    'Male (assigned at birth). Many symptoms — chest pain, fatigue, abdominal — read differently across sexes. Weight cardiovascular and prostatic context where relevant in the older bands.',
+  intersex:
+    'Intersex. Avoid assumptions tied to a single sex; weight context the patient supplies.',
+  // null = skip the line entirely; user opted not to share.
+  'prefer-not': null,
+};
+
 const AGE_DESCRIPTIONS: Record<PersonalizationProfile['ageBand'], string> = {
   teen:
     'Adolescent (12 to 17). Weight developmental and growth-related context. Keep language accessible. Be extra careful with red-flagging and avoid alarmism.',
@@ -144,6 +155,54 @@ const CONDITION_LABELS: Record<string, string> = {
 const formatConditions = (values: string[]): string =>
   values.map((v) => CONDITION_LABELS[v] ?? v).join(', ');
 
+const ALLERGY_CATEGORY_LABELS: Record<string, string> = {
+  drug: 'drug',
+  food: 'food',
+  environmental: 'environmental',
+  latex: 'latex',
+  other: 'other',
+};
+
+const ALLERGY_SPECIFIC_LABELS: Record<string, string> = {
+  penicillin: 'penicillin / amoxicillin',
+  nsaids: 'NSAIDs',
+  sulfa: 'sulfa drugs',
+  aspirin: 'aspirin',
+  opioids: 'codeine / opioids',
+  anesthetics: 'anesthetics',
+  contrast: 'contrast dye',
+  peanut: 'peanut',
+  'tree-nuts': 'tree nuts',
+  shellfish: 'shellfish',
+  dairy: 'dairy / lactose',
+  eggs: 'eggs',
+  gluten: 'gluten / wheat',
+  soy: 'soy',
+  fish: 'fish',
+  sesame: 'sesame',
+  pollen: 'pollen',
+  'dust-mites': 'dust mites',
+  'pet-dander': 'pet dander',
+  mold: 'mold',
+  grass: 'grass',
+};
+
+const formatSpecific = (v: string): string => {
+  if (v.startsWith('custom:')) return v.slice('custom:'.length);
+  return ALLERGY_SPECIFIC_LABELS[v] ?? v;
+};
+
+const formatAllergies = (entries: PersonalizationProfile['allergies']): string => {
+  return entries
+    .map((e) => {
+      const cat = ALLERGY_CATEGORY_LABELS[e.category] ?? e.category;
+      if (!e.specifics || e.specifics.length === 0) return cat;
+      const specs = e.specifics.map(formatSpecific).join(', ');
+      return `${cat} (${specs})`;
+    })
+    .join('; ');
+};
+
 type FocusValue = PersonalizationProfile['focus'][number];
 
 const FOCUS_DESCRIPTIONS: Record<FocusValue, string> = {
@@ -172,6 +231,21 @@ export const buildPatientContext = (profile: PersonalizationProfile | null): str
   const lines: string[] = ['Patient context:'];
   lines.push(`- Age: ${AGE_DESCRIPTIONS[profile.ageBand]}`);
 
+  // Sex was collected on the qualifier but never reached the prompt
+  // before. Skip the line for users who chose "prefer not to say" so
+  // we don't tell the model "no constraint" verbosely — same effect
+  // as omission, fewer tokens.
+  const sexLine = SEX_DESCRIPTIONS[profile.sex];
+  if (sexLine) {
+    lines.push(`- Sex: ${sexLine}`);
+  }
+
+  if (profile.allergies.length > 0) {
+    lines.push(
+      `- Allergies: ${formatAllergies(profile.allergies)}. Treat as hard contraindications when relevant — flag any mention of a triggering exposure or contraindicated medication.`,
+    );
+  }
+
   if (profile.knownConditions.length > 0) {
     lines.push(
       `- Known history: ${formatConditions(profile.knownConditions)}. Interpret new entries against this baseline; flag deviations that don't fit the pattern.`,
@@ -182,12 +256,20 @@ export const buildPatientContext = (profile: PersonalizationProfile | null): str
     );
   }
 
-  const focusDescriptions = profile.focus.map((f) => FOCUS_DESCRIPTIONS[f]);
-  if (focusDescriptions.length === 1) {
-    lines.push(`- Current focus: ${focusDescriptions[0]}.`);
-  } else if (focusDescriptions.length > 1) {
-    lines.push('- Current focus (multiple goals):');
-    focusDescriptions.forEach((d) => lines.push(`  · ${d}`));
+  // Focus is no longer asked in onboarding (the screen was cut). The
+  // field defaults to ['general'] for users who never saw it; emitting
+  // "general wellness journaling. No specific clinical scope yet." is
+  // pure noise — same effect as omission. Only emit a focus line when
+  // the user actually picked a non-default goal.
+  const meaningfulFocus = profile.focus.filter((f) => f !== 'general');
+  if (meaningfulFocus.length > 0) {
+    const focusDescriptions = meaningfulFocus.map((f) => FOCUS_DESCRIPTIONS[f]);
+    if (focusDescriptions.length === 1) {
+      lines.push(`- Current focus: ${focusDescriptions[0]}.`);
+    } else {
+      lines.push('- Current focus (multiple goals):');
+      focusDescriptions.forEach((d) => lines.push(`  · ${d}`));
+    }
   }
 
   if (profile.careTeam.length > 0) {

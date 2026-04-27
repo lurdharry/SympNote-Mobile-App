@@ -38,6 +38,7 @@ import { Button } from "@/components/ui/Button";
 import { useBriefsStore } from "@/stores/useBriefsStore";
 import { useProfileStore } from "@/stores/useProfileStore";
 import { useRecordingsStore } from "@/stores/useRecordingsStore";
+import { usePendingRecordingStore } from "@/stores/usePendingRecordingStore";
 import { generateBrief } from "@/services/ai";
 import {
   formatBriefAsHtml,
@@ -45,6 +46,7 @@ import {
   isBriefContentEmpty,
 } from "@/utils/briefExport";
 import { hapticLight, hapticMedium } from "@/services/haptics";
+import { usePaywallGate } from "@/hooks/usePaywallGate";
 
 /**
  * Brief detail screen — the canonical "view this synthesised
@@ -62,7 +64,15 @@ const BriefDetail: React.FC = () => {
   const styles = useStyles();
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const brief = useBriefsStore((s) => s.briefs.find((b) => b.id === id));
+  // Brief lookup: persisted store first, then onboarding draft store.
+  // The latter only has content during onboarding (between first-brief
+  // and the paywall), so the "See full brief" link from first-brief
+  // resolves before commit.
+  const persistedBrief = useBriefsStore((s) => s.briefs.find((b) => b.id === id));
+  const pendingBrief = usePendingRecordingStore((s) =>
+    s.pendingBrief?.id === id ? s.pendingBrief : null,
+  );
+  const brief = persistedBrief ?? pendingBrief;
   const careTeam = useProfileStore((s) => s.personalization?.careTeam ?? []);
   const profile = useProfileStore((s) => s.personalization);
   const setClinicianIds = useBriefsStore((s) => s.setClinicianIds);
@@ -73,6 +83,7 @@ const BriefDetail: React.FC = () => {
 
   const [retrying, setRetrying] = useState(false);
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
+  const { requireEntitlement } = usePaywallGate();
 
   if (!brief) {
     return (
@@ -140,6 +151,7 @@ const BriefDetail: React.FC = () => {
 
   const onRegenerate = async () => {
     if (retrying) return;
+    if (!requireEntitlement()) return;
     hapticMedium();
     setRetrying(true);
     try {
@@ -172,6 +184,7 @@ const BriefDetail: React.FC = () => {
   };
 
   const onExportPdf = async () => {
+    if (!requireEntitlement()) return;
     hapticLight();
     try {
       const html = formatBriefAsHtml(brief, careTeam);

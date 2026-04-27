@@ -218,6 +218,38 @@ export type PregnancyStatus = 'yes' | 'no' | 'possibly' | 'unknown';
  */
 export type TrackingStyle = 'daily' | 'episodic' | 'mixed';
 
+/**
+ * One allergy category the user reported, paired with any specific
+ * triggers they identified on the dynamic follow-up screen. Stored
+ * structured (not flat) so the AI can reason across categories
+ * (e.g. "drug allergies" as a clinical class) while still having the
+ * specific triggers when they exist.
+ *
+ *  - `category`: 'drug' | 'food' | 'environmental' | 'latex' | 'other'
+ *    (kept as string here to avoid a circular dependency with the
+ *    constants module that owns the canonical list).
+ *  - `specifics`: curated values from `ALLERGY_SPECIFICS[category]`
+ *    plus any free-text the user added (prefixed `custom:`).
+ */
+export interface AllergyEntry {
+  category: string;
+  specifics: string[];
+}
+
+/**
+ * How often the user wishes they'd mentioned something after leaving
+ * the doctor. Captured on the very first onboarding screen as a
+ * problem-anchor — the user names the pain SympNote solves before we
+ * ask anything else. Used downstream to personalise the first-brief
+ * sub-copy and the paywall sub-line (loss framing).
+ *
+ *  - `often`: almost every visit
+ *  - `sometimes`: about half the time
+ *  - `occasional`: now and then
+ *  - `rare`: rarely / pretty prepared
+ */
+export type PrepGap = 'often' | 'sometimes' | 'occasional' | 'rare';
+
 export type FocusArea =
   | 'investigate'
   | 'upcoming-visit'
@@ -273,6 +305,14 @@ export interface PersonalizationProfile {
   /** Only meaningful when `sex === 'female'`; defaults to 'unknown'. */
   pregnancyStatus: PregnancyStatus;
   /**
+   * Self-reported "how often do you forget to mention something?" from
+   * the very first onboarding screen. Drives the loss-framed paywall
+   * sub-line and a callback in the first-brief reveal — the user named
+   * the pain, so we close the loop. Defaults to 'sometimes' when not
+   * captured (e.g. legacy users from before this screen existed).
+   */
+  prepGap: PrepGap;
+  /**
    * User-selected conditions (e.g. "Asthma", "Migraines") plus any
    * free-text additions. Used in AI context as baseline calibration.
    */
@@ -281,8 +321,15 @@ export interface PersonalizationProfile {
    * Allergies — separate field from conditions because they carry
    * different clinical weight (drug/contrast-agent decisions ride on
    * them) and the user reports them differently. Empty array = none.
+   *
+   * Structured by category: each entry pairs a top-level allergy
+   * category (drug / food / environmental / latex / other) with the
+   * specific triggers the user identified on the dynamic follow-up
+   * walk. `specifics` is empty when the category needed no detail
+   * (latex), the user skipped the detail screen, or the user typed
+   * only free-text into "other".
    */
-  allergies: string[];
+  allergies: AllergyEntry[];
   /** Goals for this tracking — multi-select on the Focus screen. */
   focus: FocusArea[];
   /** How the user plans to log — calibrates daily-prompt UX + tone. */
@@ -294,7 +341,14 @@ export interface PersonalizationProfile {
 
 export type UserProfile = {
   onboardingComplete: boolean;
-  onboardingAnswers: Record<string, unknown>;
+  /**
+   * @deprecated — onboarding answers now live in
+   * `usePendingRecordingStore.answers` (in-memory only) until the
+   * paywall commits them via personalization. This field is no longer
+   * read or written by the active flow; the v6 migration drops the
+   * stored value but the type is kept for legacy access patterns.
+   */
+  onboardingAnswers?: Record<string, unknown>;
   subscriptionStatus: SubscriptionStatus;
   trialEndsAt: string | null;
   /** Derived profile — set once the analyzing screen runs. Null before. */

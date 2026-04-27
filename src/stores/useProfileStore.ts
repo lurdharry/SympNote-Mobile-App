@@ -26,7 +26,6 @@ type State = UserProfile & {
 };
 
 type Actions = {
-  setOnboardingAnswer: (key: string, value: unknown) => void;
   completeOnboarding: () => void;
   resetOnboarding: () => void;
   setSubscription: (status: SubscriptionStatus, trialEndsAt?: string | null) => void;
@@ -73,7 +72,6 @@ type Actions = {
 
 const initial: State = {
   onboardingComplete: false,
-  onboardingAnswers: {},
   subscriptionStatus: "none",
   trialEndsAt: null,
   personalization: null,
@@ -87,10 +85,6 @@ export const useProfileStore = create<State & Actions>()(
   persist(
     (set, get) => ({
       ...initial,
-      setOnboardingAnswer: (key, value) =>
-        set((s) => ({
-          onboardingAnswers: { ...s.onboardingAnswers, [key]: value },
-        })),
       completeOnboarding: () => set(() => ({ onboardingComplete: true })),
       resetOnboarding: () => set(() => ({ ...initial })),
       setSubscription: (status, trialEndsAt = null) =>
@@ -227,7 +221,26 @@ export const useProfileStore = create<State & Actions>()(
     {
       name: "profile",
       storage: createJSONStorage(() => mmkvStorage),
-      version: 5,
+      version: 6,
+      migrate: (persisted, _version) => {
+        // v0 → v1: pre-existing migration target (none captured).
+        // v1 → v2: backfill `id` on every Clinician.
+        // v2 → v3: backfill brief / briefGeneratedAt /
+        //          briefSourceRecordingIds on every Clinician.
+        // v3 → v4: convert flat `allergies: string[]` → AllergyEntry[].
+        // v4 → v5: backfill `prepGap` (default 'sometimes').
+        // v5 → v6: drop the orphan `onboardingAnswers` field — it now
+        //          lives in usePendingRecordingStore (in-memory) until
+        //          the paywall commits via personalization.
+        // Note: only the v5 → v6 step is strictly required to be
+        // idempotent here; the earlier steps are kept as safety for
+        // any install that skipped intermediate versions.
+        const s = persisted as Record<string, unknown>;
+        if (s && "onboardingAnswers" in s) {
+          delete s.onboardingAnswers;
+        }
+        return s;
+      },
     },
   ),
 );

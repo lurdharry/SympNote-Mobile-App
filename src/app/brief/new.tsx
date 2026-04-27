@@ -31,6 +31,7 @@ import { useProfileStore } from "@/stores/useProfileStore";
 import { useRecordingsStore } from "@/stores/useRecordingsStore";
 import { unbriefedRecordings } from "@/utils/briefSource";
 import { useGenerateBrief } from "@/hooks/useGenerateBrief";
+import { usePaywallGate } from "@/hooks/usePaywallGate";
 import { hapticLight } from "@/services/haptics";
 import type { Recording } from "@/stores/types";
 
@@ -62,6 +63,7 @@ const NewBrief: React.FC = () => {
   const allBriefs = useBriefsStore((s) => s.briefs);
   const careTeam = useProfileStore((s) => s.personalization?.careTeam ?? []);
   const generate = useGenerateBrief();
+  const { requireEntitlement } = usePaywallGate();
 
   const [title, setTitle] = useState("");
   const [range, setRange] = useState<DateRange>("30d");
@@ -124,6 +126,9 @@ const NewBrief: React.FC = () => {
       Alert.alert("Pick at least one note", "Tap a note to include it in the brief.");
       return;
     }
+    // Gate at the action moment, not on screen mount — picking notes
+    // is fine without entitlement; spending an AI call isn't.
+    if (!requireEntitlement()) return;
     setGenerating(true);
     const trimmedTitle = title.trim();
     generate.mutate(

@@ -6,8 +6,9 @@ import { Plan, purchase } from "../services/subscription";
 import { structureTranscript } from "../services/ai";
 import { useProfileStore } from "../stores/useProfileStore";
 import { useRecordingsStore } from "../stores/useRecordingsStore";
+import { useBriefsStore } from "../stores/useBriefsStore";
 import { usePendingRecordingStore } from "../stores/usePendingRecordingStore";
-import { StructuredEntry } from "../stores/types";
+import { Recording, StructuredEntry } from "../stores/types";
 import { hapticHeavy } from "../services/haptics";
 import { uuid } from "../utils/uuid";
 
@@ -47,31 +48,67 @@ export type PaywallMode = "onboarding" | "gate";
 export function usePaywallPurchase(mode: PaywallMode = "onboarding") {
   const router = useRouter();
   const complete = useProfileStore((s) => s.completeOnboarding);
-  const personalization = useProfileStore((s) => s.personalization);
 
   const [loading, setLoading] = useState(false);
   const [crafting, setCrafting] = useState(false);
 
+  /**
+   * Sweep the entire onboarding draft store into the persisted stores.
+   * This is the only place onboarding data crosses the persistence
+   * boundary — the wide-scope deferred-commit pattern.
+   *
+   * Three handoffs in priority order:
+   *  1. Personalization → useProfileStore
+   *  2. Pending recording (structured) + brief → useRecordingsStore +
+   *     useBriefsStore (the normal happy path)
+   *  3. Fallback: a raw draft survived but no AI was run yet (edge
+   *     case if the user somehow reached the paywall without going
+   *     through first-brief). Run structureTranscript here so the
+   *     recording at least has fields.
+   *
+   * No-ops cleanly when the draft store is empty (gate-mode purchases
+   * post-onboarding) — every step early-returns on null.
+   */
   const commitDraft = async (): Promise<void> => {
-    const pending = usePendingRecordingStore.getState().draft;
-    if (!pending) return;
-    let structured: StructuredEntry = EMPTY_STRUCTURED;
-    let tags: string[] = [];
-    try {
-      const result = await structureTranscript(pending.transcript, personalization);
-      structured = result as StructuredEntry;
-      tags = result.symptoms.filter(Boolean).slice(0, 2);
-    } catch {
-      // Gemini failure post-purchase — save raw; retry later from home.
+    const draftState = usePendingRecordingStore.getState();
+
+    // 1. Personalization
+    if (draftState.personalization) {
+      useProfileStore.getState().setPersonalization(draftState.personalization);
     }
-    useRecordingsStore.getState().add({
-      id: uuid(),
-      createdAt: pending.createdAt,
-      durationSec: pending.durationSec,
-      transcript: pending.transcript,
-      structured,
-      tags,
-    });
+
+    // 2. Structured recording + brief from first-brief (happy path)
+    if (draftState.pendingRecording) {
+      useRecordingsStore.getState().add(draftState.pendingRecording);
+      if (draftState.pendingBrief) {
+        useBriefsStore.getState().add(draftState.pendingBrief);
+      }
+    } else if (draftState.draft) {
+      // 3. Fallback path — raw draft only, AI never ran. Run it now.
+      const pending = draftState.draft;
+      let structured: StructuredEntry = EMPTY_STRUCTURED;
+      let tags: string[] = [];
+      try {
+        const result = await structureTranscript(
+          pending.transcript,
+          draftState.personalization,
+        );
+        structured = result as StructuredEntry;
+        tags = result.symptoms.filter(Boolean).slice(0, 2);
+      } catch {
+        // Gemini failure — save raw; user can retry from home later.
+      }
+      useRecordingsStore.getState().add({
+        id: uuid(),
+        createdAt: pending.createdAt,
+        durationSec: pending.durationSec,
+        transcript: pending.transcript,
+        structured,
+        tags,
+      });
+    }
+
+    // Wipe everything once committed.
     usePendingRecordingStore.getState().clear();
   };
 

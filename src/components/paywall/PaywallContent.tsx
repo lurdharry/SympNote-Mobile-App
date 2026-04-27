@@ -3,14 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Check, X as XIcon } from "lucide-react-native";
-import {
-  fontScale,
-  makeStyles,
-  moderateScale,
-  spacing,
-  typography,
-  useTheme,
-} from "@/theme";
+import { fontScale, makeStyles, moderateScale, spacing, typography, useTheme } from "@/theme";
 import { PocketbookMascot } from "@/components/onboarding/PocketbookMascot";
 import { PlanCard } from "@/components/onboarding/paywall/PlanCard";
 import { CraftingOverlay } from "@/components/onboarding/paywall/CraftingOverlay";
@@ -18,13 +11,10 @@ import { PaywallFooter } from "@/components/onboarding/paywall/PaywallFooter";
 import { Plan } from "@/services/subscription";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { usePaywallPurchase } from "@/hooks/usePaywallPurchase";
-import {
-  KEEP_FEATURES,
-  PAYWALL_PLANS,
-  composePaywallHero,
-} from "@/constants/plans";
+import { KEEP_FEATURES, PAYWALL_PLANS, composePaywallHero } from "@/constants/plans";
 import { useBriefsStore } from "@/stores/useBriefsStore";
 import { useProfileStore } from "@/stores/useProfileStore";
+import { usePendingRecordingStore } from "@/stores/usePendingRecordingStore";
 
 /**
  * Shared paywall body. Two callers:
@@ -56,20 +46,35 @@ export const PaywallContent: React.FC<PaywallContentProps> = ({ mode }) => {
 
   const purchaseMode = mode === "onboarding" ? "onboarding" : "gate";
 
-  const [selected, setSelected] = useState<Plan["id"]>("monthly");
+  // Default to annual: ~30% LTV uplift in industry data, no measurable
+  // hit to trial-start rate. Users still see both options and can
+  // toggle to monthly with one tap.
+  const [selected, setSelected] = useState<Plan["id"]>("annual");
   const { loading, crafting, buy, skipDev } = usePaywallPurchase(purchaseMode);
 
   const selectedPlan = PAYWALL_PLANS.find((p) => p.id === selected);
 
-  const latestBrief = useBriefsStore((s) => s.briefs[0]);
-  const prepGap = useProfileStore((s) => s.personalization?.prepGap);
+  // Brief lookup: draft store first (onboarding — brief just generated
+  // on first-brief, not yet committed), then persisted store (gate
+  // mode — onboarding is long over, latest committed brief is what
+  // matters). Same pattern for prepGap.
+  const pendingBrief = usePendingRecordingStore((s) => s.pendingBrief);
+  const persistedBrief = useBriefsStore((s) => s.briefs[0]);
+  const relevantBrief = pendingBrief ?? persistedBrief;
+
+  const draftPrepGap = usePendingRecordingStore(
+    (s) => s.personalization?.prepGap,
+  );
+  const persistedPrepGap = useProfileStore((s) => s.personalization?.prepGap);
+  const prepGap = draftPrepGap ?? persistedPrepGap;
+
   const hero = useMemo(() => {
-    const concern = latestBrief?.content.topConcerns[0]?.label;
-    const summarySentence = latestBrief?.content.summary
-      ? latestBrief.content.summary.split(/(?<=[.!?])\s+/)[0]
+    const concern = relevantBrief?.content.topConcerns[0]?.label;
+    const summarySentence = relevantBrief?.content.summary
+      ? relevantBrief.content.summary.split(/(?<=[.!?])\s+/)[0]
       : undefined;
     return composePaywallHero(concern, summarySentence, prepGap);
-  }, [latestBrief, prepGap]);
+  }, [relevantBrief, prepGap]);
 
   // Onboarding paywall is a hard gate — no escape until they pick a
   // plan. The in-app gate modal can be dismissed (user returns to
@@ -89,49 +94,27 @@ export const PaywallContent: React.FC<PaywallContentProps> = ({ mode }) => {
               accessibilityRole="button"
               accessibilityLabel="Close"
             >
-              <XIcon
-                size={moderateScale(16)}
-                color={colors.textPrimary}
-                strokeWidth={2.2}
-              />
+              <XIcon size={moderateScale(16)} color={colors.textPrimary} strokeWidth={2.2} />
             </Pressable>
           ) : null}
         </View>
 
-        <ScrollView
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.mascotSlot}>
             <PocketbookMascot reduced={reduced} size={moderateScale(100)} />
           </View>
 
-          <Text style={[styles.heroEyebrow, { color: colors.accent }]}>
-            {hero.eyebrow}
-          </Text>
-          <Text style={[styles.heroHeadline, { color: colors.textPrimary }]}>
-            {hero.headline}
-          </Text>
-          <Text style={[styles.heroSub, { color: colors.textSecondary }]}>
-            {hero.sub}
-          </Text>
+          <Text style={[styles.heroHeadline, { color: colors.textPrimary }]}>{hero.headline}</Text>
+          <Text style={[styles.heroSub, { color: colors.textSecondary }]}>{hero.sub}</Text>
 
-          {/* Plans visible early — the user shouldn't have to scroll
-              past three trust elements to find the choice. */}
-          <View style={styles.plans}>
-            {PAYWALL_PLANS.map((p, i) => (
-              <PlanCard
-                key={p.id}
-                plan={p}
-                index={i}
-                selected={selected === p.id}
-                onSelect={() => setSelected(p.id)}
-              />
-            ))}
-          </View>
-
-          {/* Compact "what you keep" — label-only rows, no hint
-              sublines. Loss frame stays; the dense card doesn't. */}
+          {/* Section eyebrow — gives the features card a clear
+              identity ("here's what you're paying for") instead of
+              floating as an unlabeled list. Gain-framed ("unlock")
+              rather than loss-framed ("keep") to read more like a
+              standard pricing-page promise. */}
+          <Text style={[styles.sectionEyebrow, { color: colors.textTertiary }]}>
+            UNLOCK ALL FEATURES
+          </Text>
           <View
             style={[
               styles.featuresCard,
@@ -149,27 +132,34 @@ export const PaywallContent: React.FC<PaywallContentProps> = ({ mode }) => {
                   },
                 ]}
               >
-                <View
-                  style={[
-                    styles.featureCheck,
-                    { backgroundColor: colors.accent },
-                  ]}
-                >
+                <View style={[styles.featureCheck, { backgroundColor: colors.accent }]}>
                   <Check size={moderateScale(10)} color="#FFFFFF" strokeWidth={3.2} />
                 </View>
-                <Text
-                  style={[styles.featureLabel, { color: colors.textPrimary }]}
-                >
-                  {f.label}
-                </Text>
+                <Text style={[styles.featureLabel, { color: colors.textPrimary }]}>{f.label}</Text>
               </View>
             ))}
           </View>
 
-          {/* Single muted trust line — replaces the three-chip row.
-              Same content, ~80% less visual weight. */}
+          {/* Plans visible early — the user shouldn't have to scroll
+              past three trust elements to find the choice. */}
+          <View style={styles.plans}>
+            {PAYWALL_PLANS.map((p, i) => (
+              <PlanCard
+                key={p.id}
+                plan={p}
+                index={i}
+                selected={selected === p.id}
+                onSelect={() => setSelected(p.id)}
+              />
+            ))}
+          </View>
+
+          {/* Single muted trust line. "Practicing clinicians" is the
+              strongest concrete credibility claim we can make pre-launch
+              (no fabricated names, no fake star counts). Replace with a
+              real rating once the App Store has reviews. */}
           <Text style={[styles.trustLine, { color: colors.textTertiary }]}>
-            Private · Built with clinicians · Cancel anytime
+            Private · Built with practicing clinicians · Cancel anytime
           </Text>
 
           {__DEV__ && (
@@ -193,11 +183,7 @@ export const PaywallContent: React.FC<PaywallContentProps> = ({ mode }) => {
           )}
         </ScrollView>
 
-        <PaywallFooter
-          selectedPlan={selectedPlan}
-          loading={loading}
-          onBuy={() => buy(selected)}
-        />
+        <PaywallFooter selectedPlan={selectedPlan} loading={loading} onBuy={() => buy(selected)} />
       </SafeAreaView>
 
       {crafting && <CraftingOverlay reduced={reduced} />}
@@ -268,8 +254,15 @@ const useStyles = makeStyles((theme) => ({
     marginTop: theme.spacing.s2,
     paddingHorizontal: theme.spacing.s4,
   },
+  sectionEyebrow: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: fontScale(10),
+    letterSpacing: 1.4,
+    textAlign: "center",
+    marginTop: theme.spacing.s5,
+  },
   featuresCard: {
-    marginTop: theme.spacing.s4,
+    marginTop: theme.spacing.s2,
     borderRadius: theme.radius.lg,
     borderWidth: StyleSheet.hairlineWidth,
     overflow: "hidden",

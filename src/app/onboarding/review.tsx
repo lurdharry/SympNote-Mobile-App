@@ -48,15 +48,22 @@ const ScreenFirstRecordingReview: React.FC = () => {
   const { colors } = useTheme();
   const styles = useStyles();
 
-  const draft = usePendingRecordingStore((s) => s.draft);
+  // Snapshot the draft at mount. The downstream first-brief screen
+  // intentionally clears the live pending draft after the AI run
+  // succeeds; a reactive subscription here would interpret that clear
+  // as missing-draft and call router.back() while review is still in
+  // the stack background — which pops first-brief and dumps the user
+  // back at the recording surface mid-success.
+  const [draft] = useState(() => usePendingRecordingStore.getState().draft);
   const [editValue, setEditValue] = useState(draft?.transcript ?? "");
 
   // Defensive: if the user lands here without a draft (deep-link, hot
-  // reload, etc.), bounce back to the recording surface rather than
-  // showing an empty screen.
+  // reload, etc.), bounce back. Mount-only — later store changes are
+  // intentional and must not retrigger this.
   useEffect(() => {
     if (!draft) router.back();
-  }, [draft, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (!draft) return null;
 
@@ -114,7 +121,7 @@ const ScreenFirstRecordingReview: React.FC = () => {
             <View style={{ width: 40 }} />
           </View>
           <View style={styles.progressSlot}>
-            <OnboardingProgress value={1} />
+            <OnboardingProgress value={0.85} />
           </View>
 
           <KeyboardAvoidingView

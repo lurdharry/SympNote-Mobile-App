@@ -152,6 +152,70 @@ export const QUALIFIER_TIMINGS = {
   chipStaggerMs: 40,
 } as const;
 
+/* -------------------- Allergy specifics (dynamic walk) -------------------- */
+
+/**
+ * Sub-options shown on the dynamic `/onboarding/allergy-details` screen,
+ * one screen per category the user selected on `health-context`.
+ *
+ * `latex` and `__none` are deliberately absent: latex's category IS the
+ * specific (gloves/balloons add no clinical info the AI can act on), and
+ * "no allergies" short-circuits the walk entirely.
+ *
+ * `other` is intentionally chip-less — its detail screen renders only
+ * the free-text "Add your own" input.
+ */
+export interface AllergySpecificOption {
+  v: string;
+  t: string;
+}
+
+export const ALLERGY_SPECIFICS: Record<string, AllergySpecificOption[]> = {
+  drug: [
+    { v: 'penicillin', t: 'Penicillin / amoxicillin' },
+    { v: 'nsaids', t: 'NSAIDs (ibuprofen, naproxen)' },
+    { v: 'sulfa', t: 'Sulfa drugs' },
+    { v: 'aspirin', t: 'Aspirin' },
+    { v: 'opioids', t: 'Codeine / opioids' },
+    { v: 'anesthetics', t: 'Anesthetics' },
+    { v: 'contrast', t: 'Contrast dye' },
+  ],
+  food: [
+    { v: 'peanut', t: 'Peanut' },
+    { v: 'tree-nuts', t: 'Tree nuts' },
+    { v: 'shellfish', t: 'Shellfish' },
+    { v: 'dairy', t: 'Dairy / lactose' },
+    { v: 'eggs', t: 'Eggs' },
+    { v: 'gluten', t: 'Gluten / wheat' },
+    { v: 'soy', t: 'Soy' },
+    { v: 'fish', t: 'Fish' },
+    { v: 'sesame', t: 'Sesame' },
+  ],
+  environmental: [
+    { v: 'pollen', t: 'Pollen' },
+    { v: 'dust-mites', t: 'Dust mites' },
+    { v: 'pet-dander', t: 'Pet dander' },
+    { v: 'mold', t: 'Mold' },
+    { v: 'grass', t: 'Grass' },
+  ],
+  other: [],
+};
+
+/**
+ * Categories that gain a follow-up specifics screen. Order is preserved
+ * from the user's selection on health-context, but `latex` and `__none`
+ * are filtered out before the walk begins.
+ */
+export const ALLERGY_CATEGORIES_WITH_SPECIFICS = ['drug', 'food', 'environmental', 'other'] as const;
+
+export const ALLERGY_CATEGORY_LABELS: Record<string, string> = {
+  drug: 'Drug',
+  food: 'Food',
+  environmental: 'Environmental',
+  latex: 'Latex',
+  other: 'Something else',
+};
+
 /* -------------------- Care team palette -------------------- */
 
 export const CARE_TEAM_PALETTE = [

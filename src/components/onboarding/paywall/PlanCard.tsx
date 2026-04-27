@@ -29,12 +29,7 @@ interface PlanCardProps {
   onSelect: () => void;
 }
 
-export const PlanCard: React.FC<PlanCardProps> = ({
-  plan,
-  index,
-  selected,
-  onSelect,
-}) => {
+export const PlanCard: React.FC<PlanCardProps> = ({ plan, index, selected, onSelect }) => {
   const { colors } = useTheme();
   const styles = useStyles();
   const opacity = useSharedValue(0);
@@ -46,10 +41,7 @@ export const PlanCard: React.FC<PlanCardProps> = ({
       240 + index * 80,
       withTiming(1, { duration: 320, easing: Easing.out(Easing.cubic) }),
     );
-    ty.value = withDelay(
-      240 + index * 80,
-      withSpring(0, { damping: 18, stiffness: 140 }),
-    );
+    ty.value = withDelay(240 + index * 80, withSpring(0, { damping: 18, stiffness: 140 }));
   }, [index, opacity, ty]);
 
   // Punchy spring whenever this card becomes the selected one.
@@ -95,9 +87,7 @@ export const PlanCard: React.FC<PlanCardProps> = ({
           {/* Left column — name + small badge + subline */}
           <View style={{ flex: 1, minWidth: 0 }}>
             <View style={styles.planHeadRow}>
-              <Text style={[styles.planLabel, { color: colors.textPrimary }]}>
-                {plan.label}
-              </Text>
+              <Text style={[styles.planLabel, { color: colors.textPrimary }]}>{plan.label}</Text>
               {plan.trialBadge && (
                 <View
                   style={[
@@ -130,10 +120,7 @@ export const PlanCard: React.FC<PlanCardProps> = ({
               )}
             </View>
             {plan.subline && (
-              <Text
-                style={[styles.planSubline, { color: colors.textTertiary }]}
-                numberOfLines={1}
-              >
+              <Text style={[styles.planSubline, { color: colors.textTertiary }]} numberOfLines={1}>
                 {plan.subline}
               </Text>
             )}
@@ -141,12 +128,19 @@ export const PlanCard: React.FC<PlanCardProps> = ({
 
           {/* Middle — price stack */}
           <View style={styles.priceStack}>
-            <Text style={[styles.planPrice, { color: colors.textPrimary }]}>
-              {plan.price}
+            <Text>
+              {plan.originalPrice ? (
+                <Text
+                  style={[styles.planOriginal, { color: colors.textTertiary }]}
+                  accessibilityLabel={`Was ${plan.originalPrice}`}
+                >
+                  {plan.originalPrice}
+                  {"  "}
+                </Text>
+              ) : null}
+              <Text style={[styles.planPrice, { color: colors.textPrimary }]}>{plan.price}</Text>
             </Text>
-            <Text style={[styles.planPer, { color: colors.textTertiary }]}>
-              {plan.per}
-            </Text>
+            <Text style={[styles.planPer, { color: colors.textTertiary }]}>{plan.per}</Text>
           </View>
 
           {/* Right — radio / check */}
@@ -158,9 +152,7 @@ export const PlanCard: React.FC<PlanCardProps> = ({
                 : { borderColor: colors.border },
             ]}
           >
-            {selected && (
-              <Check size={moderateScale(13)} color="#FFFFFF" strokeWidth={3} />
-            )}
+            {selected && <Check size={moderateScale(13)} color="#FFFFFF" strokeWidth={3} />}
           </View>
         </View>
       </Pressable>
@@ -212,6 +204,14 @@ const useStyles = makeStyles((theme) => ({
   },
   priceStack: {
     alignItems: "flex-end",
+  },
+  planOriginal: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: fontScale(12),
+    textDecorationLine: "line-through",
+    textDecorationStyle: "solid",
+    letterSpacing: 0.1,
+    marginBottom: 1,
   },
   planPrice: {
     fontFamily: "DMSans_700Bold",
