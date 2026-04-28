@@ -11,17 +11,17 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { format, parseISO } from "date-fns";
 import { ArrowLeft, X as XIcon } from "lucide-react-native";
-import { fontScale, makeStyles, moderateScale, useTheme, verticalScale } from "../theme";
+import { makeStyles, moderateScale, useTheme, verticalScale } from "../theme";
 import { ReviewPhase } from "../components/recording/ReviewPhase";
 import { ExtractingPhase } from "../components/recording/ExtractingPhase";
 import { ExtractedPhase } from "../components/recording/ExtractedPhase";
+import { PhaseIndicator } from "../components/recording/PhaseIndicator";
 import { useRecordingFlow } from "../components/recording/useRecordingFlow";
 import { useCareTeam } from "../stores/useProfileStore";
 import { useRecordingsStore } from "../stores/useRecordingsStore";
 import { useAppointmentsStore } from "../stores/useAppointmentsStore";
 import { uuid } from "../utils/uuid";
 import { hapticHeavy, hapticLight } from "../services/haptics";
-import { Phase } from "../components/recording/types";
 import { useEntitlement } from "../contexts/EntitlementContext";
 import { LockedView } from "../components/paywall/LockedView";
 
@@ -213,53 +213,6 @@ const RecordModal: React.FC = () => {
   );
 };
 
-// ─── Phase indicator ──────────────────────────────────────────────────────
-
-const STEP_ORDER: { label: string; phase: Phase }[] = [
-  { label: "Write", phase: "review" },
-  { label: "Analyze", phase: "extracting" },
-  { label: "Confirm", phase: "extracted" },
-];
-
-const indexForPhase = (phase: Phase): number => {
-  const idx = STEP_ORDER.findIndex((step) => step.phase === phase);
-  return idx === -1 ? 0 : idx;
-};
-
-const PhaseIndicator: React.FC<{ phase: Phase }> = ({ phase }) => {
-  const { colors } = useTheme();
-  const styles = useStyles();
-  const active = indexForPhase(phase);
-  return (
-    <View style={styles.stepperRow}>
-      {STEP_ORDER.map((step, i) => {
-        const isActive = i === active;
-        const isPast = i < active;
-        return (
-          <View key={step.label} style={styles.stepperCell}>
-            <View
-              style={[
-                styles.stepDot,
-                {
-                  backgroundColor: isActive
-                    ? colors.accent
-                    : isPast
-                      ? colors.accent + "66"
-                      : colors.border,
-                  width: isActive ? moderateScale(20) : moderateScale(6),
-                },
-              ]}
-            />
-            {isActive && (
-              <Text style={[styles.stepLabel, { color: colors.accent }]}>{step.label}</Text>
-            )}
-          </View>
-        );
-      })}
-    </View>
-  );
-};
-
 const lastName = (full: string): string => {
   const parts = full.trim().split(/\s+/);
   return parts[parts.length - 1] ?? full;
@@ -279,28 +232,6 @@ const useStyles = makeStyles((theme) => ({
     paddingTop: theme.spacing.s2,
     paddingBottom: theme.spacing.s3,
     gap: moderateScale(12),
-  },
-  stepperRow: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: moderateScale(8),
-  },
-  stepperCell: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(6),
-  },
-  stepDot: {
-    height: moderateScale(6),
-    borderRadius: moderateScale(3),
-  },
-  stepLabel: {
-    fontFamily: "DMSans_700Bold",
-    fontSize: fontScale(10),
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
   },
   backBtn: {
     width: moderateScale(32),
