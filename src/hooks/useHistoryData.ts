@@ -1,90 +1,164 @@
-import { useMemo } from 'react';
-import { format, isSameDay, isYesterday, parseISO } from 'date-fns';
-import { countBy, groupBy, orderBy, toPairs } from 'lodash';
-import { useRecordingsStore } from '@/stores/useRecordingsStore';
-import { formatDuration } from '@/utils/date';
-import { colorForTag } from '@/utils/tagColor';
-import type { HistoryItem } from '@/constants/demo/history';
+import { useMemo } from "react";
+import { format, isSameDay, isYesterday, parseISO } from "date-fns";
+import { groupBy } from "lodash";
+import { useRecordingsStore } from "@/stores/useRecordingsStore";
+import { useBriefsStore } from "@/stores/useBriefsStore";
+import { formatDuration } from "@/utils/date";
 
-export interface TagOption {
-  t: string;
-  c: string;
+export type FeedKind = "note" | "brief";
+
+export interface NoteFeedItem {
+  kind: "note";
+  id: string;
+  createdAtMs: number;
+  date: string;
+  time: string;
+  dur: string;
+  text: string;
 }
 
-export interface HistoryGroup {
+export interface BriefFeedItem {
+  kind: "brief";
+  id: string;
+  createdAtMs: number;
   date: string;
-  entries: HistoryItem[];
+  time: string;
+  title: string;
+  sourceCount: number;
+  clinicianIds: string[];
+  summarySnippet: string;
+}
+
+export type FeedItem = NoteFeedItem | BriefFeedItem;
+
+export type FeedFilter = "all" | "notes" | "briefs";
+
+export type FeedDateRange = "all" | "today" | "7d" | "30d";
+
+const DAY_MS = 86_400_000;
+
+const cutoffMsForRange = (range: FeedDateRange): number => {
+  const now = Date.now();
+  switch (range) {
+    case "today": {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      return start.getTime();
+    }
+    case "7d":
+      return now - 7 * DAY_MS;
+    case "30d":
+      return now - 30 * DAY_MS;
+    case "all":
+    default:
+      return 0;
+  }
+};
+
+export interface FeedGroup {
+  date: string;
+  entries: FeedItem[];
 }
 
 export interface UseHistoryDataResult {
-  items: HistoryItem[];
-  filtered: HistoryItem[];
-  allTags: TagOption[];
-  groups: HistoryGroup[];
-  /** True when the user has zero recordings — render the empty state. */
+  items: FeedItem[];
+  filtered: FeedItem[];
+  groups: FeedGroup[];
+  notesCount: number;
+  briefsCount: number;
+  /** True when the user has no notes AND no briefs. */
   isEmpty: boolean;
 }
 
-const MAX_TAGS_PER_ROW = 3;
-
 const dateLabel = (d: Date, today: Date): string => {
-  if (isSameDay(d, today)) return 'Today';
-  if (isYesterday(d)) return 'Yesterday';
-  return format(d, 'MMM d');
+  if (isSameDay(d, today)) return "Today";
+  if (isYesterday(d)) return "Yesterday";
+  return format(d, "MMM d");
 };
 
-const matchesQuery = (item: HistoryItem, query: string): boolean => {
+const matchesQuery = (item: FeedItem, query: string): boolean => {
   if (!query) return true;
-  const haystack = `${item.text} ${item.tags.map((x) => x.t).join(' ')}`.toLowerCase();
-  return haystack.includes(query.toLowerCase());
+  const haystack =
+    item.kind === "note"
+      ? item.text
+      : `${item.title} ${item.summarySnippet}`;
+  return haystack.toLowerCase().includes(query.toLowerCase());
 };
 
-const matchesTags = (item: HistoryItem, active: string[]): boolean =>
-  active.length === 0 || item.tags.some((tg) => active.includes(tg.t));
+const matchesFilter = (item: FeedItem, filter: FeedFilter): boolean => {
+  if (filter === "all") return true;
+  if (filter === "notes") return item.kind === "note";
+  return item.kind === "brief";
+};
+
+const matchesDate = (item: FeedItem, cutoffMs: number): boolean =>
+  cutoffMs === 0 || item.createdAtMs >= cutoffMs;
 
 /**
- * Owns the History tab's derived data: normalizes store recordings into
- * display items, applies the search + tag filter, groups by date, and
- * builds the live tag-filter strip. Returns `isEmpty: true` when the
- * store is empty so callers can render the first-run empty state.
+ * Owns the History tab's derived feed — a unified chronological stream
+ * of notes (recordings) and briefs interleaved, date-grouped, with
+ * search + kind filtering on top. Tells the user the story of their
+ * tracking instead of just listing audio clips.
  */
-export const useHistoryData = (query: string, active: string[]): UseHistoryDataResult => {
-  const storeRecordings = useRecordingsStore((s) => s.recordings);
-  const isEmpty = storeRecordings.length === 0;
+export const useHistoryData = (
+  query: string,
+  filter: FeedFilter,
+  dateRange: FeedDateRange = "all",
+): UseHistoryDataResult => {
+  const recordings = useRecordingsStore((s) => s.recordings);
+  const briefs = useBriefsStore((s) => s.briefs);
+  const isEmpty = recordings.length === 0 && briefs.length === 0;
 
-  const items = useMemo<HistoryItem[]>(() => {
+  const items = useMemo<FeedItem[]>(() => {
     if (isEmpty) return [];
     const today = new Date();
-    return storeRecordings.map((r) => {
+
+    const notes: NoteFeedItem[] = recordings.map((r) => {
       const d = parseISO(r.createdAt);
       return {
+        kind: "note",
         id: r.id,
+        createdAtMs: d.getTime(),
         date: dateLabel(d, today),
-        time: format(d, 'h:mm a'),
+        time: format(d, "h:mm a"),
         dur: formatDuration(r.durationSec),
         text: r.transcript,
-        tags: r.tags.slice(0, MAX_TAGS_PER_ROW).map((t) => ({ t, c: colorForTag(t) })),
       };
     });
-  }, [storeRecordings, isEmpty]);
 
-  const filtered = useMemo(
-    () => items.filter((it) => matchesQuery(it, query) && matchesTags(it, active)),
-    [items, query, active],
-  );
+    const briefItems: BriefFeedItem[] = briefs.map((b) => {
+      const d = parseISO(b.generatedAt);
+      const summary = b.content.summary ?? "";
+      const firstSentence = summary.split(/(?<=[.!?])\s+/)[0] ?? summary;
+      return {
+        kind: "brief",
+        id: b.id,
+        createdAtMs: d.getTime(),
+        date: dateLabel(d, today),
+        time: format(d, "h:mm a"),
+        title: b.title ?? "Brief",
+        sourceCount: b.sourceRecordingIds.length,
+        clinicianIds: b.clinicianIds,
+        summarySnippet: firstSentence,
+      };
+    });
 
-  const allTags = useMemo<TagOption[]>(() => {
-    if (isEmpty) return [];
-    const counts = countBy(
-      storeRecordings.flatMap((r) => r.tags.map((t) => t.trim().toLowerCase())),
-      (t) => t,
+    return [...notes, ...briefItems].sort(
+      (a, b) => b.createdAtMs - a.createdAtMs,
     );
-    return orderBy(toPairs(counts).filter(([t]) => t.length > 0), [1], ['desc']).map(
-      ([t]) => ({ t, c: colorForTag(t) }),
-    );
-  }, [storeRecordings, isEmpty]);
+  }, [recordings, briefs, isEmpty]);
 
-  const groups = useMemo<HistoryGroup[]>(() => {
+  const filtered = useMemo(() => {
+    const cutoffMs = cutoffMsForRange(dateRange);
+    return items.filter(
+      (it) =>
+        matchesQuery(it, query) &&
+        matchesFilter(it, filter) &&
+        matchesDate(it, cutoffMs),
+    );
+  }, [items, query, filter, dateRange]);
+
+  const groups = useMemo<FeedGroup[]>(() => {
     const byDate = groupBy(filtered, (it) => it.date);
     const orderedDates: string[] = [];
     filtered.forEach((it) => {
@@ -93,5 +167,12 @@ export const useHistoryData = (query: string, active: string[]): UseHistoryDataR
     return orderedDates.map((date) => ({ date, entries: byDate[date]! }));
   }, [filtered]);
 
-  return { items, filtered, allTags, groups, isEmpty };
+  return {
+    items,
+    filtered,
+    groups,
+    notesCount: items.filter((i) => i.kind === "note").length,
+    briefsCount: items.filter((i) => i.kind === "brief").length,
+    isEmpty,
+  };
 };

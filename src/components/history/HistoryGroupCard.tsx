@@ -7,11 +7,11 @@ import {
   useTheme,
   verticalScale,
 } from '@/theme';
-import type { HistoryGroup } from '@/hooks/useHistoryData';
-import { HistoryEntryRow } from './HistoryEntryRow';
+import type { FeedGroup } from '@/hooks/useHistoryData';
+import { FeedRow } from './FeedRow';
 
 interface HistoryGroupCardProps {
-  group: HistoryGroup;
+  group: FeedGroup;
 }
 
 export const HistoryGroupCard: React.FC<HistoryGroupCardProps> = ({ group }) => {
@@ -45,7 +45,7 @@ export const HistoryGroupCard: React.FC<HistoryGroupCardProps> = ({ group }) => 
         ]}
       >
         {group.entries.map((entry, i) => (
-          <HistoryEntryRow key={entry.id} entry={entry} isFirst={i === 0} />
+          <FeedRow key={`${entry.kind}-${entry.id}`} entry={entry} isFirst={i === 0} />
         ))}
       </View>
     </View>
