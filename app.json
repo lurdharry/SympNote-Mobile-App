@@ -6,11 +6,11 @@
     "orientation": "portrait",
     "scheme": "sympnote",
     "userInterfaceStyle": "automatic",
-    "icon": "./assets/icon-white.png",
+    "icon": "./assets/icon.png",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sympnote.app",
-      "icon": "./assets/icon-white.png",
+      "icon": "./assets/icon.png",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Sympnote uses the microphone so we can transcribe what you're saying about your symptoms.",
         "NSSpeechRecognitionUsageDescription": "Sympnote transcribes your voice on-device so your symptoms are ready to share with your doctor."
@@ -19,12 +19,10 @@
     "android": {
       "package": "com.sympnote.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon-white.png",
-        "backgroundColor": "#245353"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#FEF8EE"
       },
-      "permissions": [
-        "RECORD_AUDIO"
-      ]
+      "permissions": ["RECORD_AUDIO"]
     },
     "plugins": [
       "expo-router",
@@ -34,21 +32,19 @@
         {
           "microphonePermission": "Sympnote uses the microphone so we can transcribe what you're saying about your symptoms.",
           "speechRecognitionPermission": "Sympnote transcribes your voice on-device so your symptoms are ready to share with your doctor.",
-          "androidSpeechServicePackages": [
-            "com.google.android.googlequicksearchbox"
-          ]
+          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
         }
       ],
       [
         "expo-splash-screen",
         {
           "image": "./assets/icon.png",
-          "backgroundColor": "#245353",
+          "backgroundColor": "#FEF8EE",
           "resizeMode": "contain",
           "imageWidth": 220,
           "dark": {
             "image": "./assets/icon.png",
-            "backgroundColor": "#1B4846"
+            "backgroundColor": "#FEF8EE"
           }
         }
       ],
