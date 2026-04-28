@@ -7,7 +7,6 @@ import {
   makeStyles,
   moderateScale,
   scale,
-  shadows,
   useTheme,
   verticalScale,
 } from "@/theme";
@@ -65,16 +64,15 @@ export const CareTeamStrip: React.FC = () => {
                 hapticLight();
                 router.push(`/clinician/${c.id}`);
               }}
-              style={[
+              style={({ pressed }) => [
                 styles.pill,
-                { backgroundColor: colors.bgSurface, borderColor: colors.border },
-                shadows.card,
+                { borderColor: colors.border, opacity: pressed ? 0.7 : 1 },
               ]}
               accessibilityRole="button"
               accessibilityLabel={`Open brief for ${c.name}`}
             >
               <View style={styles.mascotSlot}>
-                <Mascot size={moderateScale(34)} />
+                <Mascot size={moderateScale(40)} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text

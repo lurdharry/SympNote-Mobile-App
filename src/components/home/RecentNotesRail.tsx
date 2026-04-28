@@ -15,6 +15,7 @@ import {
 } from "@/theme";
 import { useRecordingsStore } from "@/stores/useRecordingsStore";
 import { hapticLight } from "@/services/haptics";
+import { colorForTag } from "@/utils/tagColor";
 
 const RAIL_LIMIT = 5;
 const SNIPPET_LEN = 90;
@@ -65,6 +66,7 @@ export const RecentNotesRail: React.FC = () => {
           const date = parseISO(r.createdAt);
           const snippet = r.transcript.trim().slice(0, SNIPPET_LEN);
           const tag = r.tags[0];
+          const stripeColor = tag ? colorForTag(tag) : colors.accent;
           return (
             <Pressable
               key={r.id}
@@ -80,6 +82,7 @@ export const RecentNotesRail: React.FC = () => {
               accessibilityRole="button"
               accessibilityLabel={`Open note from ${format(date, "MMM d")}`}
             >
+              <View style={[styles.edge, { backgroundColor: stripeColor }]} />
               <View style={styles.cardHead}>
                 <Mic size={moderateScale(11)} color={colors.textTertiary} strokeWidth={2.2} />
                 <Text style={[styles.cardDate, { color: colors.textTertiary }]}>
@@ -94,9 +97,9 @@ export const RecentNotesRail: React.FC = () => {
               </Text>
               {tag ? (
                 <View style={styles.tagRow}>
-                  <View style={[styles.tagDot, { backgroundColor: colors.accent }]} />
+                  <View style={[styles.tagDot, { backgroundColor: stripeColor }]} />
                   <Text
-                    style={[styles.tagText, { color: colors.accent }]}
+                    style={[styles.tagText, { color: stripeColor }]}
                     numberOfLines={1}
                   >
                     {tag}
@@ -140,8 +143,17 @@ const useStyles = makeStyles((theme) => ({
     width: moderateScale(220),
     paddingHorizontal: scale(14),
     paddingVertical: verticalScale(12),
+    paddingLeft: scale(18),
     borderRadius: theme.radius.lg,
     borderWidth: 1,
+    overflow: "hidden",
+  },
+  edge: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: moderateScale(4),
   },
   cardHead: {
     flexDirection: "row",
