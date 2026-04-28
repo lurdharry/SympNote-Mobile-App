@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { parseISO } from "date-fns";
@@ -11,6 +11,7 @@ import { useAppointmentsStore } from "@/stores/useAppointmentsStore";
 import { useBriefsStore } from "@/stores/useBriefsStore";
 import { unbriefedRecordings } from "@/utils/briefSource";
 import { hapticLight } from "@/services/haptics";
+import { showInfo } from "@/components/ui/Toast";
 import { BackButton } from "@/components/ui/BackButton";
 import { AddClinicianSheet } from "@/components/onboarding/care-team/AddClinicianSheet";
 import { ClinicianMasthead } from "@/components/clinician/ClinicianMasthead";
@@ -94,10 +95,9 @@ const ClinicianDetail: React.FC = () => {
 
   const onGenerate = () => {
     if (recordings.length === 0) {
-      Alert.alert(
-        "Nothing to brief yet",
-        "Record a note first — once you have something to synthesise, you'll be able to pick which notes go into a brief tagged for this clinician.",
-      );
+      showInfo("Nothing to brief yet", {
+        body: "Record a note first — once you have something to synthesise, you'll be able to pick which notes go into a brief.",
+      });
       return;
     }
     hapticLight();

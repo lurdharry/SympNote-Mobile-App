@@ -19,8 +19,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { useTheme, lightColors, darkColors } from "../theme";
 import { TransitionProvider } from "../components/navigation/TransitionContext";
 import { queryClient } from "../services/queryClient";
-import { migrateClinicianRefs } from "../utils/migrateClinicianRefs";
 import { EntitlementProvider } from "../contexts/EntitlementContext";
+import { ToastHost, toastConfig } from "../components/ui/Toast";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -107,6 +107,7 @@ const RootLayout: React.FC = () => {
                   />
                 </Stack>
               </View>
+              <ToastHost config={toastConfig} topOffset={moderateTopOffset} />
             </EntitlementProvider>
           </TransitionProvider>
         </SafeAreaProvider>
@@ -114,6 +115,8 @@ const RootLayout: React.FC = () => {
     </GestureHandlerRootView>
   );
 };
+
+const moderateTopOffset = 60;
 
 const styles = StyleSheet.create({
   root: { flex: 1 },

@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { Alert, Linking, Pressable, Text, View } from "react-native";
+import { Linking, Pressable, Text, View } from "react-native";
 import { fontScale, makeStyles, moderateScale, useTheme, verticalScale } from "../../../theme";
 import { PrimaryButton } from "../../ui/PrimaryButton";
 import { PlanDef } from "../../../constants/plans";
 import { restorePurchases } from "../../../services/subscription";
 import { useProfileStore } from "../../../stores/useProfileStore";
 import { hapticLight } from "../../../services/haptics";
+import { showError, showInfo, showSuccess } from "../../ui/Toast";
 
 interface PaywallFooterProps {
   selectedPlan: PlanDef | undefined;
@@ -36,33 +37,32 @@ export const PaywallFooter: React.FC<PaywallFooterProps> = ({ selectedPlan, load
       const result = await restorePurchases();
       if (result.restored) {
         useProfileStore.getState().setSubscription(result.status, result.trialEndsAt);
-        Alert.alert(
-          "Subscription restored",
-          "We've reactivated your Sympnote Plus access on this device.",
-        );
+        showSuccess("Subscription restored", {
+          body: "We've reactivated your Sympnote Plus access on this device.",
+        });
       } else {
-        Alert.alert(
-          "No purchases found",
-          "We couldn't find an active subscription on this Apple ID. If you believe this is wrong, contact support@sympnote.app.",
-        );
+        showInfo("No purchases found", {
+          body: "We couldn't find an active subscription on this Apple ID. Contact support@sympnote.app if you believe this is wrong.",
+        });
       }
     } catch (e) {
-      Alert.alert(
-        "Couldn't restore",
-        e instanceof Error ? e.message : "Something went wrong reaching the App Store.",
-      );
+      showError("Couldn't restore", {
+        body: e instanceof Error ? e.message : "Something went wrong reaching the App Store.",
+        actionLabel: "Retry",
+        onAction: onRestore,
+      });
     } finally {
       setRestoring(false);
     }
   };
   const onTerms = () => {
     Linking.openURL("https://sympnote.app/terms").catch(() => {
-      Alert.alert("Couldn't open Terms", "Visit sympnote.app/terms in your browser.");
+      showInfo("Couldn't open Terms", { body: "Visit sympnote.app/terms in your browser." });
     });
   };
   const onPrivacy = () => {
     Linking.openURL("https://sympnote.app/privacy").catch(() => {
-      Alert.alert("Couldn't open Privacy", "Visit sympnote.app/privacy in your browser.");
+      showInfo("Couldn't open Privacy", { body: "Visit sympnote.app/privacy in your browser." });
     });
   };
 

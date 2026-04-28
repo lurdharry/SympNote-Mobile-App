@@ -1,5 +1,5 @@
 import React from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Plus, Sparkles } from "lucide-react-native";
@@ -21,6 +21,7 @@ import { useCareTeam } from "@/stores/useProfileStore";
 import { useRecordingsStore } from "@/stores/useRecordingsStore";
 import { unbriefedRecordings } from "@/utils/briefSource";
 import { hapticLight } from "@/services/haptics";
+import { showInfo } from "@/components/ui/Toast";
 
 /**
  * Briefs tab — chronological list of every brief the user has
@@ -43,10 +44,9 @@ const TabBriefs: React.FC = () => {
 
   const onGenerate = () => {
     if (recordings.length === 0) {
-      Alert.alert(
-        "Nothing to brief yet",
-        "Record a note first — once you have something to synthesise, tap + to pick which notes go in.",
-      );
+      showInfo("Nothing to brief yet", {
+        body: "Record a note first — once you have something to synthesise, tap + to pick which notes go in.",
+      });
       return;
     }
     hapticLight();

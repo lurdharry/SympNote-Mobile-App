@@ -1,8 +1,8 @@
-import { Alert } from 'react-native';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useRecordingsStore } from '@/stores/useRecordingsStore';
 import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
+import { showError, showInfo } from '@/components/ui/Toast';
 
 const EXPORT_FILENAME = 'sympnote-export.json';
 const EXPORT_VERSION = 1;
@@ -28,7 +28,7 @@ export const exportUserData = async (): Promise<void> => {
 
     const ok = await Sharing.isAvailableAsync();
     if (!ok) {
-      Alert.alert('Sharing unavailable', 'File saved to cache.');
+      showInfo('Sharing unavailable', { body: 'File saved to cache.' });
       return;
     }
     await Sharing.shareAsync(file.uri, {
@@ -36,6 +36,6 @@ export const exportUserData = async (): Promise<void> => {
       dialogTitle: 'Export Sympnote data',
     });
   } catch (e) {
-    Alert.alert('Export failed', String(e));
+    showError('Export failed', { body: String(e) });
   }
 };

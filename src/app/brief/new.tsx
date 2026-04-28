@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -31,6 +30,7 @@ import { unbriefedRecordings } from "@/utils/briefSource";
 import { useGenerateBrief } from "@/hooks/useGenerateBrief";
 import { usePaywallGate } from "@/hooks/usePaywallGate";
 import { hapticLight } from "@/services/haptics";
+import { showError, showInfo } from "@/components/ui/Toast";
 
 const DAY_MS = 86_400_000;
 
@@ -102,7 +102,9 @@ const NewBrief: React.FC = () => {
     if (generating) return;
     const picked = visibleRecordings.filter((r) => selectedRecordingIds.has(r.id));
     if (picked.length === 0) {
-      Alert.alert("Pick at least one note", "Tap a note to include it in the brief.");
+      showInfo("Pick at least one note", {
+        body: "Tap a note to include it in the brief.",
+      });
       return;
     }
     // Gate at the action moment, not on screen mount — picking notes
@@ -123,10 +125,11 @@ const NewBrief: React.FC = () => {
         },
         onError: (err) => {
           setGenerating(false);
-          Alert.alert(
-            "Couldn't generate",
-            err instanceof Error ? err.message : "Something went wrong.",
-          );
+          showError("Couldn't generate", {
+            body: err instanceof Error ? err.message : "Something went wrong.",
+            actionLabel: "Retry",
+            onAction: onGenerate,
+          });
         },
       },
     );
