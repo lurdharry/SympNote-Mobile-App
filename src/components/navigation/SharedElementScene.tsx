@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { StyleProp, StyleSheet, useWindowDimensions, ViewStyle } from 'react-native';
+import React, { useEffect } from "react";
+import { StyleProp, StyleSheet, useWindowDimensions, ViewStyle } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -8,9 +8,9 @@ import Animated, {
   withDelay,
   Easing,
   runOnJS,
-} from 'react-native-reanimated';
-import { useTransition } from './TransitionContext';
-import { useReducedMotion } from '../../hooks/useReducedMotion';
+} from "react-native-reanimated";
+import { useTransition } from "./TransitionContext";
+import { useReducedMotion } from "../../hooks/useReducedMotion";
 
 type Props = {
   children: React.ReactNode;
@@ -42,7 +42,7 @@ export const SharedElementScene: React.FC<Props> = ({ children, style }) => {
     t.value = withSpring(1, { damping: 18, stiffness: 100, mass: 0.9 });
     childOp.value = withDelay(
       150,
-      withTiming(1, { duration: 260, easing: Easing.out(Easing.cubic) })
+      withTiming(1, { duration: 260, easing: Easing.out(Easing.cubic) }),
     );
   }, [t, childOp, reduced]);
 
@@ -64,7 +64,7 @@ export const SharedElementScene: React.FC<Props> = ({ children, style }) => {
           { duration: reduced ? 180 : 320, easing: Easing.in(Easing.cubic) },
           (done) => {
             if (done) runOnJS(resolve)();
-          }
+          },
         );
       });
     registerSceneCloser(closer);
@@ -74,7 +74,7 @@ export const SharedElementScene: React.FC<Props> = ({ children, style }) => {
   const container = useAnimatedStyle(() => {
     if (!origin) {
       return {
-        position: 'absolute',
+        position: "absolute",
         left: 0,
         top: 0,
         width,
@@ -86,13 +86,13 @@ export const SharedElementScene: React.FC<Props> = ({ children, style }) => {
     const w = origin.width + (width - origin.width) * t.value;
     const h = origin.height + (height - origin.height) * t.value;
     return {
-      position: 'absolute',
+      position: "absolute",
       left: x,
       top: y,
       width: w,
       height: h,
       borderRadius: 16 * (1 - t.value),
-      overflow: 'hidden',
+      overflow: "hidden",
     };
   });
 
@@ -100,9 +100,7 @@ export const SharedElementScene: React.FC<Props> = ({ children, style }) => {
 
   return (
     <Animated.View style={[container, style]}>
-      <Animated.View style={[StyleSheet.absoluteFill, content]}>
-        {children}
-      </Animated.View>
+      <Animated.View style={[StyleSheet.absoluteFill, content]}>{children}</Animated.View>
     </Animated.View>
   );
-}
+};

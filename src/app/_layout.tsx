@@ -18,7 +18,6 @@ import { StyleSheet, View } from "react-native";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useTheme, lightColors, darkColors } from "../theme";
 import { TransitionProvider } from "../components/navigation/TransitionContext";
-import { RadialWipe } from "../components/navigation/RadialWipe";
 import { queryClient } from "../services/queryClient";
 import { migrateClinicianRefs } from "../utils/migrateClinicianRefs";
 import { EntitlementProvider } from "../contexts/EntitlementContext";
@@ -117,7 +116,6 @@ const RootLayout: React.FC = () => {
                     }}
                   />
                 </Stack>
-                <RadialWipe />
               </View>
             </EntitlementProvider>
           </TransitionProvider>
