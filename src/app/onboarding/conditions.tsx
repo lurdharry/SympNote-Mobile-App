@@ -98,7 +98,7 @@ const ScreenConditions: React.FC = () => {
     value.startsWith("custom:") ? value.slice("custom:".length) : value;
 
   const count = picked.size;
-  const ctaLabel = count === 0 ? "None apply" : `That's me · ${count}`;
+  const ctaLabel = count === 0 ? "None apply" : `These apply · ${count}`;
 
   return (
     <SceneTransition mode="scale-fade">

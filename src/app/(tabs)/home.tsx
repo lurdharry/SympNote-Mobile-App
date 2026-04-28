@@ -25,10 +25,7 @@ import { useRecordingsStore } from "@/stores/useRecordingsStore";
 import { useBriefsStore } from "@/stores/useBriefsStore";
 import { unbriefedRecordings } from "@/utils/briefSource";
 import { Sparkles } from "lucide-react-native";
-import type { Clinician } from "@/stores/types";
 import { useOverlayRecording } from "@/hooks/useOverlayRecording";
-
-const EMPTY_CARETEAM: readonly Clinician[] = Object.freeze([]);
 
 const TabHome: React.FC = () => {
   const router = useRouter();
@@ -58,8 +55,6 @@ const TabHome: React.FC = () => {
   } = useHomeDashboard();
 
   const {
-    selectedClinicians,
-    toggleClinician,
     onSave,
     isExtracting,
     postCapture,
@@ -88,10 +83,6 @@ const TabHome: React.FC = () => {
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     };
   }, []);
-
-  const careTeam = useProfileStore(
-    (s) => s.personalization?.careTeam ?? EMPTY_CARETEAM,
-  ) as Clinician[];
 
   const { requireEntitlement, entitled } = usePaywallGate();
 
@@ -277,9 +268,6 @@ const TabHome: React.FC = () => {
             onReRecord={onReRecord}
             error={aiError}
             retryInSec={retryInSec}
-            careTeam={careTeam}
-            selectedClinicians={selectedClinicians}
-            onToggleClinician={toggleClinician}
           />
 
           {toast && (

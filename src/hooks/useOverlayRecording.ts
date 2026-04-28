@@ -1,5 +1,4 @@
-import { View, Text } from "react-native";
-import React, { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { GeminiQuotaError } from "@/services/aiQuota";
 import { hapticHeavy } from "@/services/haptics";
 import { useStructureTranscript } from "./useStructureTranscript";
@@ -16,8 +15,6 @@ interface OncommitProps {
 }
 
 export const useOverlayRecording = ({ showToast }: UseOverlayRecordingProps) => {
-  const [selectedClinicians, setSelectedClinicians] = useState<string[]>([]);
-
   // Post-release state — the captured transcript + duration we're
   // reviewing. Null means no review in progress. When this is set
   // alongside isRecording=false the overlay stays mounted in
@@ -49,7 +46,6 @@ export const useOverlayRecording = ({ showToast }: UseOverlayRecordingProps) => 
     setAiError(null);
     setRetryInSec(0);
     setIsExtracting(false);
-    setSelectedClinicians([]);
   }, []);
 
   const onCommit = useCallback(({ transcript, durationSec }: OncommitProps) => {
@@ -57,19 +53,12 @@ export const useOverlayRecording = ({ showToast }: UseOverlayRecordingProps) => 
     setEditValue(transcript);
     setAiError(null);
     setRetryInSec(0);
-    setSelectedClinicians([]);
   }, []);
 
-  const toggleClinician = useCallback((name: string) => {
-    setSelectedClinicians((prev) => {
-      const norm = name.trim();
-      const lower = norm.toLowerCase();
-      const hit = prev.findIndex((s) => s.trim().toLowerCase() === lower);
-      if (hit >= 0) return prev.filter((_, i) => i !== hit);
-      return [...prev, norm];
-    });
-  }, []);
-
+  // Notes are no longer tagged with clinicians at save-time. Audience
+  // tagging belongs on the brief (see brief-first pivot in the dev
+  // plan), so the recording just persists the transcript + structured
+  // fields without any per-note routing.
   const onSave = useCallback(() => {
     if (!postCapture) return;
     const text = editValue.trim();
@@ -89,7 +78,6 @@ export const useOverlayRecording = ({ showToast }: UseOverlayRecordingProps) => 
           transcript: text,
           structured,
           tags,
-          ...(selectedClinicians.length > 0 ? { clinicianNames: selectedClinicians } : {}),
         });
         hapticHeavy();
         dismissOverlay();
@@ -104,12 +92,9 @@ export const useOverlayRecording = ({ showToast }: UseOverlayRecordingProps) => 
         }
       },
     });
-  }, [postCapture, editValue, selectedClinicians, structureMutation, showToast, dismissOverlay]);
+  }, [postCapture, editValue, structureMutation, showToast, dismissOverlay]);
 
   return {
-    selectedClinicians,
-    setSelectedClinicians,
-    toggleClinician,
     onSave,
     isExtracting,
     postCapture,
