@@ -10,6 +10,8 @@ import { useHomeDashboard } from "@/hooks/useHomeDashboard";
 import { useHoldToRecord } from "@/hooks/useHoldToRecord";
 import { usePaywallGate } from "@/hooks/usePaywallGate";
 import { ReadyStateCard } from "@/components/home/ReadyStateCard";
+import { CareTeamStrip } from "@/components/home/CareTeamStrip";
+import { RecentNotesRail } from "@/components/home/RecentNotesRail";
 import { TimelineCard } from "@/components/home/TimelineCard";
 import { InsightNudge } from "@/components/home/InsightNudge";
 import { FirstEntryHero } from "@/components/home/FirstEntryHero";
@@ -128,6 +130,9 @@ const TabHome: React.FC = () => {
                 />
               </View>
             )}
+
+            <CareTeamStrip />
+            <RecentNotesRail />
 
             {todayEntries.length > 0 && (
               <View style={{ marginTop: spacing.s5 }}>
