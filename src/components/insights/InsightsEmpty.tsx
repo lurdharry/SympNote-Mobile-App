@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Mic, TrendingUp } from 'lucide-react-native';
+import { Mic } from 'lucide-react-native';
 import {
   fontScale,
   makeStyles,
@@ -14,6 +14,7 @@ import {
   verticalScale,
 } from '@/theme';
 import { hapticLight } from '@/services/haptics';
+import { SproutMascot } from './SproutMascot';
 
 interface InsightsEmptyProps {
   /** Current recordings inside the selected range. */
@@ -39,8 +40,8 @@ export const InsightsEmpty: React.FC<InsightsEmptyProps> = ({
 
   return (
     <View style={styles.wrap}>
-      <View style={[styles.iconRing, { backgroundColor: colors.accent + '14' }]}>
-        <TrendingUp size={moderateScale(28)} color={colors.accent} strokeWidth={2} />
+      <View style={styles.mascot}>
+        <SproutMascot />
       </View>
 
       <Text style={[styles.headline, { color: colors.textPrimary }]}>
@@ -69,7 +70,10 @@ export const InsightsEmpty: React.FC<InsightsEmptyProps> = ({
       <Pressable
         onPress={() => {
           hapticLight();
-          router.push('/record');
+          // Route to home where the FAB hosts both capture paths:
+          // long-press for voice, tap for typing. /record is
+          // type-only, which would trap voice-first users.
+          router.push('/(tabs)/home');
         }}
         style={[styles.cta, shadows.accentGlow]}
       >
@@ -92,13 +96,8 @@ const useStyles = makeStyles((theme) => ({
     paddingVertical: verticalScale(40),
     paddingHorizontal: spacing.s6,
   },
-  iconRing: {
-    width: moderateScale(72),
-    height: moderateScale(72),
-    borderRadius: moderateScale(36),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: theme.spacing.s5,
+  mascot: {
+    marginBottom: theme.spacing.s4,
   },
   headline: {
     ...theme.typography.serifHeadline,
