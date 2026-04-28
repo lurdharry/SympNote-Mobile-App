@@ -1,14 +1,14 @@
 import React, { useMemo } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
-import { format, formatDistanceToNowStrict, isSameDay, parseISO } from "date-fns";
+import { LinearGradient } from "expo-linear-gradient";
+import { format, isSameDay, parseISO } from "date-fns";
 import { sortBy } from "lodash";
 import {
   fontScale,
   makeStyles,
   moderateScale,
-  shadows,
-  typography,
+  scale,
   useTheme,
   verticalScale,
 } from "@/theme";
@@ -19,25 +19,40 @@ import { useBriefsStore } from "@/stores/useBriefsStore";
 import { hapticLight } from "@/services/haptics";
 import { timeGreeting } from "@/utils/date";
 
-const TRANSCRIPT_QUOTE_LEN = 140;
+const TRANSCRIPT_QUOTE_LEN = 110;
 const DAY_MS = 86_400_000;
 
+const NUMBER_WORDS = [
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "ten",
+  "eleven",
+  "twelve",
+];
+
+/** Spell out small numbers, fall through to digits for editorial flow. */
+const numberWord = (n: number): string =>
+  n >= 0 && n <= 12 ? NUMBER_WORDS[n]! : n.toString();
+
 /**
- * Always-on masthead at the top of the home tab. Anchors the page in
- * the user's own story so home reads as "yours" instead of an empty
- * dashboard on quiet days.
+ * Always-on editorial masthead at the top of the home tab. Reads as
+ * the cover of a daily journal: tiny SYMPNOTE / Issue / date strap
+ * across the top, an oversized Fraunces italic greeting, the user's
+ * progress woven into a single sentence (numbers as the editorial
+ * weight — not stat chips), and the latest note as an inline pull
+ * quote with a date attribution.
  *
- * Composition (top → bottom):
- *   1. Date eyebrow + Fraunces italic greeting + Sympnote sprite
- *   2. Stats strip (notes · briefs · weeks journaling) — hidden on
- *      day-zero so a fresh user doesn't open the app to a row of
- *      zeroes
- *   3. Pull-quote card with the latest note's transcript snippet,
- *      tappable to open that note. Falls back to a welcome line
- *      when the user has no recordings yet.
+ * No card borders. The hero is the page, not a widget.
  *
- * The whole component is self-contained — reads stores directly, no
- * props — so the home orchestrator just renders <JournalHero />.
+ * Self-contained — reads stores directly, no props.
  */
 export const JournalHero: React.FC = () => {
   const router = useRouter();
@@ -60,7 +75,7 @@ export const JournalHero: React.FC = () => {
     return sortBy(recordings, (r) => parseISO(r.createdAt).getTime())[0]!;
   }, [recordings]);
 
-  // Weeks since the very first note. Fresh user reads "1 week" on
+  // Weeks since the very first note. Fresh user reads "1" on
   // their first day; ticks up each calendar week thereafter.
   const weeksJournaling = useMemo(() => {
     if (!earliestRecording) return 0;
@@ -68,7 +83,10 @@ export const JournalHero: React.FC = () => {
     return Math.max(1, Math.ceil(ms / (7 * DAY_MS)));
   }, [earliestRecording]);
 
-  const dateEyebrow = format(new Date(), "EEEE · MMM d").toUpperCase();
+  const issueLabel = recordingsCount > 0
+    ? `No. ${String(recordingsCount).padStart(3, "0")}`
+    : "Premiere Issue";
+  const dateLabel = format(new Date(), "MMM d").toUpperCase();
   const greetingLine = timeGreeting();
 
   const pullQuote = useMemo(() => {
@@ -80,15 +98,14 @@ export const JournalHero: React.FC = () => {
       : text;
   }, [latestRecording]);
 
-  const pullQuoteEyebrow = useMemo(() => {
+  const pullQuoteAttribution = useMemo(() => {
     if (!latestRecording) return null;
     const created = parseISO(latestRecording.createdAt);
     const now = new Date();
-    if (isSameDay(created, now)) return "FROM TODAY";
+    if (isSameDay(created, now)) return "today";
     const yesterday = new Date(now.getTime() - DAY_MS);
-    if (isSameDay(created, yesterday)) return "FROM YESTERDAY";
-    const dist = formatDistanceToNowStrict(created);
-    return `${dist.toUpperCase()} AGO`;
+    if (isSameDay(created, yesterday)) return "yesterday";
+    return format(created, "MMM d").toLowerCase();
   }, [latestRecording]);
 
   const onTapQuote = () => {
@@ -97,85 +114,88 @@ export const JournalHero: React.FC = () => {
     router.push(`/recording/${latestRecording.id}`);
   };
 
-  const showStats = recordingsCount > 0;
+  const showNarrative = recordingsCount > 0;
 
   return (
     <View style={styles.wrap}>
-      {/* ── Date + greeting + sprite ────────────────────────────── */}
-      <View style={styles.topRow}>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={[styles.eyebrow, { color: colors.textTertiary }]}>{dateEyebrow}</Text>
-          <Text style={[styles.greeting, { color: colors.textPrimary }]} numberOfLines={2}>
-            {greetingLine}
-          </Text>
-        </View>
-        <View style={styles.spriteSlot}>
-          <SympnoteSprite pose="greeting" reduced={reduced} size={moderateScale(64)} />
+      {/* Soft accent aurora wash behind the masthead */}
+      <LinearGradient
+        pointerEvents="none"
+        colors={[colors.accent + "1A", colors.accent + "00"]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={styles.aurora}
+      />
+
+      {/* ── Masthead strap ──────────────────────────────────────── */}
+      <View style={styles.masthead}>
+        <Text style={[styles.wordmark, { color: colors.textPrimary }]}>SYMPNOTE</Text>
+        <View style={[styles.strapDot, { backgroundColor: colors.textTertiary }]} />
+        <Text style={[styles.strapMeta, { color: colors.textTertiary }]}>{issueLabel}</Text>
+        <View style={[styles.strapDot, { backgroundColor: colors.textTertiary }]} />
+        <Text style={[styles.strapMeta, { color: colors.textTertiary }]}>{dateLabel}</Text>
+        <View style={{ flex: 1 }} />
+        <View style={styles.spriteSigil}>
+          <SympnoteSprite pose="greeting" reduced={reduced} size={moderateScale(40)} />
         </View>
       </View>
+      <View style={[styles.rule, { backgroundColor: colors.accent + "55" }]} />
 
-      {/* ── Stats strip ─────────────────────────────────────────── */}
-      {showStats && (
-        <View style={[styles.stats, { borderTopColor: colors.border, borderBottomColor: colors.border }]}>
-          <Stat
-            value={recordingsCount.toString()}
-            label={recordingsCount === 1 ? "note" : "notes"}
-          />
-          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          <Stat
-            value={briefsCount.toString()}
-            label={briefsCount === 1 ? "brief" : "briefs"}
-          />
-          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          <Stat
-            value={`${weeksJournaling}w`}
-            label={weeksJournaling === 1 ? "week" : "weeks"}
-          />
-        </View>
+      {/* ── Hero greeting ───────────────────────────────────────── */}
+      <Text style={[styles.greeting, { color: colors.textPrimary }]}>
+        {greetingLine}
+      </Text>
+
+      {/* ── Narrative — stats woven into prose ──────────────────── */}
+      {showNarrative ? (
+        <Text style={[styles.narrative, { color: colors.textSecondary }]}>
+          You've kept{" "}
+          <Text style={[styles.statWord, { color: colors.accent }]}>
+            {numberWord(recordingsCount)} {recordingsCount === 1 ? "note" : "notes"}
+          </Text>
+          {briefsCount > 0 ? ", shaped " : " and journaled "}
+          {briefsCount > 0 && (
+            <>
+              <Text style={[styles.statWord, { color: colors.accent }]}>
+                {numberWord(briefsCount)} {briefsCount === 1 ? "brief" : "briefs"}
+              </Text>
+              , and journaled{" "}
+            </>
+          )}
+          <Text style={[styles.statWord, { color: colors.accent }]}>
+            {numberWord(weeksJournaling)} {weeksJournaling === 1 ? "week" : "weeks"}
+          </Text>{" "}
+          in.
+        </Text>
+      ) : (
+        <Text style={[styles.narrative, { color: colors.textSecondary }]}>
+          A blank page. Hold the mic below to begin your first entry.
+        </Text>
       )}
 
-      {/* ── Pull-quote ──────────────────────────────────────────── */}
-      {pullQuote && pullQuoteEyebrow ? (
+      {/* ── Pull-quote — borderless inline ──────────────────────── */}
+      {pullQuote && pullQuoteAttribution ? (
         <Pressable
           onPress={onTapQuote}
-          style={[
-            styles.quote,
-            { backgroundColor: colors.bgSurface, borderColor: colors.border },
-            shadows.card,
-          ]}
+          style={({ pressed }) => [styles.quoteBlock, { opacity: pressed ? 0.65 : 1 }]}
           accessibilityRole="button"
           accessibilityLabel="Open most recent note"
         >
-          <Text style={[styles.quoteEyebrow, { color: colors.accent }]}>{pullQuoteEyebrow}</Text>
-          <Text style={[styles.quoteBody, { color: colors.textPrimary }]} numberOfLines={3}>
+          <Text
+            style={[styles.quoteBody, { color: colors.textPrimary }]}
+            numberOfLines={3}
+          >
             &ldquo;{pullQuote}&rdquo;
           </Text>
+          <View style={styles.quoteAttribution}>
+            <View style={[styles.attrLine, { backgroundColor: colors.textTertiary }]} />
+            <Text style={[styles.attrText, { color: colors.textTertiary }]}>
+              {pullQuoteAttribution}
+            </Text>
+            <Text style={[styles.attrArrow, { color: colors.accent }]}>›</Text>
+          </View>
         </Pressable>
-      ) : (
-        <View
-          style={[
-            styles.quote,
-            { backgroundColor: colors.bgSurface, borderColor: colors.border },
-            shadows.card,
-          ]}
-        >
-          <Text style={[styles.quoteEyebrow, { color: colors.accent }]}>WELCOME</Text>
-          <Text style={[styles.quoteBody, { color: colors.textSecondary }]}>
-            Your journal is just beginning. Hold the mic below to record your first note.
-          </Text>
-        </View>
-      )}
-    </View>
-  );
-};
-
-const Stat: React.FC<{ value: string; label: string }> = ({ value, label }) => {
-  const { colors } = useTheme();
-  const styles = useStyles();
-  return (
-    <View style={styles.statCell}>
-      <Text style={[styles.statValue, { color: colors.textPrimary }]}>{value}</Text>
-      <Text style={[styles.statLabel, { color: colors.textTertiary }]}>{label}</Text>
+      ) : null}
     </View>
   );
 };
@@ -183,82 +203,104 @@ const Stat: React.FC<{ value: string; label: string }> = ({ value, label }) => {
 const useStyles = makeStyles((theme) => ({
   wrap: {
     paddingTop: theme.spacing.s2,
+    paddingBottom: theme.spacing.s4,
   },
-  topRow: {
+  aurora: {
+    position: "absolute",
+    top: -theme.spacing.s8,
+    left: -theme.spacing.s8,
+    right: -theme.spacing.s8,
+    height: verticalScale(220),
+  },
+  // ── Masthead strap
+  masthead: {
     flexDirection: "row",
     alignItems: "center",
-    gap: moderateScale(12),
+    gap: moderateScale(8),
   },
-  eyebrow: {
+  wordmark: {
     fontFamily: "DMSans_700Bold",
+    fontSize: fontScale(11),
+    letterSpacing: 2,
+  },
+  strapMeta: {
+    fontFamily: "DMSans_500Medium",
     fontSize: fontScale(10),
     letterSpacing: 1.4,
+    textTransform: "uppercase",
   },
+  strapDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 2,
+    opacity: 0.7,
+  },
+  spriteSigil: {
+    width: moderateScale(44),
+    height: moderateScale(44),
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: -moderateScale(6),
+  },
+  rule: {
+    height: StyleSheet.hairlineWidth,
+    marginTop: theme.spacing.s2,
+    opacity: 0.7,
+  },
+  // ── Hero greeting
   greeting: {
     fontFamily: "Fraunces_500Medium",
     fontStyle: "italic",
-    fontSize: fontScale(30),
-    lineHeight: fontScale(38),
-    letterSpacing: -0.6,
-    marginTop: 4,
+    fontSize: fontScale(40),
+    lineHeight: fontScale(46),
+    letterSpacing: -1,
+    marginTop: theme.spacing.s5,
   },
-  spriteSlot: {
-    width: moderateScale(72),
-    height: moderateScale(72),
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  // ── Stats
-  stats: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: verticalScale(14),
+  // ── Narrative
+  narrative: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: fontScale(15),
+    lineHeight: fontScale(23),
+    letterSpacing: -0.05,
     marginTop: theme.spacing.s4,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
   },
-  statCell: {
-    flex: 1,
-    alignItems: "center",
-  },
-  statValue: {
+  statWord: {
     fontFamily: "Fraunces_500Medium",
-    fontSize: fontScale(22),
-    lineHeight: fontScale(26),
-    letterSpacing: -0.4,
-  },
-  statLabel: {
-    ...typography.caption,
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: fontScale(10),
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    marginTop: 2,
-  },
-  statDivider: {
-    width: 1,
-    height: moderateScale(28),
-    opacity: 0.6,
+    fontStyle: "italic",
+    fontSize: fontScale(16),
+    letterSpacing: -0.1,
   },
   // ── Pull-quote
-  quote: {
-    marginTop: theme.spacing.s4,
-    paddingHorizontal: moderateScale(16),
-    paddingVertical: moderateScale(14),
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-  },
-  quoteEyebrow: {
-    fontFamily: "DMSans_700Bold",
-    fontSize: fontScale(10),
-    letterSpacing: 1.4,
-    marginBottom: 6,
+  quoteBlock: {
+    marginTop: theme.spacing.s5,
   },
   quoteBody: {
     fontFamily: "Fraunces_400Regular",
-    fontSize: fontScale(15),
-    lineHeight: fontScale(22),
-    letterSpacing: -0.1,
+    fontStyle: "italic",
+    fontSize: fontScale(18),
+    lineHeight: fontScale(26),
+    letterSpacing: -0.2,
+  },
+  quoteAttribution: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(8),
+    marginTop: theme.spacing.s2,
+  },
+  attrLine: {
+    width: scale(20),
+    height: 1,
+    opacity: 0.6,
+  },
+  attrText: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: fontScale(11),
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+  },
+  attrArrow: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: fontScale(16),
+    marginLeft: moderateScale(2),
   },
 }));
