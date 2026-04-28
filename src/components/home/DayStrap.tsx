@@ -5,22 +5,22 @@ import { fontScale, makeStyles, useTheme } from "@/theme";
 
 /**
  * Tiny editorial strap that anchors every visit to home: weekday +
- * date in tiny ALL CAPS, a hairline rule below. Sets the brand voice
- * before the user reads anything else. No functional cost.
+ * date in tiny ALL CAPS with a hairline rule extending to the right.
+ * Sets the brand voice before the user reads anything else. Time
+ * intentionally omitted — the device's status bar already shows it,
+ * so duplicating it on every screen would just be noise.
  */
 export const DayStrap: React.FC = () => {
   const { colors } = useTheme();
   const styles = useStyles();
   const now = new Date();
-  const left = format(now, "EEEE · MMM d").toUpperCase();
-  const right = format(now, "h:mm a").toLowerCase();
+  const dateLabel = format(now, "EEEE · MMM d").toUpperCase();
 
   return (
     <View style={styles.wrap}>
       <View style={styles.row}>
-        <Text style={[styles.text, { color: colors.textTertiary }]}>{left}</Text>
+        <Text style={[styles.text, { color: colors.textTertiary }]}>{dateLabel}</Text>
         <View style={[styles.rule, { backgroundColor: colors.border }]} />
-        <Text style={[styles.text, { color: colors.textTertiary }]}>{right}</Text>
       </View>
     </View>
   );
