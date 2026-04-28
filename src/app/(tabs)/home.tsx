@@ -3,7 +3,7 @@ import { ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { Easing, FadeIn, FadeOut } from "react-native-reanimated";
-import { fontScale, makeStyles, moderateScale, spacing, typography, useTheme } from "@/theme";
+import { fontScale, makeStyles, moderateScale, spacing, useTheme } from "@/theme";
 import { SceneTransition } from "@/components/navigation/SceneTransition";
 import { hapticLight } from "@/services/haptics";
 import { useHomeDashboard } from "@/hooks/useHomeDashboard";
@@ -12,13 +12,11 @@ import { usePaywallGate } from "@/hooks/usePaywallGate";
 import { ReadyStateCard } from "@/components/home/ReadyStateCard";
 import { CareTeamStrip } from "@/components/home/CareTeamStrip";
 import { RecentNotesRail } from "@/components/home/RecentNotesRail";
-import { TimelineCard } from "@/components/home/TimelineCard";
 import { InsightNudge } from "@/components/home/InsightNudge";
 import { FirstEntryHero } from "@/components/home/FirstEntryHero";
 import { PostVisitPrompt } from "@/components/home/PostVisitPrompt";
 import { RecordFAB } from "@/components/home/RecordFAB";
 import { HoldToRecordOverlay, HoldOverlayMode } from "@/components/home/HoldToRecordOverlay";
-import { SectionLabel } from "@/components/ui/SectionLabel";
 import { useAppointmentsStore } from "@/stores/useAppointmentsStore";
 import { useProfileStore } from "@/stores/useProfileStore";
 import { useOverlayRecording } from "@/hooks/useOverlayRecording";
@@ -37,7 +35,7 @@ const TabHome: React.FC = () => {
     toastTimerRef.current = setTimeout(() => setToast(null), 1800);
   }, []);
 
-  const { nextAppointment, todayEntries, nudge, recordingsCount, firstRecording, unresolvedVisit } =
+  const { nextAppointment, nudge, recordingsCount, firstRecording, unresolvedVisit } =
     useHomeDashboard();
 
   const {
@@ -134,18 +132,6 @@ const TabHome: React.FC = () => {
             <CareTeamStrip />
             <RecentNotesRail />
 
-            {todayEntries.length > 0 && (
-              <View style={{ marginTop: spacing.s5 }}>
-                <View style={styles.sectionRow}>
-                  <SectionLabel label="Today" />
-                  <Text style={[typography.label, { color: colors.textTertiary }]}>
-                    {todayEntries.length} {todayEntries.length === 1 ? "entry" : "entries"}
-                  </Text>
-                </View>
-                <TimelineCard entries={todayEntries} />
-              </View>
-            )}
-
             {nudge && (
               <InsightNudge nudge={nudge} onPress={() => router.push("/(tabs)/insights")} />
             )}
@@ -199,11 +185,6 @@ const useStyles = makeStyles(() => ({
     paddingHorizontal: spacing.s6,
     paddingTop: spacing.s4,
     paddingBottom: 160,
-  },
-  sectionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
   },
   toastWrap: {
     position: "absolute",
