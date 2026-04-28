@@ -5,27 +5,25 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { format, parseISO } from "date-fns";
-import { Check, Mic, X as XIcon } from "lucide-react-native";
+import { parseISO } from "date-fns";
+import { X as XIcon } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
   moderateScale,
-  scale,
-  shadows,
-  spacing,
   typography,
   useTheme,
-  verticalScale,
 } from "@/theme";
 import { Button } from "@/components/ui/Button";
+import { TitleField } from "@/components/brief/new/TitleField";
+import { RangeChips, RANGE_OPTIONS, type DateRange } from "@/components/brief/new/RangeChips";
+import { AudienceChips } from "@/components/brief/new/AudienceChips";
+import { NotesPicker } from "@/components/brief/new/NotesPicker";
 import { useBriefsStore } from "@/stores/useBriefsStore";
 import { useCareTeam } from "@/stores/useProfileStore";
 import { useRecordingsStore } from "@/stores/useRecordingsStore";
@@ -33,16 +31,6 @@ import { unbriefedRecordings } from "@/utils/briefSource";
 import { useGenerateBrief } from "@/hooks/useGenerateBrief";
 import { usePaywallGate } from "@/hooks/usePaywallGate";
 import { hapticLight } from "@/services/haptics";
-import type { Recording } from "@/stores/types";
-
-type DateRange = "all" | "7d" | "30d" | "90d";
-
-const RANGE_OPTIONS: { id: DateRange; label: string; days?: number }[] = [
-  { id: "7d", label: "7 days", days: 7 },
-  { id: "30d", label: "30 days", days: 30 },
-  { id: "90d", label: "90 days", days: 90 },
-  { id: "all", label: "All time" },
-];
 
 const DAY_MS = 86_400_000;
 
@@ -87,8 +75,6 @@ const NewBrief: React.FC = () => {
   useEffect(() => {
     const unbriefed = new Set(unbriefedRecordings(visibleRecordings, allBriefs).map((r) => r.id));
     setSelectedRecordingIds(unbriefed);
-    // Run only when the visible set or briefs change — not on every
-    // selection toggle.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleRecordings, allBriefs]);
 
@@ -100,13 +86,6 @@ const NewBrief: React.FC = () => {
       else next.add(id);
       return next;
     });
-  };
-
-  const toggleClinician = (id: string) => {
-    hapticLight();
-    setSelectedClinicianIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
   };
 
   const selectAll = () => {
@@ -140,8 +119,6 @@ const NewBrief: React.FC = () => {
       {
         onSuccess: (brief) => {
           setGenerating(false);
-          // Replace this screen with the brief detail so back from
-          // detail returns to Briefs tab, not the picker.
           router.replace(`/brief/${brief.id}`);
         },
         onError: (err) => {
@@ -187,172 +164,29 @@ const NewBrief: React.FC = () => {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-          <Text style={[styles.eyebrow, { color: colors.accent }]}>NEW BRIEF</Text>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>
-            Pick the notes to{"\n"}synthesise.
-          </Text>
-          <Text style={[styles.sub, { color: colors.textSecondary }]}>
-            Combine several recordings into one summary. The AI reads all picked notes and
-            distils them — top concerns, patterns, questions, the lot.
-          </Text>
-
-          {/* ── Title (optional) ────────────────────────────────── */}
-          <View style={styles.filterBlock}>
-            <Text style={[styles.filterLabel, { color: colors.textTertiary }]}>
-              TITLE · OPTIONAL
+            <Text style={[styles.eyebrow, { color: colors.accent }]}>NEW BRIEF</Text>
+            <Text style={[styles.title, { color: colors.textPrimary }]}>
+              Pick the notes to{"\n"}synthesise.
             </Text>
-            <View
-              style={[
-                styles.titleField,
-                { backgroundColor: colors.bgSurface, borderColor: colors.border },
-              ]}
-            >
-              <TextInput
-                value={title}
-                onChangeText={setTitle}
-                placeholder="e.g. Knee flare-up · Pre-Smith visit"
-                placeholderTextColor={colors.textTertiary}
-                style={[styles.titleInput, { color: colors.textPrimary }]}
-                returnKeyType="done"
-                maxLength={60}
-                accessibilityLabel="Brief title"
-              />
-            </View>
-          </View>
+            <Text style={[styles.sub, { color: colors.textSecondary }]}>
+              Combine several recordings into one summary. The AI reads all picked notes and
+              distils them — top concerns, patterns, questions, the lot.
+            </Text>
 
-          {/* ── Date range filter ───────────────────────────────── */}
-          <View style={styles.filterBlock}>
-            <Text style={[styles.filterLabel, { color: colors.textTertiary }]}>RANGE</Text>
-            <View style={styles.chipRow}>
-              {RANGE_OPTIONS.map((r) => {
-                const active = range === r.id;
-                return (
-                  <Pressable
-                    key={r.id}
-                    onPress={() => {
-                      hapticLight();
-                      setRange(r.id);
-                    }}
-                    style={[
-                      styles.chip,
-                      {
-                        backgroundColor: active ? colors.accent + "1A" : "transparent",
-                        borderColor: active ? colors.accent : colors.border,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        { color: active ? colors.accent : colors.textPrimary },
-                      ]}
-                    >
-                      {r.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* ── Audience filter ──────────────────────────────────── */}
-          {careTeam.length > 0 && (
-            <View style={styles.filterBlock}>
-              <Text style={[styles.filterLabel, { color: colors.textTertiary }]}>SHARE WITH</Text>
-              <View style={styles.chipRow}>
-                <Pressable
-                  onPress={() => {
-                    hapticLight();
-                    setSelectedClinicianIds([]);
-                  }}
-                  style={[
-                    styles.chip,
-                    {
-                      backgroundColor:
-                        selectedClinicianIds.length === 0 ? colors.accent + "1A" : "transparent",
-                      borderColor:
-                        selectedClinicianIds.length === 0 ? colors.accent : colors.border,
-                      borderStyle: selectedClinicianIds.length === 0 ? "solid" : "dashed",
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      {
-                        color:
-                          selectedClinicianIds.length === 0
-                            ? colors.accent
-                            : colors.textTertiary,
-                      },
-                    ]}
-                  >
-                    Everyone
-                  </Text>
-                </Pressable>
-                {careTeam.map((c) => {
-                  const active = selectedClinicianIds.includes(c.id);
-                  return (
-                    <Pressable
-                      key={c.id}
-                      onPress={() => toggleClinician(c.id)}
-                      style={[
-                        styles.chip,
-                        {
-                          backgroundColor: active ? colors.accent + "1A" : "transparent",
-                          borderColor: active ? colors.accent : colors.border,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.chipText,
-                          { color: active ? colors.accent : colors.textPrimary },
-                        ]}
-                      >
-                        {c.name}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-          )}
-
-          {/* ── Notes list ──────────────────────────────────────── */}
-          <View style={styles.notesBlock}>
-            <View style={styles.notesHeader}>
-              <Text style={[styles.filterLabel, { color: colors.textTertiary }]}>
-                NOTES · {visibleRecordings.length}
-              </Text>
-              <View style={styles.notesQuickActions}>
-                <Pressable onPress={selectAll} hitSlop={6}>
-                  <Text style={[styles.quickAction, { color: colors.accent }]}>Select all</Text>
-                </Pressable>
-                <Text style={[styles.quickAction, { color: colors.textTertiary }]}>·</Text>
-                <Pressable onPress={clearAll} hitSlop={6}>
-                  <Text style={[styles.quickAction, { color: colors.accent }]}>Clear</Text>
-                </Pressable>
-              </View>
-            </View>
-
-            {visibleRecordings.length === 0 ? (
-              <Text style={[styles.emptyHint, { color: colors.textTertiary }]}>
-                No notes in this range. Try widening the window or record something first.
-              </Text>
-            ) : (
-              visibleRecordings.map((r) => (
-                <RecordingPickerRow
-                  key={r.id}
-                  recording={r}
-                  selected={selectedRecordingIds.has(r.id)}
-                  onToggle={() => toggleRecording(r.id)}
-                  colors={colors}
-                  styles={styles}
-                />
-              ))
-            )}
-          </View>
+            <TitleField value={title} onChange={setTitle} />
+            <RangeChips value={range} onChange={setRange} />
+            <AudienceChips
+              careTeam={careTeam}
+              selected={selectedClinicianIds}
+              onChange={setSelectedClinicianIds}
+            />
+            <NotesPicker
+              recordings={visibleRecordings}
+              selected={selectedRecordingIds}
+              onToggle={toggleRecording}
+              onSelectAll={selectAll}
+              onClear={clearAll}
+            />
           </ScrollView>
 
           <View style={styles.ctaArea}>
@@ -366,69 +200,6 @@ const NewBrief: React.FC = () => {
         </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
-  );
-};
-
-interface RecordingPickerRowProps {
-  recording: Recording;
-  selected: boolean;
-  onToggle: () => void;
-  colors: ReturnType<typeof useTheme>["colors"];
-  styles: ReturnType<typeof useStyles>;
-}
-
-const RecordingPickerRow: React.FC<RecordingPickerRowProps> = ({
-  recording,
-  selected,
-  onToggle,
-  colors,
-  styles,
-}) => {
-  const date = parseISO(recording.createdAt);
-  const dateLabel = format(date, "MMM d · h:mm a");
-  const preview = recording.transcript.trim().slice(0, 120);
-  return (
-    <Pressable
-      onPress={onToggle}
-      style={[
-        styles.recordingRow,
-        {
-          backgroundColor: colors.bgSurface,
-          borderColor: selected ? colors.accent : colors.border,
-          borderWidth: selected ? 1.5 : StyleSheet.hairlineWidth,
-        },
-        shadows.card,
-      ]}
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked: selected }}
-      accessibilityLabel={`Note from ${dateLabel}`}
-    >
-      <View
-        style={[
-          styles.checkbox,
-          {
-            backgroundColor: selected ? colors.accent : "transparent",
-            borderColor: selected ? colors.accent : colors.border,
-          },
-        ]}
-      >
-        {selected && <Check size={moderateScale(13)} color="#FFFFFF" strokeWidth={3} />}
-      </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <View style={styles.recordingMeta}>
-          <Mic size={moderateScale(10)} color={colors.textTertiary} strokeWidth={2.2} />
-          <Text style={[styles.recordingDate, { color: colors.textTertiary }]}>
-            {dateLabel}
-          </Text>
-        </View>
-        <Text
-          style={[styles.recordingPreview, { color: colors.textPrimary }]}
-          numberOfLines={2}
-        >
-          {preview || "(empty note)"}
-        </Text>
-      </View>
-    </Pressable>
   );
 };
 
@@ -471,106 +242,10 @@ const useStyles = makeStyles((theme) => ({
     marginTop: 4,
   },
   sub: {
-    ...theme.typography.body,
+    ...typography.body,
     fontSize: fontScale(13),
     lineHeight: fontScale(19),
     marginTop: theme.spacing.s2,
-  },
-  filterBlock: {
-    marginTop: theme.spacing.s5,
-    gap: theme.spacing.s2,
-  },
-  filterLabel: {
-    fontFamily: "DMSans_700Bold",
-    fontSize: fontScale(10),
-    letterSpacing: 1.4,
-  },
-  titleField: {
-    paddingHorizontal: scale(14),
-    paddingVertical: verticalScale(10),
-    borderRadius: theme.radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  titleInput: {
-    fontFamily: "Fraunces_400Regular",
-    fontSize: fontScale(15),
-    lineHeight: fontScale(20),
-    padding: 0,
-    margin: 0,
-  },
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: moderateScale(8),
-  },
-  chip: {
-    paddingHorizontal: scale(12),
-    paddingVertical: verticalScale(7),
-    borderRadius: theme.radius.full,
-    borderWidth: 1,
-  },
-  chipText: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: fontScale(12),
-  },
-  notesBlock: {
-    marginTop: theme.spacing.s5,
-    gap: theme.spacing.s2,
-  },
-  notesHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  notesQuickActions: {
-    flexDirection: "row",
-    gap: moderateScale(8),
-    alignItems: "center",
-  },
-  quickAction: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: fontScale(11),
-    letterSpacing: 0.2,
-  },
-  emptyHint: {
-    ...theme.typography.body,
-    fontSize: fontScale(12),
-    fontStyle: "italic",
-    paddingVertical: theme.spacing.s4,
-  },
-  recordingRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: moderateScale(12),
-    paddingHorizontal: moderateScale(14),
-    paddingVertical: moderateScale(12),
-    borderRadius: theme.radius.lg,
-  },
-  checkbox: {
-    width: moderateScale(22),
-    height: moderateScale(22),
-    borderRadius: moderateScale(6),
-    borderWidth: 1.5,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 2,
-  },
-  recordingMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(5),
-  },
-  recordingDate: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: fontScale(10),
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-  },
-  recordingPreview: {
-    fontFamily: "Fraunces_400Regular",
-    fontSize: fontScale(14),
-    lineHeight: fontScale(20),
-    marginTop: 4,
   },
   ctaArea: {
     paddingHorizontal: theme.spacing.s6,
