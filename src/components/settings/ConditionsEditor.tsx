@@ -1,11 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
   Easing,
   FadeIn,
@@ -15,7 +9,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
-import { Activity, Check, ChevronDown, Plus, X } from "lucide-react-native";
+import { Activity, ChevronDown } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
@@ -28,6 +22,8 @@ import {
 } from "@/theme";
 import { useProfileStore } from "@/stores/useProfileStore";
 import { hapticLight } from "@/services/haptics";
+import { ConditionChip } from "./conditions/ConditionChip";
+import { AddConditionRow } from "./conditions/AddConditionRow";
 
 /**
  * Inline conditions editor. Tap the row → it expands with a smooth
@@ -68,7 +64,8 @@ const CURATED: ConditionOption[] = [
 const labelFor = (v: string): string => {
   const hit = CURATED.find((c) => c.v === v);
   if (hit) return hit.t;
-  if (v.startsWith("custom:")) return v.slice("custom:".length).replace(/^./, (c) => c.toUpperCase());
+  if (v.startsWith("custom:"))
+    return v.slice("custom:".length).replace(/^./, (c) => c.toUpperCase());
   return v;
 };
 
@@ -163,10 +160,7 @@ export const ConditionsEditor: React.FC = () => {
           <Text style={[typography.body, styles.label, { color: colors.textPrimary }]}>
             Known conditions
           </Text>
-          <Text
-            style={[typography.caption, { color: colors.textTertiary }]}
-            numberOfLines={1}
-          >
+          <Text style={[typography.caption, { color: colors.textTertiary }]} numberOfLines={1}>
             {summary}
           </Text>
         </View>
@@ -183,103 +177,28 @@ export const ConditionsEditor: React.FC = () => {
         >
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-          <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>
-            TAP TO TOGGLE
-          </Text>
+          <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>TAP TO TOGGLE</Text>
           <View style={styles.chipGrid}>
-            {visible.map((c) => {
-              const on = isOn(c.v);
-              return (
-                <Pressable
-                  key={c.v}
-                  onPress={() => toggle(c.v)}
-                  style={[
-                    styles.chip,
-                    {
-                      backgroundColor: on ? colors.accent + "16" : colors.bgMuted,
-                      borderColor: on ? colors.accent : colors.border,
-                      borderWidth: on ? 1.5 : StyleSheet.hairlineWidth,
-                    },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={c.t}
-                  accessibilityState={{ selected: on }}
-                >
-                  {on && (
-                    <Check
-                      size={moderateScale(12)}
-                      color={colors.accent}
-                      strokeWidth={2.6}
-                    />
-                  )}
-                  <Text
-                    style={[
-                      styles.chipLabel,
-                      { color: on ? colors.accent : colors.textPrimary },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {c.t}
-                  </Text>
-                  {on && c.v.startsWith("custom:") && (
-                    <Pressable
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        toggle(c.v);
-                      }}
-                      hitSlop={6}
-                      style={[styles.removeBtn, { backgroundColor: colors.accent + "22" }]}
-                    >
-                      <X size={moderateScale(10)} color={colors.accent} strokeWidth={2.4} />
-                    </Pressable>
-                  )}
-                </Pressable>
-              );
-            })}
+            {visible.map((c) => (
+              <ConditionChip
+                key={c.v}
+                label={c.t}
+                active={isOn(c.v)}
+                custom={c.v.startsWith("custom:")}
+                onPress={() => toggle(c.v)}
+              />
+            ))}
           </View>
 
-          <Text style={[styles.sectionLabel, { color: colors.textTertiary, marginTop: verticalScale(14) }]}>
-            ADD YOUR OWN
-          </Text>
-          <View
+          <Text
             style={[
-              styles.addRow,
-              { backgroundColor: colors.bgMuted, borderColor: colors.border },
+              styles.sectionLabel,
+              { color: colors.textTertiary, marginTop: verticalScale(14) },
             ]}
           >
-            <TextInput
-              value={draft}
-              onChangeText={setDraft}
-              placeholder="e.g. Eczema"
-              placeholderTextColor={colors.textTertiary}
-              onSubmitEditing={addCustom}
-              returnKeyType="done"
-              autoCapitalize="words"
-              style={[styles.addInput, { color: colors.textPrimary }]}
-              accessibilityLabel="Add a condition"
-            />
-            <Pressable
-              onPress={addCustom}
-              disabled={draft.trim().length === 0}
-              hitSlop={6}
-              style={[
-                styles.addBtn,
-                {
-                  backgroundColor:
-                    draft.trim().length === 0 ? colors.bgMuted : colors.accent,
-                  opacity: draft.trim().length === 0 ? 0.5 : 1,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Add condition"
-            >
-              <Plus
-                size={moderateScale(14)}
-                color={draft.trim().length === 0 ? colors.textTertiary : "#FFFFFF"}
-                strokeWidth={2.6}
-              />
-            </Pressable>
-          </View>
+            ADD YOUR OWN
+          </Text>
+          <AddConditionRow value={draft} onChange={setDraft} onSubmit={addCustom} />
         </Animated.View>
       )}
     </Animated.View>
@@ -329,50 +248,5 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: moderateScale(6),
-  },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(6),
-    paddingHorizontal: scale(10),
-    paddingVertical: verticalScale(7),
-    borderRadius: 999,
-  },
-  chipLabel: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: fontScale(12),
-    letterSpacing: 0.1,
-    maxWidth: moderateScale(170),
-  },
-  removeBtn: {
-    width: moderateScale(16),
-    height: moderateScale(16),
-    borderRadius: moderateScale(8),
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: moderateScale(2),
-  },
-  addRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(8),
-    paddingLeft: scale(12),
-    paddingRight: scale(4),
-    paddingVertical: verticalScale(4),
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  addInput: {
-    flex: 1,
-    paddingVertical: verticalScale(8),
-    fontFamily: "DMSans_500Medium",
-    fontSize: fontScale(13),
-  },
-  addBtn: {
-    width: moderateScale(30),
-    height: moderateScale(30),
-    borderRadius: moderateScale(15),
-    alignItems: "center",
-    justifyContent: "center",
   },
 }));
