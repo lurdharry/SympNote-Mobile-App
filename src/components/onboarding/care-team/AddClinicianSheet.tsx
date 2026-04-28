@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { X as XIcon } from "lucide-react-native";
 import {
   fontScale,
@@ -158,17 +157,11 @@ export const AddClinicianSheet: React.FC<AddClinicianSheetProps> = ({
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Specialty preview tile */}
+          {/* Specialty preview — shows the picked specialty's mascot
+              big at the top so the user sees the character they're
+              about to give this clinician. */}
           <View style={styles.previewWrap}>
-            <View style={styles.previewTile}>
-              <LinearGradient
-                colors={picked.grad}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
-              />
-              <picked.Icon size={moderateScale(28)} color={picked.fg} strokeWidth={2} />
-            </View>
+            <picked.Mascot size={moderateScale(96)} />
             <Text
               style={[typography.caption, { color: colors.textTertiary, marginTop: spacing.s2 }]}
             >
@@ -176,11 +169,14 @@ export const AddClinicianSheet: React.FC<AddClinicianSheetProps> = ({
             </Text>
           </View>
 
-          {/* Specialty picker */}
+          {/* Specialty picker — each chip carries its own mini mascot
+              so the user can scan by character recognition, not just
+              text. Active chip: accent border + tinted background. */}
           <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>SPECIALTY</Text>
           <View style={styles.chipsRow}>
             {SPECIALTIES.map((s) => {
               const active = picked.id === s.id;
+              const SpecMascot = s.Mascot;
               return (
                 <Pressable
                   key={s.id}
@@ -188,16 +184,18 @@ export const AddClinicianSheet: React.FC<AddClinicianSheetProps> = ({
                   style={[
                     styles.chip,
                     {
-                      backgroundColor: active ? s.grad[1] : colors.bgSurface,
-                      borderColor: active ? s.grad[1] : colors.border,
+                      backgroundColor: active ? colors.accent + "1A" : colors.bgSurface,
+                      borderColor: active ? colors.accent : colors.border,
+                      borderWidth: active ? 1.5 : StyleSheet.hairlineWidth,
                     },
                   ]}
                 >
+                  <SpecMascot size={moderateScale(22)} />
                   <Text
                     style={[
                       typography.label,
                       {
-                        color: active ? "#FFFFFF" : colors.textPrimary,
+                        color: active ? colors.accent : colors.textPrimary,
                         fontFamily: "DMSans_600SemiBold",
                       },
                     ]}
@@ -303,14 +301,6 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     marginBottom: spacing.s5,
   },
-  previewTile: {
-    width: moderateScale(72),
-    height: moderateScale(72),
-    borderRadius: moderateScale(20),
-    overflow: "hidden",
-    alignItems: "center",
-    justifyContent: "center",
-  },
   sectionLabel: {
     ...theme.typography.label,
     fontFamily: "DMSans_600SemiBold",
@@ -323,8 +313,12 @@ const useStyles = makeStyles((theme) => ({
     gap: moderateScale(8),
   },
   chip: {
-    paddingHorizontal: scale(14),
-    paddingVertical: verticalScale(9),
+    flexDirection: "row",
+    alignItems: "center",
+    gap: moderateScale(6),
+    paddingLeft: scale(8),
+    paddingRight: scale(14),
+    paddingVertical: verticalScale(6),
     borderRadius: theme.radius.full,
     borderWidth: StyleSheet.hairlineWidth,
   },
