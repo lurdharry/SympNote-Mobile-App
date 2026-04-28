@@ -101,6 +101,7 @@ const TabsLayout: React.FC = () => {
       <Tabs.Screen name="prep" />
       <Tabs.Screen name="insights" />
       <Tabs.Screen name="history" />
+      <Tabs.Screen name="settings" />
     </Tabs>
   );
 };

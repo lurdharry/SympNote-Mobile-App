@@ -93,12 +93,6 @@ const RootLayout: React.FC = () => {
                     }}
                   />
                   <Stack.Screen
-                    name="settings"
-                    options={{
-                      animation: "slide_from_right",
-                    }}
-                  />
-                  <Stack.Screen
                     name="record"
                     options={{
                       animation: "fade",

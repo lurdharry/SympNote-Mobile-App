@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Settings } from "lucide-react-native";
 import Animated, { Easing, FadeIn, FadeOut } from "react-native-reanimated";
 import { fontScale, makeStyles, moderateScale, spacing, typography, useTheme } from "@/theme";
 import { SceneTransition } from "@/components/navigation/SceneTransition";
@@ -106,21 +105,6 @@ const TabHome: React.FC = () => {
     <SceneTransition mode="crossfade-parallax-up">
       <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
         <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-          <View style={styles.topBar}>
-            <Pressable
-              onPress={() => {
-                hapticLight();
-                router.push("/settings");
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Settings"
-              hitSlop={10}
-              style={styles.settingsBtn}
-            >
-              <Settings size={moderateScale(24)} color={colors.textPrimary} strokeWidth={2} />
-            </Pressable>
-          </View>
-
           <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
             <ReadyStateCard />
 
@@ -205,23 +189,10 @@ const TabHome: React.FC = () => {
 
 export default TabHome;
 
-const useStyles = makeStyles((theme) => ({
-  topBar: {
-    paddingTop: theme.spacing.s2,
-    paddingHorizontal: theme.spacing.s6,
-    paddingBottom: theme.spacing.s1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-  },
-  settingsBtn: {
-    width: moderateScale(36),
-    height: moderateScale(36),
-    alignItems: "center",
-    justifyContent: "center",
-  },
+const useStyles = makeStyles(() => ({
   scroll: {
     paddingHorizontal: spacing.s6,
+    paddingTop: spacing.s4,
     paddingBottom: 160,
   },
   sectionRow: {
