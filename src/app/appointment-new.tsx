@@ -1,16 +1,14 @@
 import React, { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View, ScrollView } from "react-native";
+import { Text, View, ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { addDays, setHours, setMinutes, setSeconds } from "date-fns";
-import { Check, Lock, Plus } from "lucide-react-native";
+import { Lock } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
   moderateScale,
   scale,
-  shadows,
   spacing,
   typography,
   useTheme,
@@ -21,7 +19,8 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { StaggeredList } from "@/components/animated/StaggeredList";
 import { AddClinicianSheet } from "@/components/onboarding/care-team/AddClinicianSheet";
 import { AppointmentBlock } from "@/components/onboarding/care-team/AppointmentBlock";
-import { findSpecialty, type Specialty } from "@/constants/specialties";
+import { SelectableClinicianRow } from "@/components/appointment-new/SelectableClinicianRow";
+import { AddClinicianRow } from "@/components/appointment-new/AddClinicianRow";
 import { useAppointmentsStore } from "@/stores/useAppointmentsStore";
 import { useCareTeam, useProfileStore } from "@/stores/useProfileStore";
 import { hapticLight, hapticSuccess } from "@/services/haptics";
@@ -119,8 +118,6 @@ const AppointmentNew: React.FC = () => {
     router.back();
   };
 
-  const iosDateDisplay: "inline" | "spinner" = pickerMode === "date" ? "inline" : "spinner";
-
   return (
     <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
       <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
@@ -217,109 +214,6 @@ const AppointmentNew: React.FC = () => {
   );
 };
 
-// ─── SelectableClinicianRow ───────────────────────────────────────────────
-// Mirrors ClinicianCard's visual language (gradient specialty tile + name
-// + role) but is tappable with a selected check state instead of a remove
-// X. Single-select semantics for visit picking.
-
-interface SelectableClinicianRowProps {
-  clinician: StoreClinician;
-  selected: boolean;
-  onPress: () => void;
-}
-
-const SelectableClinicianRow: React.FC<SelectableClinicianRowProps> = ({
-  clinician,
-  selected,
-  onPress,
-}) => {
-  const { colors } = useTheme();
-  const styles = useStyles();
-  const spec: Specialty = findSpecialty(clinician.role);
-  const Icon = spec.Icon;
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={[
-        styles.cardRow,
-        {
-          backgroundColor: colors.bgSurface,
-          borderColor: selected ? colors.accent : colors.border,
-          borderWidth: selected ? 1.5 : StyleSheet.hairlineWidth,
-        },
-        shadows.card,
-      ]}
-    >
-      <View style={styles.specTile}>
-        <LinearGradient
-          colors={spec.grad}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-        <Icon size={moderateScale(20)} color={spec.fg} strokeWidth={2} />
-      </View>
-
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text
-          style={[typography.h3, { color: colors.textPrimary, fontFamily: "DMSans_600SemiBold" }]}
-          numberOfLines={1}
-        >
-          {clinician.name}
-        </Text>
-        <Text
-          style={[typography.caption, { color: colors.textTertiary, marginTop: 1 }]}
-          numberOfLines={1}
-        >
-          {clinician.role}
-        </Text>
-      </View>
-
-      <View
-        style={[
-          styles.checkSlot,
-          {
-            backgroundColor: selected ? colors.accent : "transparent",
-            borderColor: selected ? colors.accent : colors.border,
-          },
-        ]}
-      >
-        {selected && <Check size={moderateScale(14)} color="#FFFFFF" strokeWidth={2.5} />}
-      </View>
-    </Pressable>
-  );
-};
-
-// ─── AddClinicianRow ──────────────────────────────────────────────────────
-// Trailing card in the clinician list. Opens the same AddClinicianSheet
-// the onboarding flow uses.
-
-const AddClinicianRow: React.FC<{ onPress: () => void }> = ({ onPress }) => {
-  const { colors } = useTheme();
-  const styles = useStyles();
-  return (
-    <Pressable
-      onPress={onPress}
-      style={[styles.addRow, { borderColor: colors.border, backgroundColor: colors.bgSurface }]}
-    >
-      <View style={[styles.addIconTile, { backgroundColor: colors.bgMuted }]}>
-        <Plus size={moderateScale(18)} color={colors.accent} strokeWidth={2.4} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text
-          style={[typography.h3, { color: colors.textPrimary, fontFamily: "DMSans_600SemiBold" }]}
-        >
-          Add someone new
-        </Text>
-        <Text style={[typography.caption, { color: colors.textTertiary, marginTop: 1 }]}>
-          Pick specialty, enter their name.
-        </Text>
-      </View>
-    </Pressable>
-  );
-};
-
 export default AppointmentNew;
 
 const useStyles = makeStyles((theme) => ({
@@ -357,46 +251,6 @@ const useStyles = makeStyles((theme) => ({
   body: {
     marginTop: spacing.s6,
     gap: moderateScale(10),
-  },
-  cardRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(12),
-    padding: moderateScale(12),
-    paddingRight: moderateScale(12),
-    borderRadius: theme.radius.lg,
-  },
-  specTile: {
-    width: moderateScale(44),
-    height: moderateScale(44),
-    borderRadius: moderateScale(12),
-    overflow: "hidden",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkSlot: {
-    width: moderateScale(24),
-    height: moderateScale(24),
-    borderRadius: moderateScale(12),
-    borderWidth: 1.5,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(12),
-    padding: moderateScale(12),
-    borderRadius: theme.radius.lg,
-    borderStyle: "dashed",
-    borderWidth: 1.5,
-  },
-  addIconTile: {
-    width: moderateScale(44),
-    height: moderateScale(44),
-    borderRadius: moderateScale(12),
-    alignItems: "center",
-    justifyContent: "center",
   },
   appointmentSlot: {
     marginTop: spacing.s6,
