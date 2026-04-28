@@ -21,14 +21,13 @@ import {
   verticalScale,
 } from "../../theme";
 import { SceneTransition } from "../../components/navigation/SceneTransition";
-import { SympnoteHero } from "../../components/brand/SympnoteHero";
 import { PrimaryButton } from "../../components/ui/PrimaryButton";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { FULL_HEADLINE } from "../../constants/onboarding";
 import { resetAppState } from "../../utils/resetApp";
 import { hapticMedium } from "../../services/haptics";
-import { SympnoteMark } from "@/components/brand/SympnoteMark";
 import { SympnoteSprite } from "../../components/onboarding/SympnoteSprite";
+import { TrustChip } from "@/components/onboarding/hook/TrustChip";
 
 const ScreenHook: React.FC = () => {
   const router = useRouter();
@@ -132,10 +131,7 @@ const ScreenHook: React.FC = () => {
                 style={[
                   typography.display,
                   styles.headlineLive,
-                  {
-                    color: colors.textPrimary,
-                    paddingHorizontal: spacing.s2,
-                  },
+                  { color: colors.textPrimary, paddingHorizontal: spacing.s2 },
                 ]}
               >
                 {typed}
@@ -148,11 +144,7 @@ const ScreenHook: React.FC = () => {
             <Animated.Text
               style={[
                 typography.bodyLarge,
-                {
-                  color: colors.textSecondary,
-                  textAlign: "center",
-                  marginTop: spacing.s4,
-                },
+                { color: colors.textSecondary, textAlign: "center", marginTop: spacing.s4 },
                 sub,
               ]}
             >
@@ -166,7 +158,6 @@ const ScreenHook: React.FC = () => {
             </Animated.View>
           </View>
 
-          {/* Greeting sprite + CTA */}
           <Animated.View style={[styles.ctaArea, cta]}>
             <PrimaryButton label="Let's begin" onPress={handleGetStarted} />
           </Animated.View>
@@ -176,50 +167,11 @@ const ScreenHook: React.FC = () => {
   );
 };
 
-type LucideIcon = typeof Zap;
-
-/**
- * Trust signal chip — a small rounded surface anchored by its own
- * tinted icon tile. Each chip carries a distinct accent color so the
- * three signals read as three different promises (speed · privacy ·
- * capability) instead of a row of identical stickers.
- */
-interface TrustChipProps {
-  Icon: LucideIcon;
-  label: string;
-  tint: string;
-}
-
-const TrustChip: React.FC<TrustChipProps> = ({ Icon, label, tint }) => {
-  const { colors } = useTheme();
-  const styles = useStyles();
-  return (
-    <View style={styles.trustChip}>
-      <View style={[styles.trustTile, { backgroundColor: tint + "1F" }]}>
-        <Icon size={moderateScale(11)} color={tint} strokeWidth={2.4} />
-      </View>
-      <Text style={[styles.trustLabel, { color: colors.textPrimary }]}>{label}</Text>
-    </View>
-  );
-};
-
 export default ScreenHook;
 
 const useStyles = makeStyles((theme) => ({
   root: { flex: 1 },
   safe: { flex: 1 },
-  topBar: {
-    paddingHorizontal: theme.spacing.s6,
-    paddingTop: theme.spacing.s4,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  brandRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing.s2,
-  },
   heroArea: {
     flex: 1,
     alignItems: "center",
@@ -248,31 +200,6 @@ const useStyles = makeStyles((theme) => ({
     flexWrap: "wrap",
     justifyContent: "center",
     gap: theme.spacing.s2,
-  },
-  trustChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(6),
-    paddingLeft: scale(6),
-    paddingRight: scale(12),
-    paddingVertical: verticalScale(5),
-    borderRadius: theme.radius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.bgSurface,
-    ...theme.shadows.card,
-  },
-  trustTile: {
-    width: moderateScale(22),
-    height: moderateScale(22),
-    borderRadius: moderateScale(7),
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  trustLabel: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: fontScale(12),
-    letterSpacing: 0.1,
   },
   ctaArea: {
     paddingHorizontal: theme.spacing.s6,
