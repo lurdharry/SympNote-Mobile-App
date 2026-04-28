@@ -30,15 +30,12 @@ type LucideIcon = React.ComponentType<{
   strokeWidth?: number;
 }>;
 
-type ToneKey = "urgency" | "ready" | "action" | "calm" | "welcome";
-
 interface Slot {
   eyebrow: string;
   headline: string;
   sub: string;
   ctaLabel: string;
   Icon: LucideIcon;
-  tone: ToneKey;
   onPress: (router: Router) => void;
 }
 
@@ -64,7 +61,6 @@ const buildSlot = (state: ReadyState): Slot => {
         sub: "Hold the mic below to record. Sympnote turns it into a doctor-ready brief.",
         ctaLabel: "Start now",
         Icon: Mic,
-        tone: "welcome",
         onPress: (router) => router.push("/record"),
       };
 
@@ -80,7 +76,6 @@ const buildSlot = (state: ReadyState): Slot => {
         sub: "Synthesise them into a one-page brief tailored for this visit.",
         ctaLabel: "Generate brief",
         Icon: Sparkles,
-        tone: "urgency",
         onPress: (router) => router.push("/brief/new"),
       };
     }
@@ -92,7 +87,6 @@ const buildSlot = (state: ReadyState): Slot => {
         sub: "Open it to review concerns, questions, and patterns before you go.",
         ctaLabel: "Open brief",
         Icon: FileText,
-        tone: "ready",
         onPress: (router) => {
           if (state.brief) router.push(`/brief/${state.brief.id}`);
         },
@@ -105,7 +99,6 @@ const buildSlot = (state: ReadyState): Slot => {
         sub: "A short voice note now becomes a clinician-ready summary at the visit.",
         ctaLabel: "Capture a note",
         Icon: Mic,
-        tone: "urgency",
         onPress: (router) => router.push("/record"),
       };
 
@@ -120,7 +113,6 @@ const buildSlot = (state: ReadyState): Slot => {
         sub: "Generate a brief now and it'll be ready for whichever clinician you tag it with.",
         ctaLabel: "Generate brief",
         Icon: Sparkles,
-        tone: "action",
         onPress: (router) => router.push("/brief/new"),
       };
     }
@@ -132,7 +124,6 @@ const buildSlot = (state: ReadyState): Slot => {
         sub: "A quick check-in — even one sentence — keeps your brief sharp.",
         ctaLabel: "Capture",
         Icon: Calendar,
-        tone: "calm",
         onPress: (router) => router.push("/record"),
       };
 
@@ -144,7 +135,6 @@ const buildSlot = (state: ReadyState): Slot => {
         sub: "Add an upcoming visit and Sympnote will prep a brief when it's near.",
         ctaLabel: "Add a visit",
         Icon: TrendingUp,
-        tone: "calm",
         onPress: (router) => router.push("/appointment-new"),
       };
   }
@@ -156,12 +146,14 @@ const buildSlot = (state: ReadyState): Slot => {
  * moment and a single primary action.
  *
  * Visual anatomy:
- *   • Top accent stripe — color shifts with `tone` (coral for
- *     urgency, gold for ready, accent for action/calm, gold for
- *     welcome) so the page top establishes mood at a glance.
+ *   • Top accent stripe in brand teal so the page top reads as
+ *     Sympnote at a glance, regardless of state.
  *   • Asymmetric layout — headline pulled to the left column,
  *     ReadyStateGlyph illustration tucked in the upper-right corner.
  *   • Filled accent CTA at the bottom — proper button, not a link.
+ *
+ * State variation comes from copy + icon + illustration, not color —
+ * the brand stays disciplined to one accent.
  */
 export const ReadyStateCard: React.FC = () => {
   const router = useRouter();
@@ -170,21 +162,7 @@ export const ReadyStateCard: React.FC = () => {
   const state = useReadyState();
   const slot = useMemo(() => buildSlot(state), [state]);
 
-  const tint = (() => {
-    switch (slot.tone) {
-      case "urgency":
-        return colors.coral ?? "#E07A5F";
-      case "ready":
-        return colors.gold ?? "#F6C06A";
-      case "welcome":
-        return colors.gold ?? "#F6C06A";
-      case "action":
-        return colors.accent;
-      case "calm":
-      default:
-        return colors.accent;
-    }
-  })();
+  const tint = colors.accent;
 
   return (
     <View
