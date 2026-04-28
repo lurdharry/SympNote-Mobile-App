@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Alert } from "react-native";
 import { useRouter } from "expo-router";
+import { showError } from "../components/ui/Toast";
 import { addDays } from "date-fns";
 import { Plan, purchase } from "../services/subscription";
 import { structureTranscript } from "../services/ai";
@@ -138,7 +138,7 @@ export function usePaywallPurchase(mode: PaywallMode = "onboarding") {
       }
     } catch (e) {
       setCrafting(false);
-      Alert.alert("Purchase failed", String(e));
+      showError("Purchase failed", { body: String(e) });
     } finally {
       setLoading(false);
     }

@@ -1,8 +1,8 @@
 import { useCallback, useState } from "react";
-import { Alert } from "react-native";
 import { GeminiQuotaError } from "../../services/ai";
 import { hapticLight, hapticMedium } from "../../services/haptics";
 import { useStructureTranscript } from "../../hooks/useStructureTranscript";
+import { showInfo } from "../ui/Toast";
 import { Phase, StructuredWithSources } from "./types";
 
 const DEBUG = __DEV__;
@@ -62,7 +62,7 @@ export function useRecordingFlow(): RecordingFlow {
   const processWithAI = useCallback(async () => {
     const text = reviewText.trim();
     if (!text) {
-      Alert.alert("Nothing to process", "Add or record something first.");
+      showInfo("Nothing to process", { body: "Add or record something first." });
       return;
     }
     hapticMedium();

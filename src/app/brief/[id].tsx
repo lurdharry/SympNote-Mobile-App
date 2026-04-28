@@ -20,6 +20,7 @@ import { generateBrief } from "@/services/ai";
 import { formatBriefAsHtml, formatBriefAsText, isBriefContentEmpty } from "@/utils/briefExport";
 import { hapticLight, hapticMedium } from "@/services/haptics";
 import { usePaywallGate } from "@/hooks/usePaywallGate";
+import { showError, showInfo } from "@/components/ui/Toast";
 
 /**
  * Brief detail screen — the orchestrator. State + side-effects live
@@ -121,10 +122,9 @@ const BriefDetail: React.FC = () => {
     try {
       const sources = recordings.filter((r) => brief.sourceRecordingIds.includes(r.id));
       if (sources.length === 0) {
-        Alert.alert(
-          "No notes to brief",
-          "The notes that fed this brief were removed. Generate a new brief from the Briefs tab.",
-        );
+        showInfo("No notes to brief", {
+          body: "The notes that fed this brief were removed. Generate a new brief from the Briefs tab.",
+        });
         return;
       }
       const taggedNow = brief.clinicianIds
@@ -138,10 +138,11 @@ const BriefDetail: React.FC = () => {
       });
       setContent(brief.id, content, brief.sourceRecordingIds);
     } catch (e) {
-      Alert.alert(
-        "Couldn't regenerate",
-        e instanceof Error ? e.message : "Something went wrong.",
-      );
+      showError("Couldn't regenerate", {
+        body: e instanceof Error ? e.message : "Something went wrong.",
+        actionLabel: "Retry",
+        onAction: onRegenerate,
+      });
     } finally {
       setRetrying(false);
     }
@@ -161,16 +162,16 @@ const BriefDetail: React.FC = () => {
           UTI: "com.adobe.pdf",
         });
       } else {
-        Alert.alert(
-          "PDF saved",
-          "Your phone doesn't support sharing here, but the PDF is ready.",
-        );
+        showInfo("PDF saved", {
+          body: "Your phone doesn't support sharing here, but the PDF is ready.",
+        });
       }
     } catch (e) {
-      Alert.alert(
-        "Couldn't export PDF",
-        e instanceof Error ? e.message : "Something went wrong.",
-      );
+      showError("Couldn't export PDF", {
+        body: e instanceof Error ? e.message : "Something went wrong.",
+        actionLabel: "Retry",
+        onAction: onExportPdf,
+      });
     }
   };
 
