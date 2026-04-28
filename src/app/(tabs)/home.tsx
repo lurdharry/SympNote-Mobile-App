@@ -17,6 +17,7 @@ import { InsightNudge } from "@/components/home/InsightNudge";
 import { FirstEntryHero } from "@/components/home/FirstEntryHero";
 import { PostVisitPrompt } from "@/components/home/PostVisitPrompt";
 import { RecordFAB } from "@/components/home/RecordFAB";
+import { BriefsPeek } from "@/components/home/BriefsPeek";
 import { HoldToRecordOverlay, HoldOverlayMode } from "@/components/home/HoldToRecordOverlay";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { useAppointmentsStore } from "@/stores/useAppointmentsStore";
@@ -24,7 +25,6 @@ import { useProfileStore } from "@/stores/useProfileStore";
 import { useRecordingsStore } from "@/stores/useRecordingsStore";
 import { useBriefsStore } from "@/stores/useBriefsStore";
 import { unbriefedRecordings } from "@/utils/briefSource";
-import { Sparkles } from "lucide-react-native";
 import { useOverlayRecording } from "@/hooks/useOverlayRecording";
 
 const TabHome: React.FC = () => {
@@ -183,27 +183,14 @@ const TabHome: React.FC = () => {
               onAdd={() => router.push("/appointment-new")}
             />
 
-            {unbriefedCount > 0 && (
-              <Pressable
-                onPress={() => {
-                  hapticLight();
-                  router.push("/(tabs)/prep");
-                }}
-                style={[
-                  styles.briefsPeek,
-                  { backgroundColor: colors.accent + "12", borderColor: colors.accent + "55" },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="Generate brief from new notes"
-              >
-                <Sparkles size={moderateScale(14)} color={colors.accent} strokeWidth={2.2} />
-                <Text style={[styles.briefsPeekText, { color: colors.accent }]}>
-                  {unbriefedCount} {unbriefedCount === 1 ? "note" : "notes"} ready to brief
-                </Text>
-                <View style={{ flex: 1 }} />
-                <Text style={[styles.briefsPeekCta, { color: colors.accent }]}>Open Briefs ›</Text>
-              </Pressable>
-            )}
+            <BriefsPeek
+              unbriefedCount={unbriefedCount}
+              onPress={() => {
+                hapticLight();
+                router.push("/(tabs)/prep");
+              }}
+            />
+
 
             <View style={{ marginTop: spacing.s5 }}>
               <View style={styles.sectionRow}>
@@ -334,25 +321,5 @@ const useStyles = makeStyles((theme) => ({
     fontSize: fontScale(12),
     letterSpacing: 0.2,
     textAlign: "center",
-  },
-  briefsPeek: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(8),
-    paddingHorizontal: moderateScale(14),
-    paddingVertical: moderateScale(11),
-    borderRadius: theme.radius.lg,
-    borderWidth: 1,
-    marginTop: theme.spacing.s4,
-  },
-  briefsPeekText: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: fontScale(12),
-    letterSpacing: 0.1,
-  },
-  briefsPeekCta: {
-    fontFamily: "DMSans_700Bold",
-    fontSize: fontScale(12),
-    letterSpacing: 0.2,
   },
 }));
