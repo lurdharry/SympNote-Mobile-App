@@ -3,11 +3,7 @@ import { ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { fontScale, makeStyles, spacing, typography, useTheme } from "@/theme";
 import { SceneTransition } from "@/components/navigation/SceneTransition";
-import {
-  useHistoryData,
-  type FeedDateRange,
-  type FeedFilter,
-} from "@/hooks/useHistoryData";
+import { useHistoryData, type FeedDateRange, type FeedFilter } from "@/hooks/useHistoryData";
 import { SearchBar } from "@/components/history/SearchBar";
 import { HistoryGroupCard } from "@/components/history/HistoryGroupCard";
 import { FeedFilterChips } from "@/components/history/FeedFilterChips";
@@ -51,16 +47,12 @@ const TabHistory: React.FC = () => {
       <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
         <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
           <View style={styles.header}>
-            <Text style={[styles.eyebrow, { color: colors.accent }]}>
-              YOUR JOURNEY
-            </Text>
+            <Text style={[styles.eyebrow, { color: colors.accent }]}>YOUR JOURNEY</Text>
             <Text style={[typography.h1, { color: colors.textPrimary, marginTop: 2 }]}>
               History
             </Text>
             {!isEmpty && summary ? (
-              <Text style={[styles.summary, { color: colors.textSecondary }]}>
-                {summary}
-              </Text>
+              <Text style={[styles.summary, { color: colors.textSecondary }]}>{summary}</Text>
             ) : null}
           </View>
 
