@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { Easing, FadeIn, FadeOut } from "react-native-reanimated";
+import Animated, { Easing, FadeIn, FadeInDown, FadeOut } from "react-native-reanimated";
 import { fontScale, makeStyles, moderateScale, spacing, useTheme } from "@/theme";
 import { SceneTransition } from "@/components/navigation/SceneTransition";
 import { hapticLight } from "@/services/haptics";
@@ -10,6 +10,7 @@ import { useHomeDashboard } from "@/hooks/useHomeDashboard";
 import { useHoldToRecord } from "@/hooks/useHoldToRecord";
 import { usePaywallGate } from "@/hooks/usePaywallGate";
 import { ReadyStateCard } from "@/components/home/ReadyStateCard";
+import { DayStrap } from "@/components/home/DayStrap";
 import { CareTeamStrip } from "@/components/home/CareTeamStrip";
 import { RecentNotesRail } from "@/components/home/RecentNotesRail";
 import { InsightNudge } from "@/components/home/InsightNudge";
@@ -106,7 +107,15 @@ const TabHome: React.FC = () => {
       <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
         <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
           <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-            <ReadyStateCard />
+            <Animated.View entering={FadeIn.duration(280)}>
+              <DayStrap />
+            </Animated.View>
+
+            <Animated.View
+              entering={FadeInDown.duration(420).easing(Easing.out(Easing.cubic))}
+            >
+              <ReadyStateCard />
+            </Animated.View>
 
             {unresolvedVisit && (
               <View style={{ marginTop: spacing.s4 }}>
@@ -129,11 +138,23 @@ const TabHome: React.FC = () => {
               </View>
             )}
 
-            <CareTeamStrip />
-            <RecentNotesRail />
+            <Animated.View
+              entering={FadeInDown.delay(140).duration(420).easing(Easing.out(Easing.cubic))}
+            >
+              <CareTeamStrip />
+            </Animated.View>
+            <Animated.View
+              entering={FadeInDown.delay(260).duration(420).easing(Easing.out(Easing.cubic))}
+            >
+              <RecentNotesRail />
+            </Animated.View>
 
             {nudge && (
-              <InsightNudge nudge={nudge} onPress={() => router.push("/(tabs)/insights")} />
+              <Animated.View
+                entering={FadeInDown.delay(380).duration(420).easing(Easing.out(Easing.cubic))}
+              >
+                <InsightNudge nudge={nudge} onPress={() => router.push("/(tabs)/insights")} />
+              </Animated.View>
             )}
           </ScrollView>
 

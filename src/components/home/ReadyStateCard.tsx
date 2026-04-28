@@ -22,6 +22,7 @@ import {
 } from "@/theme";
 import { hapticLight } from "@/services/haptics";
 import { useReadyState, type ReadyState } from "@/hooks/useReadyState";
+import { ReadyStateGlyph } from "./ReadyStateGlyph";
 
 type LucideIcon = React.ComponentType<{
   size?: number;
@@ -29,12 +30,15 @@ type LucideIcon = React.ComponentType<{
   strokeWidth?: number;
 }>;
 
+type ToneKey = "urgency" | "ready" | "action" | "calm" | "welcome";
+
 interface Slot {
   eyebrow: string;
   headline: string;
   sub: string;
   ctaLabel: string;
   Icon: LucideIcon;
+  tone: ToneKey;
   onPress: (router: Router) => void;
 }
 
@@ -60,6 +64,7 @@ const buildSlot = (state: ReadyState): Slot => {
         sub: "Hold the mic below to record. Sympnote turns it into a doctor-ready brief.",
         ctaLabel: "Start now",
         Icon: Mic,
+        tone: "welcome",
         onPress: (router) => router.push("/record"),
       };
 
@@ -75,6 +80,7 @@ const buildSlot = (state: ReadyState): Slot => {
         sub: "Synthesise them into a one-page brief tailored for this visit.",
         ctaLabel: "Generate brief",
         Icon: Sparkles,
+        tone: "urgency",
         onPress: (router) => router.push("/brief/new"),
       };
     }
@@ -86,6 +92,7 @@ const buildSlot = (state: ReadyState): Slot => {
         sub: "Open it to review concerns, questions, and patterns before you go.",
         ctaLabel: "Open brief",
         Icon: FileText,
+        tone: "ready",
         onPress: (router) => {
           if (state.brief) router.push(`/brief/${state.brief.id}`);
         },
@@ -98,6 +105,7 @@ const buildSlot = (state: ReadyState): Slot => {
         sub: "A short voice note now becomes a clinician-ready summary at the visit.",
         ctaLabel: "Capture a note",
         Icon: Mic,
+        tone: "urgency",
         onPress: (router) => router.push("/record"),
       };
 
@@ -112,6 +120,7 @@ const buildSlot = (state: ReadyState): Slot => {
         sub: "Generate a brief now and it'll be ready for whichever clinician you tag it with.",
         ctaLabel: "Generate brief",
         Icon: Sparkles,
+        tone: "action",
         onPress: (router) => router.push("/brief/new"),
       };
     }
@@ -122,7 +131,8 @@ const buildSlot = (state: ReadyState): Slot => {
         headline: "How are you feeling today?",
         sub: "A quick check-in — even one sentence — keeps your brief sharp.",
         ctaLabel: "Capture",
-        Icon: Mic,
+        Icon: Calendar,
+        tone: "calm",
         onPress: (router) => router.push("/record"),
       };
 
@@ -134,19 +144,24 @@ const buildSlot = (state: ReadyState): Slot => {
         sub: "Add an upcoming visit and Sympnote will prep a brief when it's near.",
         ctaLabel: "Add a visit",
         Icon: TrendingUp,
+        tone: "calm",
         onPress: (router) => router.push("/appointment-new"),
       };
   }
 };
 
 /**
- * The home hero — one always-on card that picks the single most-
- * useful next action based on the user's state in the capture →
- * brief → visit loop. Copy and CTA shift between seven states; the
- * card chrome stays consistent so the hero anchors home reliably.
+ * The home hero — one always-on card driven by the state-machine
+ * picker in `useReadyState`. Anchors home with one bold typographic
+ * moment and a single primary action.
  *
- * Replaces the old stacked UpNextCard / BriefsPeek / TodayCheckIn
- * widgets — three weak conditional cards are now one strong card.
+ * Visual anatomy:
+ *   • Top accent stripe — color shifts with `tone` (coral for
+ *     urgency, gold for ready, accent for action/calm, gold for
+ *     welcome) so the page top establishes mood at a glance.
+ *   • Asymmetric layout — headline pulled to the left column,
+ *     ReadyStateGlyph illustration tucked in the upper-right corner.
+ *   • Filled accent CTA at the bottom — proper button, not a link.
  */
 export const ReadyStateCard: React.FC = () => {
   const router = useRouter();
@@ -155,62 +170,115 @@ export const ReadyStateCard: React.FC = () => {
   const state = useReadyState();
   const slot = useMemo(() => buildSlot(state), [state]);
 
+  const tint = (() => {
+    switch (slot.tone) {
+      case "urgency":
+        return colors.coral ?? "#E07A5F";
+      case "ready":
+        return colors.gold ?? "#F6C06A";
+      case "welcome":
+        return colors.gold ?? "#F6C06A";
+      case "action":
+        return colors.accent;
+      case "calm":
+      default:
+        return colors.accent;
+    }
+  })();
+
   return (
-    <Pressable
-      onPress={() => {
-        hapticLight();
-        slot.onPress(router);
-      }}
-      style={({ pressed }) => [
+    <View
+      style={[
         styles.card,
-        { backgroundColor: colors.bgSurface, borderColor: colors.accent + "55" },
+        { backgroundColor: colors.bgSurface, borderColor: tint + "55" },
         shadows.card,
-        { opacity: pressed ? 0.94 : 1 },
       ]}
-      accessibilityRole="button"
-      accessibilityLabel={slot.headline}
     >
+      {/* Top accent stripe — sets the mood by state */}
+      <View style={[styles.stripe, { backgroundColor: tint }]} />
+
+      {/* Soft accent wash — fades from top */}
       <LinearGradient
         pointerEvents="none"
-        colors={[colors.accent + "16", colors.accent + "00"]}
+        colors={[tint + "16", tint + "00"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
-        style={StyleSheet.absoluteFill}
+        style={styles.wash}
       />
 
-      <View style={styles.eyebrowRow}>
-        <View style={[styles.eyebrowIcon, { backgroundColor: colors.accent + "1F" }]}>
-          <slot.Icon size={moderateScale(13)} color={colors.accent} strokeWidth={2.4} />
+      <View style={styles.body}>
+        <View style={styles.col}>
+          <View style={styles.eyebrowRow}>
+            <View style={[styles.eyebrowIcon, { backgroundColor: tint + "1F" }]}>
+              <slot.Icon size={moderateScale(13)} color={tint} strokeWidth={2.4} />
+            </View>
+            <Text style={[styles.eyebrowText, { color: tint }]} numberOfLines={1}>
+              {slot.eyebrow}
+            </Text>
+          </View>
+          <Text style={[styles.headline, { color: colors.textPrimary }]} numberOfLines={3}>
+            {slot.headline}
+          </Text>
+          <Text style={[styles.sub, { color: colors.textSecondary }]} numberOfLines={3}>
+            {slot.sub}
+          </Text>
         </View>
-        <Text style={[styles.eyebrowText, { color: colors.accent }]} numberOfLines={1}>
-          {slot.eyebrow}
-        </Text>
+        <View style={styles.glyphSlot}>
+          <ReadyStateGlyph Icon={slot.Icon} tint={tint} />
+        </View>
       </View>
 
-      <Text style={[styles.headline, { color: colors.textPrimary }]} numberOfLines={3}>
-        {slot.headline}
-      </Text>
-
-      <Text style={[styles.sub, { color: colors.textSecondary }]} numberOfLines={2}>
-        {slot.sub}
-      </Text>
-
-      <View style={styles.ctaRow}>
-        <Text style={[styles.ctaLabel, { color: colors.accent }]}>{slot.ctaLabel}</Text>
-        <ChevronRight size={moderateScale(16)} color={colors.accent} strokeWidth={2.4} />
-      </View>
-    </Pressable>
+      {/* Filled accent CTA — actual button, not a link */}
+      <Pressable
+        onPress={() => {
+          hapticLight();
+          slot.onPress(router);
+        }}
+        style={({ pressed }) => [
+          styles.cta,
+          { backgroundColor: tint, opacity: pressed ? 0.9 : 1 },
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel={slot.ctaLabel}
+      >
+        <Text style={styles.ctaLabel}>{slot.ctaLabel}</Text>
+        <ChevronRight size={moderateScale(16)} color="#FFFFFF" strokeWidth={2.6} />
+      </Pressable>
+    </View>
   );
 };
 
 const useStyles = makeStyles((theme) => ({
   card: {
-    paddingHorizontal: moderateScale(18),
-    paddingTop: moderateScale(16),
+    paddingHorizontal: moderateScale(20),
+    paddingTop: moderateScale(22),
     paddingBottom: moderateScale(16),
     borderRadius: theme.radius.xl,
     borderWidth: 1,
     overflow: "hidden",
+  },
+  stripe: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: moderateScale(5),
+  },
+  wash: {
+    position: "absolute",
+    top: moderateScale(5),
+    left: 0,
+    right: 0,
+    height: verticalScale(140),
+  },
+  body: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: moderateScale(12),
+  },
+  col: {
+    flex: 1,
+    minWidth: 0,
   },
   eyebrowRow: {
     flexDirection: "row",
@@ -232,9 +300,9 @@ const useStyles = makeStyles((theme) => ({
   },
   headline: {
     fontFamily: "Fraunces_500Medium",
-    fontSize: fontScale(24),
-    lineHeight: fontScale(30),
-    letterSpacing: -0.5,
+    fontSize: fontScale(32),
+    lineHeight: fontScale(38),
+    letterSpacing: -0.8,
     marginTop: theme.spacing.s3,
   },
   sub: {
@@ -243,19 +311,29 @@ const useStyles = makeStyles((theme) => ({
     lineHeight: fontScale(19),
     marginTop: theme.spacing.s2,
   },
-  ctaRow: {
+  glyphSlot: {
+    marginTop: -moderateScale(6),
+  },
+  cta: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: moderateScale(4),
+    height: verticalScale(48),
+    borderRadius: 999,
     marginTop: theme.spacing.s4,
-    paddingTop: theme.spacing.s3,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(0,0,0,0.06)",
+    paddingHorizontal: scale(14),
+    ...shadows.accentGlow,
   },
   ctaLabel: {
+    color: "#FFFFFF",
     fontFamily: "DMSans_700Bold",
-    fontSize: fontScale(13),
+    fontSize: fontScale(14),
     letterSpacing: 0.2,
-    flex: 1,
+  },
+  // Keep referenced to avoid unused-style warnings during iteration.
+  _stripeFiller: {
+    width: 0,
+    height: StyleSheet.hairlineWidth,
   },
 }));
