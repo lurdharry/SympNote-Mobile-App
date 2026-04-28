@@ -73,7 +73,7 @@ export const typography: Record<string, TypeToken> = {
   },
   caption: {
     fontFamily: "DMSans_400Regular",
-    fontSize: fontScale(11),
+    fontSize: fontScale(12),
     lineHeight: fontScale(14),
   },
   number: {

@@ -1,30 +1,21 @@
-import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useState } from "react";
+import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from "react-native";
 import { Tabs } from "expo-router";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
-import {
-  fontScale,
-  makeStyles,
-  moderateScale,
-  shadows,
-  useTheme,
-  verticalScale,
-} from "../../theme";
+import { makeStyles, moderateScale, spacing, useTheme, verticalScale } from "../../theme";
 import { hapticSelect } from "../../services/haptics";
 import { TABS } from "../../constants/tabs";
+import { SharedTabIndicator } from "../../components/animated/SharedTabIndicator";
 
-/**
- * Modern tab bar — replaces the early-iOS hairline + underline style.
- * Active tab gets an accent-tinted pill behind the icon (icon turns
- * white) and the label sits below in accent. Inactive tabs are quiet
- * neutrals. No shared indicator — each tab owns its own active
- * affordance.
- */
 const TabsLayout: React.FC = () => {
   const { colors, isDark } = useTheme();
   const styles = useStyles();
   const { bottom } = useSafeAreaInsets();
+  const [barWidth, setBarWidth] = useState(0);
+  const onBarLayout = (e: LayoutChangeEvent) => {
+    setBarWidth(e.nativeEvent.layout.width);
+  };
 
   return (
     <Tabs
@@ -47,11 +38,12 @@ const TabsLayout: React.FC = () => {
               edges={[]}
               style={{ paddingBottom: moderateScale(bottom ? bottom / 3 : 10) }}
             >
-              <View style={styles.bar}>
+              <View style={styles.bar} onLayout={onBarLayout}>
                 {state.routes.map((route, i) => {
                   const isActive = i === activeIndex;
                   const cfg = TABS.find((t) => t.name === route.name);
                   if (!cfg) return null;
+                  const tint = isActive ? colors.accent : colors.textTertiary;
                   return (
                     <Pressable
                       key={route.key}
@@ -66,27 +58,13 @@ const TabsLayout: React.FC = () => {
                       accessibilityState={{ selected: isActive }}
                       style={styles.tab}
                     >
-                      <View
-                        style={[
-                          styles.iconPill,
-                          isActive && [
-                            { backgroundColor: colors.accent },
-                            shadows.accentGlow,
-                          ],
-                        ]}
-                      >
-                        <cfg.Icon
-                          size={moderateScale(20)}
-                          color={isActive ? "#FFFFFF" : colors.textTertiary}
-                          strokeWidth={isActive ? 2.4 : 2}
-                        />
-                      </View>
+                      <cfg.Icon size={moderateScale(22)} color={tint} strokeWidth={2} />
                       <Text
                         style={[
                           styles.label,
                           {
-                            color: isActive ? colors.accent : colors.textTertiary,
-                            fontFamily: isActive ? "DMSans_700Bold" : "DMSans_500Medium",
+                            color: tint,
+                            fontFamily: isActive ? "DMSans_600SemiBold" : "DMSans_400Regular",
                           },
                         ]}
                       >
@@ -95,6 +73,18 @@ const TabsLayout: React.FC = () => {
                     </Pressable>
                   );
                 })}
+                {barWidth > 0 && (
+                  <SharedTabIndicator
+                    count={state.routes.length}
+                    activeIndex={activeIndex}
+                    containerWidth={barWidth - spacing.s3 * 2}
+                    leftOffset={spacing.s3}
+                    color={colors.accent}
+                    height={verticalScale(2.5)}
+                    widthRatio={0.35}
+                    bottomInset={verticalScale(56)}
+                  />
+                )}
               </View>
             </SafeAreaView>
           </View>
@@ -118,27 +108,17 @@ const useStyles = makeStyles((theme) => ({
   },
   bar: {
     flexDirection: "row",
-    height: verticalScale(64),
+    height: verticalScale(60),
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: theme.colors.border,
-    paddingHorizontal: theme.spacing.s2,
+    paddingHorizontal: theme.spacing.s3,
   },
   tab: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: moderateScale(3),
+    gap: moderateScale(2),
     position: "relative",
   },
-  iconPill: {
-    width: moderateScale(48),
-    height: moderateScale(28),
-    borderRadius: moderateScale(14),
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  label: {
-    fontSize: fontScale(10),
-    letterSpacing: 0.2,
-  },
+  label: { ...theme.typography.label },
 }));

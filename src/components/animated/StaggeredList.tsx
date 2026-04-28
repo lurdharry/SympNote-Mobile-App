@@ -1,5 +1,5 @@
-import React, { Children, useEffect } from 'react';
-import { StyleProp, ViewStyle } from 'react-native';
+import React, { Children, useEffect } from "react";
+import { StyleProp, ViewStyle } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -7,15 +7,16 @@ import Animated, {
   withSpring,
   withTiming,
   Easing,
-} from 'react-native-reanimated';
-import { useReducedMotion } from '../../hooks/useReducedMotion';
+} from "react-native-reanimated";
+import { useReducedMotion } from "../../hooks/useReducedMotion";
+import { spacing } from "@/theme";
 
 type Props = {
   children: React.ReactNode;
   stagger?: number;
   initialDelay?: number;
   translateY?: number;
-  direction?: 'up' | 'down' | 'left' | 'right';
+  direction?: "up" | "down" | "left" | "right";
   style?: StyleProp<ViewStyle>;
 };
 
@@ -24,7 +25,7 @@ export const StaggeredList: React.FC<Props> = ({
   stagger = 80,
   initialDelay = 0,
   translateY = 16,
-  direction = 'up',
+  direction = "up",
   style,
 }) => {
   const items = Children.toArray(children);
@@ -42,13 +43,13 @@ export const StaggeredList: React.FC<Props> = ({
       ))}
     </Animated.View>
   );
-}
+};
 
 type ItemProps = {
   children: React.ReactNode;
   delay: number;
   translateY: number;
-  direction: 'up' | 'down' | 'left' | 'right';
+  direction: "up" | "down" | "left" | "right";
 };
 
 const StaggeredItem: React.FC<ItemProps> = ({ children, delay, translateY, direction }) => {
@@ -64,24 +65,20 @@ const StaggeredItem: React.FC<ItemProps> = ({ children, delay, translateY, direc
     }
     opacity.value = withDelay(
       delay,
-      withTiming(1, { duration: 320, easing: Easing.out(Easing.cubic) })
+      withTiming(1, { duration: 320, easing: Easing.out(Easing.cubic) }),
     );
-    offset.value = withDelay(
-      delay,
-      withSpring(0, { damping: 18, stiffness: 110, mass: 0.7 })
-    );
+    offset.value = withDelay(delay, withSpring(0, { damping: 18, stiffness: 110, mass: 0.7 }));
   }, [reduced, delay, opacity, offset]);
 
   const style = useAnimatedStyle(() => {
-    const tx =
-      direction === 'left' ? offset.value : direction === 'right' ? -offset.value : 0;
-    const ty =
-      direction === 'up' ? offset.value : direction === 'down' ? -offset.value : 0;
+    const tx = direction === "left" ? offset.value : direction === "right" ? -offset.value : 0;
+    const ty = direction === "up" ? offset.value : direction === "down" ? -offset.value : 0;
     return {
       opacity: opacity.value,
       transform: [{ translateX: tx }, { translateY: ty }],
+      marginBottom: spacing.s2,
     };
   });
 
   return <Animated.View style={style}>{children}</Animated.View>;
-}
+};

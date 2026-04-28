@@ -111,9 +111,7 @@ const TabHome: React.FC = () => {
               <DayStrap />
             </Animated.View>
 
-            <Animated.View
-              entering={FadeInDown.duration(420).easing(Easing.out(Easing.cubic))}
-            >
+            <Animated.View entering={FadeInDown.duration(420).easing(Easing.out(Easing.cubic))}>
               <ReadyStateCard />
             </Animated.View>
 

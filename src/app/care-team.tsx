@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Lock, Plus, X as XIcon } from 'lucide-react-native';
+import React, { useState } from "react";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Lock, Plus } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
@@ -12,20 +12,21 @@ import {
   typography,
   useTheme,
   verticalScale,
-} from '@/theme';
-import { StaggeredList } from '@/components/animated/StaggeredList';
-import { ClinicianCard } from '@/components/onboarding/care-team/ClinicianCard';
-import { AddClinicianSheet } from '@/components/onboarding/care-team/AddClinicianSheet';
-import { CareTeamEmpty } from '@/components/onboarding/care-team/CareTeamEmpty';
-import { Specialty } from '@/constants/specialties';
-import { useCareTeam, useProfileStore } from '@/stores/useProfileStore';
-import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
-import { useRecordingsStore } from '@/stores/useRecordingsStore';
-import { hapticLight, hapticSuccess } from '@/services/haptics';
+} from "@/theme";
+import { StaggeredList } from "@/components/animated/StaggeredList";
+import { ClinicianCard } from "@/components/onboarding/care-team/ClinicianCard";
+import { AddClinicianSheet } from "@/components/onboarding/care-team/AddClinicianSheet";
+import { CareTeamEmpty } from "@/components/onboarding/care-team/CareTeamEmpty";
+import { Specialty } from "@/constants/specialties";
+import { useCareTeam, useProfileStore } from "@/stores/useProfileStore";
+import { useAppointmentsStore } from "@/stores/useAppointmentsStore";
+import { useRecordingsStore } from "@/stores/useRecordingsStore";
+import { hapticLight, hapticSuccess } from "@/services/haptics";
+import { BackButton } from "@/components/ui/BackButton";
 
 type EditTarget =
-  | { mode: 'add'; specialty: Specialty | null }
-  | { mode: 'edit'; index: number; value: { name: string; role: string } };
+  | { mode: "add"; specialty: Specialty | null }
+  | { mode: "edit"; index: number; value: { name: string; role: string } };
 
 const ScreenCareTeamManage: React.FC = () => {
   const router = useRouter();
@@ -41,14 +42,14 @@ const ScreenCareTeamManage: React.FC = () => {
 
   const openAdd = (specialty?: Specialty) => {
     hapticLight();
-    setTarget({ mode: 'add', specialty: specialty ?? null });
+    setTarget({ mode: "add", specialty: specialty ?? null });
   };
 
   const openEdit = (index: number) => {
     hapticLight();
     const c = careTeam[index];
     if (!c) return;
-    setTarget({ mode: 'edit', index, value: { name: c.name, role: c.role } });
+    setTarget({ mode: "edit", index, value: { name: c.name, role: c.role } });
   };
 
   const handleRemove = (index: number) => {
@@ -88,13 +89,9 @@ const ScreenCareTeamManage: React.FC = () => {
             // Past appointments → keep the row, drop the link.
             const pastLinked = useAppointmentsStore
               .getState()
-              .appointments.filter(
-                (a) => a.clinicianId === c.id && a.status !== "upcoming",
-              );
+              .appointments.filter((a) => a.clinicianId === c.id && a.status !== "upcoming");
             for (const a of pastLinked) {
-              useAppointmentsStore
-                .getState()
-                .update(a.id, { clinicianId: undefined });
+              useAppointmentsStore.getState().update(a.id, { clinicianId: undefined });
             }
             // Recordings → strip this clinician from the routing list.
             const linkedRecordings = useRecordingsStore
@@ -120,7 +117,7 @@ const ScreenCareTeamManage: React.FC = () => {
   };
 
   const handleEditSave = (value: { name: string; role: string }) => {
-    if (target?.mode !== 'edit') return;
+    if (target?.mode !== "edit") return;
     updateClinician(target.index, value);
     hapticSuccess();
   };
@@ -129,29 +126,16 @@ const ScreenCareTeamManage: React.FC = () => {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={10}
-            style={[styles.close, { backgroundColor: colors.bgMuted }]}
-            accessibilityRole="button"
-            accessibilityLabel="Close"
-          >
-            <XIcon size={moderateScale(18)} color={colors.textPrimary} strokeWidth={2} />
-          </Pressable>
-          <Text style={[typography.h2, { color: colors.textPrimary }]}>
-            Care team
-          </Text>
+          <BackButton onPress={() => router.back()} type="contained" />
+          <Text style={[typography.h2, { color: colors.textPrimary }]}>Care team</Text>
         </View>
 
-        <ScrollView
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <Text style={[styles.sub, { color: colors.textSecondary }]}>
-            Who takes care of you? Sympnote organizes your entries by clinician
-            so each visit prep stays relevant.
+            Who takes care of you? Sympnote organizes your entries by clinician so each visit prep
+            stays relevant.
           </Text>
 
           {hasMembers ? (
@@ -185,9 +169,7 @@ const ScreenCareTeamManage: React.FC = () => {
                 accessibilityRole="button"
                 accessibilityLabel="Add clinician"
               >
-                <View
-                  style={[styles.addIcon, { backgroundColor: colors.accent + '1A' }]}
-                >
+                <View style={[styles.addIcon, { backgroundColor: colors.accent + "1A" }]}>
                   <Plus size={moderateScale(16)} color={colors.accent} strokeWidth={2.2} />
                 </View>
                 <Text
@@ -195,7 +177,7 @@ const ScreenCareTeamManage: React.FC = () => {
                     typography.body,
                     {
                       color: colors.accent,
-                      fontFamily: 'DMSans_600SemiBold',
+                      fontFamily: "DMSans_600SemiBold",
                       flex: 1,
                     },
                   ]}
@@ -212,9 +194,7 @@ const ScreenCareTeamManage: React.FC = () => {
 
           <View style={[styles.privacyRow, { backgroundColor: colors.bgMuted }]}>
             <Lock size={moderateScale(12)} color={colors.textTertiary} strokeWidth={2.2} />
-            <Text
-              style={[typography.caption, { color: colors.textTertiary, flex: 1 }]}
-            >
+            <Text style={[typography.caption, { color: colors.textTertiary, flex: 1 }]}>
               Private to you. Sympnote never contacts your clinicians.
             </Text>
           </View>
@@ -223,8 +203,8 @@ const ScreenCareTeamManage: React.FC = () => {
 
       <AddClinicianSheet
         visible={target !== null}
-        initialSpecialty={target?.mode === 'add' ? target.specialty : null}
-        initialValue={target?.mode === 'edit' ? target.value : null}
+        initialSpecialty={target?.mode === "add" ? target.specialty : null}
+        initialValue={target?.mode === "edit" ? target.value : null}
         onClose={() => setTarget(null)}
         onAdd={handleAddSave}
         onSave={handleEditSave}
@@ -242,17 +222,11 @@ const useStyles = makeStyles((theme) => ({
     paddingTop: theme.spacing.s3,
     paddingHorizontal: theme.spacing.s6,
     paddingBottom: theme.spacing.s3,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: moderateScale(12),
   },
-  close: {
-    width: moderateScale(36),
-    height: moderateScale(36),
-    borderRadius: moderateScale(18),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+
   content: {
     paddingHorizontal: theme.spacing.s6,
     paddingTop: theme.spacing.s2,
@@ -267,26 +241,26 @@ const useStyles = makeStyles((theme) => ({
     gap: moderateScale(10),
   },
   addRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: moderateScale(12),
     paddingHorizontal: scale(14),
     paddingVertical: verticalScale(14),
     borderRadius: theme.radius.lg,
     borderWidth: 1,
-    borderStyle: 'dashed',
+    borderStyle: "dashed",
     marginTop: moderateScale(4),
   },
   addIcon: {
     width: moderateScale(28),
     height: moderateScale(28),
     borderRadius: moderateScale(8),
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   privacyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: moderateScale(8),
     paddingHorizontal: scale(14),
     paddingVertical: verticalScale(10),
