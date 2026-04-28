@@ -6,20 +6,17 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { Easing, FadeInDown } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
-import { Clock, Mic, Pencil } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
   moderateScale,
   scale,
-  shadows,
   spacing,
   useTheme,
   verticalScale,
@@ -28,6 +25,7 @@ import { SceneTransition } from "@/components/navigation/SceneTransition";
 import { BackButton } from "@/components/ui/BackButton";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
+import { TranscriptQuote } from "@/components/onboarding/review/TranscriptQuote";
 import { usePendingRecordingStore } from "@/stores/usePendingRecordingStore";
 import { hapticLight } from "@/services/haptics";
 
@@ -73,9 +71,6 @@ const ScreenFirstRecordingReview: React.FC = () => {
       durationSec: draft.durationSec,
       createdAt: draft.createdAt,
     });
-    // Route through the first-brief screen so the user sees the AI
-    // synthesise their note before hitting the paywall — the aha
-    // moment that earns the subscription ask.
     router.push("/onboarding/first-brief");
   };
 
@@ -148,7 +143,8 @@ const ScreenFirstRecordingReview: React.FC = () => {
                 style={[styles.headline, { color: colors.textPrimary }]}
               >
                 Your next visit,{"\n"}
-                <Text style={{ fontStyle: "italic", color: colors.accent }}>already prepared</Text>.
+                <Text style={{ fontStyle: "italic", color: colors.accent }}>already prepared</Text>
+                .
               </Animated.Text>
 
               <Animated.Text
@@ -177,74 +173,6 @@ const ScreenFirstRecordingReview: React.FC = () => {
       </View>
     </SceneTransition>
   );
-};
-
-interface TranscriptQuoteProps {
-  transcript: string;
-  durationSec: number;
-  onChangeText: (next: string) => void;
-}
-
-const TranscriptQuote: React.FC<TranscriptQuoteProps> = ({
-  transcript,
-  durationSec,
-  onChangeText,
-}) => {
-  const { colors } = useTheme();
-  const styles = useStyles();
-  return (
-    <View
-      style={[
-        styles.quoteCard,
-        { backgroundColor: colors.bgSurface, borderColor: colors.border },
-        shadows.card,
-      ]}
-    >
-      <LinearGradient
-        colors={[colors.accent + "18", colors.accent + "00"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={styles.quoteWash}
-      />
-      <Text style={[styles.quoteGlyph, { color: colors.accent + "55" }]}>&ldquo;</Text>
-      <TextInput
-        value={transcript}
-        onChangeText={onChangeText}
-        multiline
-        scrollEnabled
-        textAlignVertical="top"
-        style={[styles.quoteText, styles.quoteInput, { color: colors.textPrimary }]}
-        placeholder="Your words will appear here…"
-        placeholderTextColor={colors.textTertiary}
-      />
-      <View style={[styles.metaRow, { borderTopColor: colors.border }]}>
-        <View style={[styles.metaChip, { backgroundColor: colors.bgMuted }]}>
-          <Mic size={moderateScale(10)} color={colors.textSecondary} strokeWidth={2.2} />
-          <Text style={[styles.metaChipText, { color: colors.textSecondary }]}>
-            {formatDuration(durationSec)}
-          </Text>
-        </View>
-        <View style={[styles.metaChip, { backgroundColor: colors.bgMuted }]}>
-          <Clock size={moderateScale(10)} color={colors.textSecondary} strokeWidth={2.2} />
-          <Text style={[styles.metaChipText, { color: colors.textSecondary }]}>Just now</Text>
-        </View>
-        <View style={{ flex: 1 }} />
-      </View>
-      <View style={styles.editHintRow}>
-        <Pencil size={moderateScale(10)} color={colors.textTertiary} strokeWidth={2} />
-        <Text style={[styles.editHintText, { color: colors.textTertiary }]}>
-          Tap the text above to edit
-        </Text>
-      </View>
-    </View>
-  );
-};
-
-const formatDuration = (s: number): string => {
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  const rem = s % 60;
-  return rem === 0 ? `${m}m` : `${m}m ${rem}s`;
 };
 
 export default ScreenFirstRecordingReview;
@@ -311,79 +239,6 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing.s6,
     lineHeight: fontScale(22),
     maxWidth: moderateScale(340),
-  },
-  quoteCard: {
-    position: "relative",
-    paddingHorizontal: moderateScale(18),
-    paddingTop: moderateScale(18),
-    paddingBottom: moderateScale(12),
-    borderRadius: theme.radius.xl,
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: "hidden",
-  },
-  quoteWash: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: verticalScale(70),
-  },
-  quoteGlyph: {
-    fontFamily: "Fraunces_500Medium",
-    fontSize: fontScale(64),
-    lineHeight: fontScale(64),
-    height: fontScale(44),
-    marginTop: -moderateScale(4),
-    marginLeft: -moderateScale(2),
-  },
-  quoteText: {
-    ...theme.typography.body,
-    fontFamily: "Fraunces_400Regular",
-    fontSize: fontScale(17),
-    lineHeight: fontScale(26),
-    letterSpacing: -0.1,
-  },
-  quoteInput: {
-    maxHeight: verticalScale(200),
-    padding: 0,
-    margin: 0,
-    marginTop: moderateScale(4),
-  },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(6),
-    marginTop: verticalScale(14),
-    paddingTop: verticalScale(12),
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  metaChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(4),
-    paddingHorizontal: scale(8),
-    paddingVertical: verticalScale(4),
-    borderRadius: theme.radius.full,
-  },
-  metaChipText: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: fontScale(11),
-    letterSpacing: 0.1,
-  },
-  reRecord: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: fontScale(12),
-    textDecorationLine: "underline",
-  },
-  editHintRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(4),
-    marginTop: verticalScale(8),
-  },
-  editHintText: {
-    ...theme.typography.caption,
-    fontStyle: "italic",
   },
   ctaArea: {
     paddingHorizontal: theme.spacing.s6,
