@@ -59,10 +59,8 @@ const ScreenSettings: React.FC = () => {
     <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
       <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <View style={styles.header}>
-          <BackButton onPress={close} />
-          <Text style={[typography.h1, styles.title, { color: colors.textPrimary }]}>
-            Settings
-          </Text>
+          <BackButton onPress={close} type="contained" />
+          <Text style={[typography.h1, styles.title, { color: colors.textPrimary }]}>Settings</Text>
           <View style={styles.headerRightFiller} />
         </View>
 
@@ -87,9 +85,7 @@ const ScreenSettings: React.FC = () => {
 
           {/* Preferences — currently just the theme toggle. */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>
-              PREFERENCES
-            </Text>
+            <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>PREFERENCES</Text>
             <View
               style={[
                 styles.prefCard,
@@ -97,9 +93,7 @@ const ScreenSettings: React.FC = () => {
                 shadows.card,
               ]}
             >
-              <Text style={[styles.prefLabel, { color: colors.textPrimary }]}>
-                Appearance
-              </Text>
+              <Text style={[styles.prefLabel, { color: colors.textPrimary }]}>Appearance</Text>
               <Text style={[styles.prefHint, { color: colors.textTertiary }]}>
                 Light, Dark, or follow your device.
               </Text>
