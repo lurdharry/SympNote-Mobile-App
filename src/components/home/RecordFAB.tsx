@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
   Easing,
   FadeIn,
@@ -11,11 +11,11 @@ import Animated, {
   withRepeat,
   withSpring,
   withTiming,
-} from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Mic } from 'lucide-react-native';
-import { fontScale, makeStyles, moderateScale, useTheme, verticalScale } from '@/theme';
-import { useReducedMotion } from '@/hooks/useReducedMotion';
+} from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
+import { Mic } from "lucide-react-native";
+import { fontScale, makeStyles, moderateScale, useTheme, verticalScale } from "@/theme";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface RecordFABProps {
   /** Invoked when a press-and-release did not commit to recording
@@ -70,12 +70,12 @@ export const RecordFAB: React.FC<RecordFABProps> = ({
   const ring1Style = useAnimatedStyle(() => ({
     opacity: 0.45 * (1 - pulse1.value),
     transform: [{ scale: 1 + pulse1.value * 0.5 }],
-    backgroundColor: 'rgba(44,110,107,0.22)',
+    backgroundColor: "rgba(44,110,107,0.22)",
   }));
   const ring2Style = useAnimatedStyle(() => ({
     opacity: 0.45 * (1 - pulse2.value),
     transform: [{ scale: 1 + pulse2.value * 0.5 }],
-    backgroundColor: 'rgba(246,192,106,0.24)',
+    backgroundColor: "rgba(246,192,106,0.24)",
   }));
 
   // While holding, the FAB swells slightly and pulses with volume.
@@ -106,7 +106,7 @@ export const RecordFAB: React.FC<RecordFABProps> = ({
             style={styles.fab}
           >
             <LinearGradient
-              colors={['#4DB8B0', '#2C6E6B']}
+              colors={["#4DB8B0", "#2C6E6B"]}
               start={{ x: 0.3, y: 0.3 }}
               end={{ x: 1, y: 1 }}
               style={StyleSheet.absoluteFill}
@@ -134,21 +134,21 @@ export const RecordFAB: React.FC<RecordFABProps> = ({
 
 const useStyles = makeStyles(() => ({
   wrap: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
-    bottom: verticalScale(92),
-    alignItems: 'center',
-    justifyContent: 'center',
+    bottom: verticalScale(44),
+    alignItems: "center",
+    justifyContent: "center",
   },
   inner: {
     width: moderateScale(68),
     height: moderateScale(68),
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   ring: {
-    position: 'absolute',
+    position: "absolute",
     width: moderateScale(68),
     height: moderateScale(68),
     borderRadius: moderateScale(34),
@@ -157,25 +157,25 @@ const useStyles = makeStyles(() => ({
     width: moderateScale(68),
     height: moderateScale(68),
     borderRadius: moderateScale(34),
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 6,
-    borderColor: 'rgba(255,255,255,0.9)',
-    shadowColor: '#2C6E6B',
+    borderColor: "rgba(255,255,255,0.9)",
+    shadowColor: "#2C6E6B",
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.45,
     shadowRadius: 28,
     elevation: 14,
   },
   caption: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: moderateScale(8),
     marginTop: verticalScale(8),
   },
   captionText: {
-    fontFamily: 'DMSans_500Medium',
+    fontFamily: "DMSans_500Medium",
     fontSize: fontScale(11),
     letterSpacing: 0.2,
   },
