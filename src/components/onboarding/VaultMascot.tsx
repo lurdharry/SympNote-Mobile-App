@@ -215,21 +215,13 @@ export const VaultMascot: React.FC<VaultMascotProps> = ({
         {/* Sparkles — fire when the shackle is most open. */}
         <Animated.View
           pointerEvents="none"
-          style={[
-            styles.spark,
-            sparkleAStyle,
-            { top: size * 0.06, left: size * 0.18 },
-          ]}
+          style={[styles.spark, sparkleAStyle, { top: size * 0.06, left: size * 0.18 }]}
         >
           <Sparkle size={moderateScale(11)} />
         </Animated.View>
         <Animated.View
           pointerEvents="none"
-          style={[
-            styles.spark,
-            sparkleBStyle,
-            { top: size * 0.12, left: size * 0.36 },
-          ]}
+          style={[styles.spark, sparkleBStyle, { top: size * 0.12, left: size * 0.36 }]}
         >
           <Sparkle size={moderateScale(7)} />
         </Animated.View>
@@ -262,12 +254,7 @@ export const VaultMascot: React.FC<VaultMascotProps> = ({
             />
             {/* Subtle accent stripe across the upper third — picks up
                 the brand teal without competing with the face. */}
-            <Path
-              d="M 14 22 H 86"
-              stroke="#2C6E6B"
-              strokeWidth={0.8}
-              strokeOpacity={0.25}
-            />
+            <Path d="M 14 22 H 86" stroke="#2C6E6B" strokeWidth={0.8} strokeOpacity={0.25} />
           </Svg>
 
           {/* Inner gold light — pulses behind the keyhole, suggesting
@@ -343,10 +330,7 @@ export const VaultMascot: React.FC<VaultMascotProps> = ({
 
 const Sparkle: React.FC<{ size: number }> = ({ size }) => (
   <Svg width={size} height={size} viewBox="0 0 12 12">
-    <Path
-      d="M 6 0 L 7.4 4.6 L 12 6 L 7.4 7.4 L 6 12 L 4.6 7.4 L 0 6 L 4.6 4.6 Z"
-      fill="#F6C06A"
-    />
+    <Path d="M 6 0 L 7.4 4.6 L 12 6 L 7.4 7.4 L 6 12 L 4.6 7.4 L 0 6 L 4.6 4.6 Z" fill="#F6C06A" />
   </Svg>
 );
 

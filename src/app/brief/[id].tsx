@@ -1,14 +1,5 @@
 import React, { useState } from "react";
-import {
-  Alert,
-  Modal,
-  Pressable,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Alert, Modal, Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Print from "expo-print";
@@ -40,13 +31,10 @@ import { useCareTeam, useProfileStore } from "@/stores/useProfileStore";
 import { useRecordingsStore } from "@/stores/useRecordingsStore";
 import { usePendingRecordingStore } from "@/stores/usePendingRecordingStore";
 import { generateBrief } from "@/services/ai";
-import {
-  formatBriefAsHtml,
-  formatBriefAsText,
-  isBriefContentEmpty,
-} from "@/utils/briefExport";
+import { formatBriefAsHtml, formatBriefAsText, isBriefContentEmpty } from "@/utils/briefExport";
 import { hapticLight, hapticMedium } from "@/services/haptics";
 import { usePaywallGate } from "@/hooks/usePaywallGate";
+import { BackButton } from "@/components/ui/BackButton";
 
 /**
  * Brief detail screen — the canonical "view this synthesised
@@ -90,7 +78,7 @@ const BriefDetail: React.FC = () => {
       <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
         <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
           <View style={styles.topBar}>
-            <BackBtn onPress={() => router.back()} />
+            <BackButton onPress={() => router.back()} />
           </View>
           <View style={styles.gone}>
             <Text style={[typography.h2, { color: colors.textPrimary, textAlign: "center" }]}>
@@ -174,10 +162,7 @@ const BriefDetail: React.FC = () => {
       });
       setContent(brief.id, content, brief.sourceRecordingIds);
     } catch (e) {
-      Alert.alert(
-        "Couldn't regenerate",
-        e instanceof Error ? e.message : "Something went wrong.",
-      );
+      Alert.alert("Couldn't regenerate", e instanceof Error ? e.message : "Something went wrong.");
     } finally {
       setRetrying(false);
     }
@@ -197,16 +182,10 @@ const BriefDetail: React.FC = () => {
           UTI: "com.adobe.pdf",
         });
       } else {
-        Alert.alert(
-          "PDF saved",
-          "Your phone doesn't support sharing here, but the PDF is ready.",
-        );
+        Alert.alert("PDF saved", "Your phone doesn't support sharing here, but the PDF is ready.");
       }
     } catch (e) {
-      Alert.alert(
-        "Couldn't export PDF",
-        e instanceof Error ? e.message : "Something went wrong.",
-      );
+      Alert.alert("Couldn't export PDF", e instanceof Error ? e.message : "Something went wrong.");
     }
   };
 
@@ -219,7 +198,7 @@ const BriefDetail: React.FC = () => {
     <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
       <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <View style={styles.topBar}>
-          <BackBtn onPress={() => router.back()} />
+          <BackButton onPress={() => router.back()} />
           <View style={{ flex: 1 }} />
           <Pressable
             onPress={onRegenerate}
@@ -308,8 +287,7 @@ const BriefDetail: React.FC = () => {
                     style={[
                       styles.chip,
                       {
-                        backgroundColor:
-                          tagged.length === 0 ? colors.accent + "1A" : "transparent",
+                        backgroundColor: tagged.length === 0 ? colors.accent + "1A" : "transparent",
                         borderColor: tagged.length === 0 ? colors.accent : colors.border,
                         borderStyle: tagged.length === 0 ? "solid" : "dashed",
                       },
@@ -319,8 +297,7 @@ const BriefDetail: React.FC = () => {
                       style={[
                         styles.chipText,
                         {
-                          color:
-                            tagged.length === 0 ? colors.accent : colors.textTertiary,
+                          color: tagged.length === 0 ? colors.accent : colors.textTertiary,
                         },
                       ]}
                     >
@@ -339,9 +316,7 @@ const BriefDetail: React.FC = () => {
                         style={[
                           styles.chip,
                           {
-                            backgroundColor: active
-                              ? colors.accent + "1A"
-                              : "transparent",
+                            backgroundColor: active ? colors.accent + "1A" : "transparent",
                             borderColor: active ? colors.accent : colors.border,
                           },
                         ]}
@@ -419,9 +394,7 @@ const BriefDetail: React.FC = () => {
               {brief.content.topConcerns.map((c, i) => (
                 <View key={i} style={styles.concernRow}>
                   <View style={[styles.concernNum, { backgroundColor: colors.accent + "1A" }]}>
-                    <Text style={[styles.concernNumText, { color: colors.accent }]}>
-                      {i + 1}
-                    </Text>
+                    <Text style={[styles.concernNumText, { color: colors.accent }]}>{i + 1}</Text>
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={[styles.concernLabel, { color: colors.textPrimary }]}>
@@ -524,9 +497,7 @@ const BriefDetail: React.FC = () => {
             style={[styles.sheet, { backgroundColor: colors.bgSurface }]}
             onPress={(e) => e.stopPropagation()}
           >
-            <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>
-              Share or export
-            </Text>
+            <Text style={[styles.sheetTitle, { color: colors.textPrimary }]}>Share or export</Text>
             <Text style={[styles.sheetSub, { color: colors.textSecondary }]}>
               Pick how you'd like to send this brief.
             </Text>
@@ -538,12 +509,7 @@ const BriefDetail: React.FC = () => {
               }}
               style={[styles.sheetRow, { borderColor: colors.border }]}
             >
-              <View
-                style={[
-                  styles.sheetIconTile,
-                  { backgroundColor: colors.accent + "1A" },
-                ]}
-              >
+              <View style={[styles.sheetIconTile, { backgroundColor: colors.accent + "1A" }]}>
                 <FileDown size={moderateScale(18)} color={colors.accent} strokeWidth={2} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
@@ -563,17 +529,8 @@ const BriefDetail: React.FC = () => {
               }}
               style={[styles.sheetRow, { borderColor: colors.border }]}
             >
-              <View
-                style={[
-                  styles.sheetIconTile,
-                  { backgroundColor: colors.accent + "1A" },
-                ]}
-              >
-                <MessageSquareText
-                  size={moderateScale(18)}
-                  color={colors.accent}
-                  strokeWidth={2}
-                />
+              <View style={[styles.sheetIconTile, { backgroundColor: colors.accent + "1A" }]}>
+                <MessageSquareText size={moderateScale(18)} color={colors.accent} strokeWidth={2} />
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={[styles.sheetRowLabel, { color: colors.textPrimary }]}>
@@ -591,30 +548,12 @@ const BriefDetail: React.FC = () => {
               accessibilityRole="button"
               accessibilityLabel="Cancel"
             >
-              <Text style={[styles.sheetCancelText, { color: colors.textSecondary }]}>
-                Cancel
-              </Text>
+              <Text style={[styles.sheetCancelText, { color: colors.textSecondary }]}>Cancel</Text>
             </Pressable>
           </Pressable>
         </Pressable>
       </Modal>
     </View>
-  );
-};
-
-const BackBtn: React.FC<{ onPress: () => void }> = ({ onPress }) => {
-  const { colors } = useTheme();
-  const styles = useStyles();
-  return (
-    <Pressable
-      onPress={onPress}
-      hitSlop={10}
-      style={[styles.iconBtn, { backgroundColor: colors.bgMuted }]}
-      accessibilityRole="button"
-      accessibilityLabel="Back"
-    >
-      <ArrowLeft size={moderateScale(16)} color={colors.textPrimary} strokeWidth={2} />
-    </Pressable>
   );
 };
 

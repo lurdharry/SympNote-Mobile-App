@@ -62,9 +62,7 @@ export const PaywallContent: React.FC<PaywallContentProps> = ({ mode }) => {
   const persistedBrief = useBriefsStore((s) => s.briefs[0]);
   const relevantBrief = pendingBrief ?? persistedBrief;
 
-  const draftPrepGap = usePendingRecordingStore(
-    (s) => s.personalization?.prepGap,
-  );
+  const draftPrepGap = usePendingRecordingStore((s) => s.personalization?.prepGap);
   const persistedPrepGap = useProfileStore((s) => s.personalization?.prepGap);
   const prepGap = draftPrepGap ?? persistedPrepGap;
 
@@ -105,13 +103,7 @@ export const PaywallContent: React.FC<PaywallContentProps> = ({ mode }) => {
           </View>
 
           <Text style={[styles.heroHeadline, { color: colors.textPrimary }]}>{hero.headline}</Text>
-          <Text style={[styles.heroSub, { color: colors.textSecondary }]}>{hero.sub}</Text>
 
-          {/* Section eyebrow — gives the features card a clear
-              identity ("here's what you're paying for") instead of
-              floating as an unlabeled list. Gain-framed ("unlock")
-              rather than loss-framed ("keep") to read more like a
-              standard pricing-page promise. */}
           <Text style={[styles.sectionEyebrow, { color: colors.textTertiary }]}>
             UNLOCK ALL FEATURES
           </Text>

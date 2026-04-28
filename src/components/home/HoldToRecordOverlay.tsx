@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -25,7 +24,6 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
-import { Check, Users } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
@@ -35,8 +33,6 @@ import {
   verticalScale,
 } from "@/theme";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
-import type { Clinician } from "@/stores/types";
-import { hapticLight } from "@/services/haptics";
 
 /**
  * Three modes:
@@ -70,11 +66,6 @@ interface HoldToRecordOverlayProps {
   /** Seconds until retry is allowed — renders a countdown on the
    *  save button when > 0. */
   retryInSec?: number;
-  /** Optional clinician routing in review mode. The row hides itself
-   *  entirely when careTeam is empty. */
-  careTeam?: Clinician[];
-  selectedClinicians?: string[];
-  onToggleClinician?: (name: string) => void;
 }
 
 export const HoldToRecordOverlay: React.FC<HoldToRecordOverlayProps> = ({
@@ -89,9 +80,6 @@ export const HoldToRecordOverlay: React.FC<HoldToRecordOverlayProps> = ({
   onReRecord,
   error,
   retryInSec = 0,
-  careTeam = [],
-  selectedClinicians = [],
-  onToggleClinician,
 }) => {
   const styles = useStyles();
   const reduced = useReducedMotion();
@@ -213,89 +201,10 @@ export const HoldToRecordOverlay: React.FC<HoldToRecordOverlayProps> = ({
               )}
             </View>
 
-            {mode === "review" && careTeam.length > 0 && (
-              <View style={styles.clinicianWrap}>
-                <Text style={styles.clinicianLabel}>ROUTE TO</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.clinicianChips}
-                >
-                  {(() => {
-                    const generalActive = selectedClinicians.length === 0;
-                    return (
-                      <View
-                        style={[
-                          styles.chip,
-                          generalActive ? styles.chipActive : styles.chipIdle,
-                        ]}
-                      >
-                        <Users
-                          size={moderateScale(12)}
-                          color={
-                            generalActive
-                              ? "#7FE0D6"
-                              : "rgba(255,255,255,0.55)"
-                          }
-                          strokeWidth={2.2}
-                        />
-                        <Text
-                          style={[
-                            styles.chipLabel,
-                            {
-                              color: generalActive
-                                ? "#7FE0D6"
-                                : "rgba(255,255,255,0.78)",
-                            },
-                          ]}
-                        >
-                          Everyone
-                        </Text>
-                      </View>
-                    );
-                  })()}
-                  {careTeam.map((c) => {
-                    const active = selectedClinicians.some(
-                      (s) => s.trim().toLowerCase() === c.name.trim().toLowerCase(),
-                    );
-                    return (
-                      <Pressable
-                        key={`${c.name}-${c.role}`}
-                        onPress={() => {
-                          hapticLight();
-                          onToggleClinician?.(c.name);
-                        }}
-                        style={[
-                          styles.chip,
-                          active ? styles.chipActive : styles.chipIdle,
-                        ]}
-                      >
-                        {active && (
-                          <Check
-                            size={moderateScale(12)}
-                            color="#7FE0D6"
-                            strokeWidth={2.4}
-                          />
-                        )}
-                        <Text
-                          style={[
-                            styles.chipLabel,
-                            {
-                              color: active
-                                ? "#7FE0D6"
-                                : "rgba(255,255,255,0.88)",
-                            },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {c.name}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            )}
+            {/* Clinician routing row removed: notes are no longer
+                tagged with audience at capture time. Audience tagging
+                lives on the brief, not the note (see brief-first
+                pivot in the dev plan). */}
 
             <View style={styles.actionsWrap}>
               <Pressable

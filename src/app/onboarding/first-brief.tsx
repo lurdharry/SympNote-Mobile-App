@@ -13,14 +13,12 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
-import { CheckCircle2, Lock, Sparkles } from "lucide-react-native";
-import { BlurView } from "expo-blur";
+import { CheckCircle2, Sparkles } from "lucide-react-native";
 import {
   fontScale,
   makeStyles,
   moderateScale,
   shadows,
-  spacing,
   typography,
   useTheme,
   verticalScale,
@@ -28,6 +26,7 @@ import {
 import { SceneTransition } from "@/components/navigation/SceneTransition";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
+import { PocketbookMascot } from "@/components/onboarding/PocketbookMascot";
 import { RedFlagAlert } from "@/components/clinical/RedFlagAlert";
 import { StructuredHeaderCard } from "@/components/clinical/StructuredHeaderCard";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
@@ -35,13 +34,7 @@ import { usePendingRecordingStore } from "@/stores/usePendingRecordingStore";
 import { generateBrief, structureTranscript } from "@/services/ai";
 import { uuid } from "@/utils/uuid";
 import { hapticLight } from "@/services/haptics";
-import type {
-  Brief,
-  BriefContent,
-  PrepGap,
-  Recording,
-  StructuredEntry,
-} from "@/stores/types";
+import type { Brief, BriefContent, PrepGap, Recording, StructuredEntry } from "@/stores/types";
 
 const EMPTY_STRUCTURED: StructuredEntry = {
   symptoms: [],
@@ -66,10 +59,7 @@ type Phase = "loading" | "ready";
  * mentioned"). Falls back to a generic descriptor when the user
  * reported they're already prepared (no pain to validate).
  */
-const readySubCopy = (
-  prepGap: PrepGap | undefined,
-  content: BriefContent | null,
-): string => {
+const readySubCopy = (prepGap: PrepGap | undefined, content: BriefContent | null): string => {
   const captured =
     (content?.topConcerns.length ?? 0) +
     (content?.questions.length ?? 0) +
@@ -142,11 +132,18 @@ const ScreenFirstBrief: React.FC = () => {
     // restore them and skip the AI call. Prevents duplicate generations
     // and wasted API spend.
     const existing = usePendingRecordingStore.getState();
-    if (
-      existing.pendingRecording &&
-      existing.pendingBrief &&
-      (!draft || existing.pendingRecording.createdAt === draft.createdAt)
-    ) {
+    // Same draft only counts as cached if the timestamp AND the
+    // transcript match. If the user edited transcript on the review
+    // screen, `setDraft` preserves the original `createdAt` (that's
+    // the original capture time) but the text changes — and we want
+    // to regenerate against the edited text, not restore the stale
+    // brief built from the previous wording.
+    const sameDraft =
+      !draft ||
+      (existing.pendingRecording &&
+        existing.pendingRecording.createdAt === draft.createdAt &&
+        existing.pendingRecording.transcript === draft.transcript);
+    if (existing.pendingRecording && existing.pendingBrief && sameDraft) {
       setBriefId(existing.pendingBrief.id);
       setPreviewContent(existing.pendingBrief.content);
       setPreviewStructured(existing.pendingRecording.structured);
@@ -182,9 +179,7 @@ const ScreenFirstBrief: React.FC = () => {
       if (cancelled) return;
 
       const structured =
-        structuredResult.status === "fulfilled"
-          ? structuredResult.value
-          : EMPTY_STRUCTURED;
+        structuredResult.status === "fulfilled" ? structuredResult.value : EMPTY_STRUCTURED;
       const tags = structured.symptoms.filter(Boolean).slice(0, 2);
 
       const fullRecording: Recording = {
@@ -254,33 +249,24 @@ const ScreenFirstBrief: React.FC = () => {
             <OnboardingProgress value={0.95} />
           </View>
 
-          <ScrollView
-            contentContainerStyle={styles.content}
-            showsVerticalScrollIndicator={false}
-          >
+          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
             <Text style={[styles.eyebrow, { color: colors.accent }]}>YOUR FIRST BRIEF</Text>
             {phase === "loading" || !previewContent ? (
               <>
                 <Text style={[styles.headline, { color: colors.textPrimary }]}>
                   Watch your note{"\n"}
-                  <Text style={{ fontStyle: "italic", color: colors.accent }}>
-                    become a brief
-                  </Text>
-                  .
+                  <Text style={{ fontStyle: "italic", color: colors.accent }}>become a brief</Text>.
                 </Text>
                 <Text style={[styles.sub, { color: colors.textSecondary }]}>
-                  Sympnote is reading what you said and distilling the clinical signal. Takes
-                  a few seconds — this is the loop you'll use whenever you need a doctor-ready
-                  summary.
+                  Sympnote is reading what you said and distilling the clinical signal. Takes a few
+                  seconds — this is the loop you'll use whenever you need a doctor-ready summary.
                 </Text>
               </>
             ) : (
               <>
                 <Text style={[styles.headline, { color: colors.textPrimary }]}>
                   Here's what your{"\n"}
-                  <Text style={{ fontStyle: "italic", color: colors.accent }}>
-                    doctor will see
-                  </Text>
+                  <Text style={{ fontStyle: "italic", color: colors.accent }}>doctor will see</Text>
                   .
                 </Text>
                 <Text style={[styles.sub, { color: colors.textSecondary }]}>
@@ -318,10 +304,7 @@ const ScreenFirstBrief: React.FC = () => {
                   </Text>
                 </Pressable>
               )}
-              <PrimaryButton
-                label={previewContent ? "Lock it in" : "See my plan"}
-                onPress={onContinue}
-              />
+              <PrimaryButton label="Save my brief" onPress={onContinue} />
             </View>
           )}
         </SafeAreaView>
@@ -330,11 +313,13 @@ const ScreenFirstBrief: React.FC = () => {
   );
 };
 
-// ─── Loading orb ────────────────────────────────────────────────────────
-// Sequenced loading beats — instead of a single static "Reading your
-// note…", the line cycles through phases that mirror what the AI is
-// actually doing. Makes the wait feel like work being done, not a
-// spinner stalling. Cycles slowly enough to read each line.
+// ─── Mascot loader ──────────────────────────────────────────────────────
+// Replaced the previous accent-orb spinner with the brand pocketbook
+// mascot in a thinking pose. Three layers of motion: a radial accent
+// halo behind, the mascot bobbing gently, and three sparkle particles
+// orbiting at staggered phases. The cycling status line below mirrors
+// what the AI is actually doing — read → pull concerns → draft
+// questions → almost done.
 const LOADING_BEATS = [
   "Reading your note…",
   "Pulling out concerns…",
@@ -348,21 +333,29 @@ const LoadingOrb: React.FC<{
   styles: ReturnType<typeof useStyles>;
 }> = ({ reduced, colors, styles }) => {
   const pulse = useSharedValue(0);
+  const bob = useSharedValue(0);
   const [beat, setBeat] = useState(0);
 
   useEffect(() => {
     if (reduced) return;
     pulse.value = withRepeat(
       withSequence(
-        withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.sin) }),
-        withTiming(0, { duration: 1100, easing: Easing.inOut(Easing.sin) }),
+        withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 1400, easing: Easing.inOut(Easing.sin) }),
       ),
       -1,
       false,
     );
-  }, [reduced, pulse]);
+    bob.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 1600, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      false,
+    );
+  }, [reduced, pulse, bob]);
 
-  // Advance one beat every 1.6s, holding on the last one (don't wrap).
   useEffect(() => {
     const id = setInterval(() => {
       setBeat((b) => Math.min(b + 1, LOADING_BEATS.length - 1));
@@ -370,32 +363,64 @@ const LoadingOrb: React.FC<{
     return () => clearInterval(id);
   }, []);
 
-  const ringStyle = useAnimatedStyle(() => ({
-    opacity: 0.3 + pulse.value * 0.5,
-    transform: [{ scale: 0.85 + pulse.value * 0.25 }],
+  const haloStyle = useAnimatedStyle(() => ({
+    opacity: 0.25 + pulse.value * 0.45,
+    transform: [{ scale: 0.9 + pulse.value * 0.2 }],
   }));
-  const sparkleStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: 1 + pulse.value * 0.08 }],
+  const mascotStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -3 + bob.value * 6 }],
+  }));
+  // Three sparkles orbit the mascot — each lifts/fades on the same
+  // pulse but at offset phases so the eye reads them as drifting.
+  const spark1 = useAnimatedStyle(() => ({
+    opacity: 0.4 + pulse.value * 0.6,
+    transform: [
+      { translateX: -28 - bob.value * 4 },
+      { translateY: -32 - pulse.value * 4 },
+    ],
+  }));
+  const spark2 = useAnimatedStyle(() => ({
+    opacity: 0.35 + (1 - pulse.value) * 0.55,
+    transform: [
+      { translateX: 32 + (1 - bob.value) * 4 },
+      { translateY: -22 - (1 - pulse.value) * 6 },
+    ],
+  }));
+  const spark3 = useAnimatedStyle(() => ({
+    opacity: 0.3 + pulse.value * 0.45,
+    transform: [
+      { translateX: 26 + bob.value * 4 },
+      { translateY: 28 + pulse.value * 4 },
+    ],
   }));
 
   return (
-    <Animated.View entering={FadeIn.duration(280)} style={styles.orbWrap}>
-      <Animated.View style={[styles.orbRing, ringStyle]}>
-        <LinearGradient
-          colors={[colors.accent + "33", colors.accent + "00"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
-      <View style={[styles.orbCore, { backgroundColor: colors.accent }]}>
-        <Animated.View style={sparkleStyle}>
-          <Sparkles size={moderateScale(28)} color="#FFFFFF" strokeWidth={2.2} />
+    <Animated.View entering={FadeIn.duration(320)} style={styles.mascotWrap}>
+      <View style={styles.mascotStage}>
+        <Animated.View style={[styles.mascotHalo, haloStyle]}>
+          <LinearGradient
+            colors={[colors.accent + "33", colors.accent + "00"]}
+            start={{ x: 0.5, y: 0.5 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
+        <Animated.View style={mascotStyle}>
+          <PocketbookMascot reduced={reduced} size={moderateScale(132)} />
+        </Animated.View>
+        <Animated.View style={[styles.spark, spark1]} pointerEvents="none">
+          <Sparkles size={moderateScale(14)} color={colors.accent} strokeWidth={2.4} />
+        </Animated.View>
+        <Animated.View style={[styles.spark, spark2]} pointerEvents="none">
+          <Sparkles size={moderateScale(10)} color={colors.accent} strokeWidth={2.4} />
+        </Animated.View>
+        <Animated.View style={[styles.spark, spark3]} pointerEvents="none">
+          <Sparkles size={moderateScale(12)} color={colors.accent} strokeWidth={2.4} />
         </Animated.View>
       </View>
       <Animated.Text
         key={beat}
-        entering={FadeIn.duration(260)}
+        entering={FadeIn.duration(280)}
         style={[styles.loadingText, { color: colors.textSecondary }]}
       >
         {LOADING_BEATS[beat]}
@@ -469,9 +494,7 @@ const BriefReveal: React.FC<{
   // succeeded — keeps the first slot occupied either way.
   const hasStructured =
     !!structured &&
-    (structured.severity > 0 ||
-      structured.bodySystem.length > 0 ||
-      structured.symptoms.length > 0);
+    (structured.severity > 0 || structured.bodySystem.length > 0 || structured.symptoms.length > 0);
 
   return (
     <View style={styles.revealStack}>
@@ -497,9 +520,7 @@ const BriefReveal: React.FC<{
             style={styles.previewWash}
             pointerEvents="none"
           />
-          <Text style={[styles.previewEyebrow, { color: colors.accent }]}>
-            SUMMARY
-          </Text>
+          <Text style={[styles.previewEyebrow, { color: colors.accent }]}>SUMMARY</Text>
           <Text
             style={[styles.previewBody, { color: colors.textPrimary, marginTop: 6 }]}
             numberOfLines={5}
@@ -517,108 +538,68 @@ const BriefReveal: React.FC<{
         </Animated.View>
       ) : null}
 
-      {/* Locked section — questions + patterns sit behind a soft blur
-          and a "Subscribe to unlock" badge. The user sees enough shape
-          to know there's content without being able to read it. The
-          structured header above and the insights count below stay
-          crisp so the value is teased, not hidden entirely. */}
-      {(questions.length > 0 || patterns.length > 0) && (
-        <View style={styles.lockedSection}>
-          {questions.length > 0 ? (
-            <Animated.View
-              entering={FadeInDown.delay(d(280)).duration(420).easing(Easing.out(Easing.cubic))}
-              style={[
-                styles.revealCard,
-                { backgroundColor: colors.bgSurface, borderColor: colors.border },
-                shadows.card,
-              ]}
-            >
-              <Text style={[styles.previewEyebrow, { color: colors.accent }]}>
-                ASK YOUR DOCTOR
-              </Text>
-              <View style={styles.questionsList}>
-                {questions.map((q, i) => (
-                  <View key={`q-${i}`} style={styles.questionRow}>
-                    <CheckCircle2
-                      size={moderateScale(14)}
-                      color={colors.accent}
-                      strokeWidth={2.2}
-                    />
-                    <Text
-                      style={[styles.questionText, { color: colors.textPrimary }]}
-                      numberOfLines={3}
-                    >
-                      {q}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-              {content.questions.length > questions.length ? (
-                <Text style={[styles.questionsMore, { color: colors.textTertiary }]}>
-                  +{content.questions.length - questions.length} more inside
+      {questions.length > 0 ? (
+        <Animated.View
+          entering={FadeInDown.delay(d(280)).duration(420).easing(Easing.out(Easing.cubic))}
+          style={[
+            styles.revealCard,
+            { backgroundColor: colors.bgSurface, borderColor: colors.border },
+            shadows.card,
+          ]}
+        >
+          <Text style={[styles.previewEyebrow, { color: colors.accent }]}>ASK YOUR DOCTOR</Text>
+          <View style={styles.questionsList}>
+            {questions.map((q, i) => (
+              <View key={`q-${i}`} style={styles.questionRow}>
+                <CheckCircle2
+                  size={moderateScale(14)}
+                  color={colors.accent}
+                  strokeWidth={2.2}
+                />
+                <Text
+                  style={[styles.questionText, { color: colors.textPrimary }]}
+                  numberOfLines={3}
+                >
+                  {q}
                 </Text>
-              ) : null}
-            </Animated.View>
-          ) : null}
-
-          {patterns.length > 0 ? (
-            <Animated.View
-              entering={FadeInDown.delay(d(480)).duration(420).easing(Easing.out(Easing.cubic))}
-              style={[
-                styles.revealCard,
-                { backgroundColor: colors.bgSurface, borderColor: colors.border },
-                shadows.card,
-              ]}
-            >
-              <Text style={[styles.previewEyebrow, { color: colors.accent }]}>
-                PATTERNS WE NOTICED
-              </Text>
-              <View style={styles.questionsList}>
-                {patterns.map((p, i) => (
-                  <View key={`p-${i}`} style={styles.questionRow}>
-                    <View style={[styles.patternDot, { backgroundColor: colors.accent }]} />
-                    <Text
-                      style={[styles.questionText, { color: colors.textPrimary }]}
-                      numberOfLines={3}
-                    >
-                      {p}
-                    </Text>
-                  </View>
-                ))}
               </View>
-            </Animated.View>
+            ))}
+          </View>
+          {content.questions.length > questions.length ? (
+            <Text style={[styles.questionsMore, { color: colors.textTertiary }]}>
+              +{content.questions.length - questions.length} more inside
+            </Text>
           ) : null}
+        </Animated.View>
+      ) : null}
 
-          {/* Frosted blur over the cards — readers see shape, not text.
-              `intensity` is tuned to obscure copy without flattening the
-              card silhouettes entirely (still feels like content, just
-              gated). */}
-          <BlurView
-            intensity={42}
-            tint="light"
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          />
-
-          {/* Centered lock badge — the unlock CTA inside the blur. The
-              tap target is the bottom Continue button, not this badge,
-              but the badge tells the user where the door is. */}
-          <Animated.View
-            entering={FadeIn.delay(d(560)).duration(360)}
-            pointerEvents="none"
-            style={styles.lockBadgeWrap}
-          >
-            <View
-              style={[styles.lockBadge, { backgroundColor: colors.accent }]}
-            >
-              <Lock size={moderateScale(12)} color="#FFFFFF" strokeWidth={2.4} />
-              <Text style={styles.lockBadgeText}>
-                Subscribe to see your doctor questions
-              </Text>
-            </View>
-          </Animated.View>
-        </View>
-      )}
+      {patterns.length > 0 ? (
+        <Animated.View
+          entering={FadeInDown.delay(d(480)).duration(420).easing(Easing.out(Easing.cubic))}
+          style={[
+            styles.revealCard,
+            { backgroundColor: colors.bgSurface, borderColor: colors.border },
+            shadows.card,
+          ]}
+        >
+          <Text style={[styles.previewEyebrow, { color: colors.accent }]}>
+            PATTERNS WE NOTICED
+          </Text>
+          <View style={styles.questionsList}>
+            {patterns.map((p, i) => (
+              <View key={`p-${i}`} style={styles.questionRow}>
+                <View style={[styles.patternDot, { backgroundColor: colors.accent }]} />
+                <Text
+                  style={[styles.questionText, { color: colors.textPrimary }]}
+                  numberOfLines={3}
+                >
+                  {p}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </Animated.View>
+      ) : null}
 
       <Animated.View
         entering={FadeInDown.delay(d(640)).duration(420).easing(Easing.out(Easing.cubic))}
@@ -673,8 +654,8 @@ const SampleBriefCard: React.FC<{
       Right knee pain, getting sharper
     </Text>
     <Text style={[styles.previewBody, { color: colors.textSecondary }]}>
-      Worse climbing stairs, eases with rest — started ~10 days ago. Mild swelling overnight,
-      no obvious trigger.
+      Worse climbing stairs, eases with rest — started ~10 days ago. Mild swelling overnight, no
+      obvious trigger.
     </Text>
     <View style={styles.previewFoot}>
       <Sparkles size={moderateScale(11)} color={colors.accent} strokeWidth={2.2} />
@@ -726,32 +707,39 @@ const useStyles = makeStyles((theme) => ({
     marginTop: theme.spacing.s2,
     maxWidth: moderateScale(360),
   },
-  // ── Loading orb
-  orbWrap: {
+  // ── Mascot loader
+  mascotWrap: {
     alignItems: "center",
     marginTop: theme.spacing.s8,
-    gap: theme.spacing.s4,
+    gap: theme.spacing.s5,
   },
-  orbRing: {
-    position: "absolute",
-    top: -moderateScale(20),
-    width: moderateScale(150),
-    height: moderateScale(150),
-    borderRadius: moderateScale(75),
-    overflow: "hidden",
-  },
-  orbCore: {
-    width: moderateScale(86),
-    height: moderateScale(86),
-    borderRadius: moderateScale(43),
+  mascotStage: {
+    width: moderateScale(180),
+    height: moderateScale(180),
     alignItems: "center",
     justifyContent: "center",
-    ...theme.shadows.accentGlow,
+  },
+  mascotHalo: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: moderateScale(90),
+    overflow: "hidden",
+  },
+  spark: {
+    position: "absolute",
   },
   loadingText: {
     ...typography.body,
-    fontSize: fontScale(13),
+    fontFamily: "Fraunces_500Medium",
     fontStyle: "italic",
+    fontSize: fontScale(15),
+    lineHeight: fontScale(20),
+    letterSpacing: -0.1,
+    textAlign: "center",
+    paddingHorizontal: theme.spacing.s6,
   },
   // ── Preview card
   previewCard: {
@@ -870,37 +858,6 @@ const useStyles = makeStyles((theme) => ({
     fontFamily: "DMSans_700Bold",
     fontSize: fontScale(11),
     letterSpacing: 0.3,
-  },
-  // ── Locked tease (questions + patterns behind blur + badge)
-  lockedSection: {
-    position: "relative",
-    gap: moderateScale(10),
-    borderRadius: theme.radius.lg,
-    overflow: "hidden",
-  },
-  lockBadgeWrap: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  lockBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(8),
-    paddingHorizontal: moderateScale(14),
-    paddingVertical: moderateScale(10),
-    borderRadius: theme.radius.full,
-    ...theme.shadows.accentGlow,
-  },
-  lockBadgeText: {
-    color: "#FFFFFF",
-    fontFamily: "DMSans_700Bold",
-    fontSize: fontScale(12),
-    letterSpacing: -0.05,
   },
   // ── CTA
   cta: {
