@@ -1,73 +1,9 @@
 import { format, parseISO } from 'date-fns';
-import type { Appointment, AppointmentBrief, Brief, Clinician } from '@/stores/types';
+import type { Brief, Clinician } from '@/stores/types';
 
 /**
- * Render the full structured brief as plain text for Copy / Share.
- * Keeps the sections in a predictable order a doctor can scan linearly.
- */
-export const briefToPlainText = (
-  appointment: Appointment,
-  brief: AppointmentBrief,
-): string => {
-  const lines: string[] = [];
-
-  lines.push(`Visit brief · ${appointment.doctorName} (${appointment.specialty})`);
-  lines.push(format(parseISO(appointment.date), 'EEEE, MMMM d, yyyy'));
-  lines.push('');
-
-  if (brief.summary) {
-    lines.push(brief.summary);
-    lines.push('');
-  }
-
-  if (brief.topConcerns.length > 0) {
-    lines.push('TOP CONCERNS');
-    brief.topConcerns.forEach((c) => {
-      const detail = c.detail ? `: ${c.detail}` : '';
-      lines.push(`• ${c.label}${detail}`);
-    });
-    lines.push('');
-  }
-
-  if (brief.timeline.length > 0) {
-    lines.push('TIMELINE');
-    brief.timeline.forEach((t) => lines.push(`• ${t.date}: ${t.line}`));
-    lines.push('');
-  }
-
-  if (brief.patterns.length > 0) {
-    lines.push('PATTERNS');
-    brief.patterns.forEach((p) => lines.push(`• ${p}`));
-    lines.push('');
-  }
-
-  if (brief.medications.length > 0) {
-    lines.push('MEDICATIONS');
-    brief.medications.forEach((m) => lines.push(`• ${m}`));
-    lines.push('');
-  }
-
-  if (brief.questions.length > 0) {
-    lines.push('QUESTIONS TO ASK');
-    brief.questions.forEach((q, i) => lines.push(`${i + 1}. ${q}`));
-    lines.push('');
-  }
-
-  if (brief.flags.length > 0) {
-    lines.push('WORTH FLAGGING');
-    brief.flags.forEach((f) => lines.push(`⚠ ${f}`));
-    lines.push('');
-  }
-
-  lines.push('Not medical advice. Review with your doctor.');
-
-  return lines.join('\n').trim();
-};
-
-/**
- * Plain-text export for the new first-class Brief entity. Same
- * sectioned layout as the appointment variant, header adapts to the
- * audience tag (clinicians, "Everyone", or just the window).
+ * Plain-text export for the first-class Brief entity. Header adapts
+ * to the audience tag (clinicians, "Everyone", or just the window).
  */
 export const formatBriefAsText = (brief: Brief, careTeam: Clinician[]): string => {
   const lines: string[] = [];
