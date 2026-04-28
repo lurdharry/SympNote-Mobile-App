@@ -1,22 +1,16 @@
-import React from 'react';
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { makeStyles, radius, spacing, typography, useTheme } from '../../theme';
-import { SharedElementScene } from '../../components/navigation/SharedElementScene';
-import { StaggeredList } from '../../components/animated/StaggeredList';
-import { Button } from '../../components/ui/Button';
-import { useRecordingsStore } from '../../stores/useRecordingsStore';
-import { formatDate, formatTime, formatDuration } from '../../utils/date';
-import { hapticLight } from '../../services/haptics';
-import { useTransition } from '../../components/navigation/TransitionContext';
+import React from "react";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { makeStyles, radius, spacing, typography, useTheme } from "../../theme";
+import { SharedElementScene } from "../../components/navigation/SharedElementScene";
+import { StaggeredList } from "../../components/animated/StaggeredList";
+import { Button } from "../../components/ui/Button";
+import { useRecordingsStore } from "../../stores/useRecordingsStore";
+import { formatDate, formatTime, formatDuration } from "../../utils/date";
+import { hapticLight } from "../../services/haptics";
+import { useTransition } from "../../components/navigation/TransitionContext";
+import { BackButton } from "@/components/ui/BackButton";
 
 const RecordingDetail: React.FC = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -36,7 +30,7 @@ const RecordingDetail: React.FC = () => {
   if (!recording) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <Text style={[typography.body, { color: colors.textSecondary }]}>
             Recording not found.
           </Text>
@@ -50,11 +44,11 @@ const RecordingDetail: React.FC = () => {
   const s = recording.structured;
 
   const confirmDelete = () => {
-    Alert.alert('Delete recording?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert("Delete recording?", "This cannot be undone.", [
+      { text: "Cancel", style: "cancel" },
       {
-        text: 'Delete',
-        style: 'destructive',
+        text: "Delete",
+        style: "destructive",
         onPress: () => {
           remove(recording.id);
           router.back();
@@ -67,22 +61,13 @@ const RecordingDetail: React.FC = () => {
     <SharedElementScene style={{ backgroundColor: colors.bgPrimary }}>
       <SafeAreaView style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.content}>
-          <Pressable onPress={goBack}>
-            <Text style={[typography.label, { color: colors.accent }]}>
-              ← Back
-            </Text>
-          </Pressable>
+          <BackButton onPress={goBack} type="contained" style={{ alignSelf: "flex-start" }} />
 
-          <Text
-            style={[
-              typography.h1,
-              { color: colors.textPrimary, marginTop: spacing.s4 },
-            ]}
-          >
-            {s.symptoms[0] ?? 'Entry'}
+          <Text style={[typography.h1, { color: colors.textPrimary, marginTop: spacing.s4 }]}>
+            {s.symptoms[0] ?? "Entry"}
           </Text>
           <Text style={[typography.caption, { color: colors.textTertiary, marginTop: 4 }]}>
-            {formatDate(recording.createdAt)} · {formatTime(recording.createdAt)} ·{' '}
+            {formatDate(recording.createdAt)} · {formatTime(recording.createdAt)} ·{" "}
             {formatDuration(recording.durationSec)}
           </Text>
 
@@ -121,9 +106,7 @@ const RecordingDetail: React.FC = () => {
 
             {s.notes ? (
               <Section label="Notes">
-                <Text style={[typography.body, { color: colors.textPrimary }]}>
-                  {s.notes}
-                </Text>
+                <Text style={[typography.body, { color: colors.textPrimary }]}>{s.notes}</Text>
               </Section>
             ) : null}
 
@@ -146,7 +129,7 @@ const RecordingDetail: React.FC = () => {
       </SafeAreaView>
     </SharedElementScene>
   );
-}
+};
 
 interface SectionProps {
   label: string;
@@ -163,7 +146,7 @@ const Section: React.FC<SectionProps> = ({ label, children }) => {
       {children}
     </View>
   );
-}
+};
 
 interface ChipsOrDashProps {
   items: string[];
@@ -175,7 +158,7 @@ const ChipsOrDash: React.FC<ChipsOrDashProps> = ({ items }) => {
     return <Text style={[typography.body, { color: colors.textTertiary }]}>—</Text>;
   }
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
       {items.map((i) => (
         <View
           key={i}
@@ -186,14 +169,12 @@ const ChipsOrDash: React.FC<ChipsOrDashProps> = ({ items }) => {
             borderRadius: radius.sm,
           }}
         >
-          <Text style={[typography.bodySmall, { color: colors.textPrimary }]}>
-            {i}
-          </Text>
+          <Text style={[typography.bodySmall, { color: colors.textPrimary }]}>{i}</Text>
         </View>
       ))}
     </View>
   );
-}
+};
 
 interface LineOrDashProps {
   text: string;
@@ -202,16 +183,11 @@ interface LineOrDashProps {
 const LineOrDash: React.FC<LineOrDashProps> = ({ text }) => {
   const { colors } = useTheme();
   return (
-    <Text
-      style={[
-        typography.body,
-        { color: text ? colors.textPrimary : colors.textTertiary },
-      ]}
-    >
-      {text || '—'}
+    <Text style={[typography.body, { color: text ? colors.textPrimary : colors.textTertiary }]}>
+      {text || "—"}
     </Text>
   );
-}
+};
 
 export default RecordingDetail;
 

@@ -78,7 +78,7 @@ const BriefDetail: React.FC = () => {
       <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
         <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
           <View style={styles.topBar}>
-            <BackButton onPress={() => router.back()} />
+            <BackButton onPress={() => router.back()} type="contained" />
           </View>
           <View style={styles.gone}>
             <Text style={[typography.h2, { color: colors.textPrimary, textAlign: "center" }]}>
@@ -581,13 +581,7 @@ const useStyles = makeStyles((theme) => ({
     paddingBottom: theme.spacing.s2,
     gap: moderateScale(10),
   },
-  iconBtn: {
-    width: moderateScale(36),
-    height: moderateScale(36),
-    borderRadius: moderateScale(18),
-    alignItems: "center",
-    justifyContent: "center",
-  },
+
   scroll: {
     paddingHorizontal: theme.spacing.s6,
     paddingBottom: theme.spacing.s8,
@@ -677,6 +671,13 @@ const useStyles = makeStyles((theme) => ({
     fontFamily: "DMSans_600SemiBold",
     fontSize: fontScale(16),
     lineHeight: fontScale(22),
+  },
+  iconBtn: {
+    width: moderateScale(36),
+    height: moderateScale(36),
+    borderRadius: moderateScale(18),
+    alignItems: "center",
+    justifyContent: "center",
   },
   concernDetail: {
     ...theme.typography.body,

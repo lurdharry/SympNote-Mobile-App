@@ -12,9 +12,6 @@ type Origin = { x: number; y: number; width: number; height: number } | null;
 type TransitionState = {
   origin: Origin;
   setOrigin: (o: Origin) => void;
-  wipeActive: boolean;
-  triggerRadialWipe: (opts?: { x?: number; y?: number }) => Promise<void>;
-  _wipeCenter: { x: number; y: number };
   /**
    * Ref holder for the active SharedElementScene's close function.
    * The scene registers a reverse-animation function on mount;
@@ -33,8 +30,6 @@ interface TransitionProviderProps {
 
 export const TransitionProvider: React.FC<TransitionProviderProps> = ({ children }) => {
   const [origin, setOriginState] = useState<Origin>(null);
-  const [wipeActive, _setWipeActive] = useState(false);
-  const [_wipeCenter, _setWipeCenter] = useState({ x: 0, y: 0 });
   const sceneCloser = useRef<(() => Promise<void>) | null>(null);
 
   // Stable identities for functions. Without useCallback, every render of
@@ -43,24 +38,11 @@ export const TransitionProvider: React.FC<TransitionProviderProps> = ({ children
   // which causes timer/navigation duplication.
   const setOrigin = useCallback((o: Origin) => setOriginState(o), []);
 
-  const triggerRadialWipe = useCallback(
-    (opts?: { x?: number; y?: number }) =>
-      new Promise<void>((resolve) => {
-        _setWipeCenter({ x: opts?.x ?? 0, y: opts?.y ?? 0 });
-        _setWipeActive(true);
-        setTimeout(() => {
-          _setWipeActive(false);
-          resolve();
-        }, 600);
-      }),
-    []
-  );
-
   const registerSceneCloser = useCallback(
     (fn: (() => Promise<void>) | null) => {
       sceneCloser.current = fn;
     },
-    []
+    [],
   );
 
   const closeScene = useCallback(async () => {
@@ -72,25 +54,14 @@ export const TransitionProvider: React.FC<TransitionProviderProps> = ({ children
     () => ({
       origin,
       setOrigin,
-      wipeActive,
-      triggerRadialWipe,
-      _wipeCenter,
       registerSceneCloser,
       closeScene,
     }),
-    [
-      origin,
-      wipeActive,
-      _wipeCenter,
-      setOrigin,
-      triggerRadialWipe,
-      registerSceneCloser,
-      closeScene,
-    ]
+    [origin, setOrigin, registerSceneCloser, closeScene],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
-}
+};
 
 export function useTransition() {
   const v = useContext(Ctx);
