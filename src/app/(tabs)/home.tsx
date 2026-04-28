@@ -10,22 +10,16 @@ import { hapticLight } from "@/services/haptics";
 import { useHomeDashboard } from "@/hooks/useHomeDashboard";
 import { useHoldToRecord } from "@/hooks/useHoldToRecord";
 import { usePaywallGate } from "@/hooks/usePaywallGate";
-import { JournalHero } from "@/components/home/JournalHero";
-import { UpNextCard } from "@/components/home/UpNextCard";
+import { ReadyStateCard } from "@/components/home/ReadyStateCard";
 import { TimelineCard } from "@/components/home/TimelineCard";
-import { TodayCheckIn } from "@/components/home/TodayCheckIn";
 import { InsightNudge } from "@/components/home/InsightNudge";
 import { FirstEntryHero } from "@/components/home/FirstEntryHero";
 import { PostVisitPrompt } from "@/components/home/PostVisitPrompt";
 import { RecordFAB } from "@/components/home/RecordFAB";
-import { BriefsPeek } from "@/components/home/BriefsPeek";
 import { HoldToRecordOverlay, HoldOverlayMode } from "@/components/home/HoldToRecordOverlay";
 import { SectionLabel } from "@/components/ui/SectionLabel";
 import { useAppointmentsStore } from "@/stores/useAppointmentsStore";
 import { useProfileStore } from "@/stores/useProfileStore";
-import { useRecordingsStore } from "@/stores/useRecordingsStore";
-import { useBriefsStore } from "@/stores/useBriefsStore";
-import { unbriefedRecordings } from "@/utils/briefSource";
 import { useOverlayRecording } from "@/hooks/useOverlayRecording";
 
 const TabHome: React.FC = () => {
@@ -42,16 +36,8 @@ const TabHome: React.FC = () => {
     toastTimerRef.current = setTimeout(() => setToast(null), 1800);
   }, []);
 
-  const {
-    nextAppointment,
-    todayEntries,
-    nudge,
-    recordingsCount,
-    firstRecording,
-    unresolvedVisit,
-    lastRecordingAt,
-    recentTopTag,
-  } = useHomeDashboard();
+  const { nextAppointment, todayEntries, nudge, recordingsCount, firstRecording, unresolvedVisit } =
+    useHomeDashboard();
 
   const {
     onSave,
@@ -64,10 +50,6 @@ const TabHome: React.FC = () => {
     editValue,
     setEditValue,
   } = useOverlayRecording({ showToast });
-
-  const allBriefs = useBriefsStore((s) => s.briefs);
-  const allRecordings = useRecordingsStore((s) => s.recordings);
-  const unbriefedCount = unbriefedRecordings(allRecordings, allBriefs).length;
 
   const markAttended = useAppointmentsStore((s) => s.markAttended);
   const markMissed = useAppointmentsStore((s) => s.markMissed);
@@ -108,12 +90,6 @@ const TabHome: React.FC = () => {
     holdHandlers.onPressIn();
   }, [entitled, requireEntitlement, holdHandlers]);
 
-  // The TodayCheckIn quick-record affordance shares the same gate.
-  const onCheckInPress = useCallback(() => {
-    if (!requireEntitlement()) return;
-    router.push("/record");
-  }, [requireEntitlement, router]);
-
   const onReRecord = useCallback(() => {
     hapticLight();
     dismissOverlay();
@@ -146,10 +122,10 @@ const TabHome: React.FC = () => {
           </View>
 
           <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-            <JournalHero />
+            <ReadyStateCard />
 
             {unresolvedVisit && (
-              <View style={{ marginBottom: spacing.s4 }}>
+              <View style={{ marginTop: spacing.s4 }}>
                 <PostVisitPrompt
                   appointment={unresolvedVisit}
                   onAttended={() => markAttended(unresolvedVisit.id)}
@@ -160,7 +136,7 @@ const TabHome: React.FC = () => {
             )}
 
             {showFirstEntryHero && firstRecording && (
-              <View style={{ marginBottom: spacing.s4 }}>
+              <View style={{ marginTop: spacing.s4 }}>
                 <FirstEntryHero
                   recording={firstRecording}
                   nextAppointment={nextAppointment}
@@ -169,60 +145,20 @@ const TabHome: React.FC = () => {
               </View>
             )}
 
-            <UpNextCard
-              appointment={nextAppointment}
-              onPress={() => router.push("/(tabs)/prep")}
-              onAdd={() => router.push("/appointment-new")}
-            />
-
-            <BriefsPeek
-              unbriefedCount={unbriefedCount}
-              onPress={() => {
-                hapticLight();
-                router.push("/(tabs)/prep");
-              }}
-            />
-
-
-            <View style={{ marginTop: spacing.s5 }}>
-              <View style={styles.sectionRow}>
-                <SectionLabel label="Today" />
-                {todayEntries.length > 0 && (
+            {todayEntries.length > 0 && (
+              <View style={{ marginTop: spacing.s5 }}>
+                <View style={styles.sectionRow}>
+                  <SectionLabel label="Today" />
                   <Text style={[typography.label, { color: colors.textTertiary }]}>
                     {todayEntries.length} {todayEntries.length === 1 ? "entry" : "entries"}
                   </Text>
-                )}
-              </View>
-              {todayEntries.length > 0 ? (
+                </View>
                 <TimelineCard entries={todayEntries} />
-              ) : (
-                <TodayCheckIn
-                  recordingsCount={recordingsCount}
-                  lastRecordingAt={lastRecordingAt}
-                  recentTopTag={recentTopTag}
-                  onPress={onCheckInPress}
-                />
-              )}
-            </View>
+              </View>
+            )}
 
             {nudge && (
               <InsightNudge nudge={nudge} onPress={() => router.push("/(tabs)/insights")} />
-            )}
-
-            {!showFirstEntryHero && (
-              <Text
-                style={[
-                  typography.caption,
-                  {
-                    color: colors.textTertiary,
-                    textAlign: "center",
-                    marginTop: spacing.s5,
-                    paddingHorizontal: spacing.s6,
-                  },
-                ]}
-              >
-                Logging little and often makes your prep summaries sharper.
-              </Text>
             )}
           </ScrollView>
 
