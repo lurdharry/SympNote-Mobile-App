@@ -10,6 +10,18 @@ import {
   Stethoscope,
   UserPlus,
 } from 'lucide-react-native';
+import {
+  CardiologyMascot,
+  DermatologyMascot,
+  NeurologyMascot,
+  ObGynMascot,
+  OphthalmologyMascot,
+  OrthopedicsMascot,
+  OtherSpecialtyMascot,
+  PrimaryCareMascot,
+  PsychiatryMascot,
+  SpecialistMascot,
+} from '@/components/onboarding/care-team/SpecialtyMascots';
 
 type IconRef = typeof Stethoscope;
 
@@ -18,10 +30,20 @@ export interface Specialty {
   id: string;
   /** Display label shown on chips and clinician cards. */
   label: string;
+  /**
+   * Bespoke SVG mascot for this specialty — paper-clinical character
+   * with a face, distinct anatomy. Self-contained (carries its own
+   * gradient) so callers render `<spec.Mascot size={N} />` directly,
+   * no gradient tile wrapper needed.
+   */
+  Mascot: React.FC<{ size?: number }>;
+  /** Lucide icon — kept for legacy chip strips that don't use the
+   *  mascot variant yet, and as a small fallback glyph. */
   Icon: IconRef;
-  /** Two-stop gradient used on the specialty tile. */
+  /** Two-stop gradient kept for legacy usage (e.g. accent gradients
+   *  on appointment cards). New surfaces should prefer Mascot. */
   grad: [string, string];
-  /** Foreground color for the icon on the gradient tile. */
+  /** Foreground color for the legacy Icon on the gradient tile. */
   fg: string;
 }
 
@@ -34,6 +56,7 @@ export const SPECIALTIES: Specialty[] = [
   {
     id: 'primary-care',
     label: 'Primary care',
+    Mascot: PrimaryCareMascot,
     Icon: Stethoscope,
     grad: ['#2C6E6B', '#1F504E'],
     fg: '#FFFFFF',
@@ -41,6 +64,7 @@ export const SPECIALTIES: Specialty[] = [
   {
     id: 'cardiology',
     label: 'Cardiology',
+    Mascot: CardiologyMascot,
     Icon: HeartPulse,
     grad: ['#E07A5F', '#C45C3F'],
     fg: '#FFFFFF',
@@ -48,6 +72,7 @@ export const SPECIALTIES: Specialty[] = [
   {
     id: 'neurology',
     label: 'Neurology',
+    Mascot: NeurologyMascot,
     Icon: Brain,
     grad: ['#A8C4C2', '#6FA19E'],
     fg: '#1F504E',
@@ -55,6 +80,7 @@ export const SPECIALTIES: Specialty[] = [
   {
     id: 'psychiatry',
     label: 'Psychiatry',
+    Mascot: PsychiatryMascot,
     Icon: Smile,
     grad: ['#F5A3A3', '#D97575'],
     fg: '#FFFFFF',
@@ -62,6 +88,7 @@ export const SPECIALTIES: Specialty[] = [
   {
     id: 'dermatology',
     label: 'Dermatology',
+    Mascot: DermatologyMascot,
     Icon: Sparkles,
     grad: ['#F6C06A', '#D9964A'],
     fg: '#5C3D12',
@@ -69,6 +96,7 @@ export const SPECIALTIES: Specialty[] = [
   {
     id: 'ob-gyn',
     label: 'OB-GYN',
+    Mascot: ObGynMascot,
     Icon: Baby,
     grad: ['#C7B98F', '#9E8F5F'],
     fg: '#FFFFFF',
@@ -76,6 +104,7 @@ export const SPECIALTIES: Specialty[] = [
   {
     id: 'orthopedics',
     label: 'Orthopedics',
+    Mascot: OrthopedicsMascot,
     Icon: Bone,
     grad: ['#6CA4A0', '#3F7E7A'],
     fg: '#FFFFFF',
@@ -83,6 +112,7 @@ export const SPECIALTIES: Specialty[] = [
   {
     id: 'ophthalmology',
     label: 'Ophthalmology',
+    Mascot: OphthalmologyMascot,
     Icon: Eye,
     grad: ['#8A9FC7', '#5C75A1'],
     fg: '#FFFFFF',
@@ -90,6 +120,7 @@ export const SPECIALTIES: Specialty[] = [
   {
     id: 'specialist',
     label: 'Other specialist',
+    Mascot: SpecialistMascot,
     Icon: Hospital,
     grad: ['#D9BBA7', '#B58D73'],
     fg: '#5C3D12',
@@ -97,6 +128,7 @@ export const SPECIALTIES: Specialty[] = [
   {
     id: 'other',
     label: 'Other',
+    Mascot: OtherSpecialtyMascot,
     Icon: UserPlus,
     grad: ['#C7C3BE', '#8E8A84'],
     fg: '#FFFFFF',
