@@ -1,38 +1,21 @@
 import React, { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from "react-native";
 import Animated, {
   Easing,
   Extrapolation,
-  FadeIn,
-  FadeOut,
   interpolate,
   SharedValue,
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
-  withSequence,
   withSpring,
   withTiming,
 } from "react-native-reanimated";
 import { BlurView } from "expo-blur";
-import {
-  fontScale,
-  makeStyles,
-  moderateScale,
-  scale,
-  spacing,
-  verticalScale,
-} from "@/theme";
+import { makeStyles, verticalScale } from "@/theme";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
+import { TimerPill } from "./hold-overlay/TimerPill";
+import { RecordingMode } from "./hold-overlay/RecordingMode";
+import { ReviewMode } from "./hold-overlay/ReviewMode";
 
 /**
  * Three modes:
@@ -121,6 +104,10 @@ export const HoldToRecordOverlay: React.FC<HoldToRecordOverlayProps> = ({
     : mode === "extracting"
       ? "Analyzing…"
       : "Save";
+  const timerLabel =
+    mode === "recording"
+      ? formatDuration(durationSec)
+      : `${formatDuration(durationSec)} captured`;
 
   return (
     <View pointerEvents={visible ? "auto" : "none"} style={StyleSheet.absoluteFill}>
@@ -129,241 +116,34 @@ export const HoldToRecordOverlay: React.FC<HoldToRecordOverlayProps> = ({
         <View style={styles.tint} />
       </Animated.View>
 
-      {/* Timer pill — consistent across modes; only the label content
-          swaps (live duration vs. captured duration). */}
       <Animated.View style={[styles.timerWrap, timerStyle]} pointerEvents="none">
-        <View style={styles.timerPill}>
-          {mode === "recording" ? (
-            <RecordingDot />
-          ) : (
-            <View style={styles.capturedDot} />
-          )}
-          <Text style={styles.timerText}>
-            {mode === "recording"
-              ? formatDuration(durationSec)
-              : `${formatDuration(durationSec)} captured`}
-          </Text>
-        </View>
+        <TimerPill recording={mode === "recording"} label={timerLabel} />
       </Animated.View>
 
-      {/* Mode-specific body */}
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.flex}
       >
         {mode === "recording" && (
-          <Animated.View
-            key="recording"
-            entering={FadeIn.duration(220)}
-            exiting={FadeOut.duration(160)}
-            style={styles.flex}
-            pointerEvents="none"
-          >
-            <View style={styles.transcriptWrap}>
-              <Text style={styles.transcript} numberOfLines={5}>
-                {liveTranscript || "Listening…"}
-              </Text>
-            </View>
-            <View style={styles.waveformWrap}>
-              <Waveform volume={volume} />
-            </View>
-            <View style={styles.hintWrap}>
-              <Text style={styles.hintText}>Release to save</Text>
-            </View>
-          </Animated.View>
+          <RecordingMode liveTranscript={liveTranscript} volume={volume} />
         )}
-
         {(mode === "review" || mode === "extracting") && (
-          <Animated.View
-            key="review"
-            entering={FadeIn.duration(260)}
-            exiting={FadeOut.duration(180)}
-            style={styles.flex}
-          >
-            <View style={styles.editWrap}>
-              <Text style={styles.editCaption}>Check what we heard — tap to edit</Text>
-              <TextInput
-                value={editValue ?? liveTranscript}
-                onChangeText={onEditChange}
-                multiline
-                scrollEnabled
-                textAlignVertical="top"
-                editable={mode === "review"}
-                style={styles.editInput}
-                placeholder="Your words will appear here…"
-                placeholderTextColor="rgba(255,255,255,0.45)"
-              />
-              {error && mode === "review" && (
-                <View style={styles.errorBox}>
-                  <Text style={styles.errorLabel}>Couldn't process that</Text>
-                  <Text style={styles.errorBody}>{error}</Text>
-                </View>
-              )}
-            </View>
-
-            {/* Clinician routing row removed: notes are no longer
-                tagged with audience at capture time. Audience tagging
-                lives on the brief, not the note (see brief-first
-                pivot in the dev plan). */}
-
-            <View style={styles.actionsWrap}>
-              <Pressable
-                onPress={onSave}
-                disabled={mode === "extracting" || blocked}
-                style={({ pressed }) => [
-                  styles.saveBtn,
-                  {
-                    opacity: mode === "extracting" || blocked ? 0.7 : pressed ? 0.88 : 1,
-                  },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={saveLabel}
-              >
-                {mode === "extracting" ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.saveLabel}>{saveLabel}</Text>
-                )}
-              </Pressable>
-              <Pressable
-                onPress={onReRecord}
-                disabled={mode === "extracting"}
-                style={({ pressed }) => [
-                  styles.secondaryBtn,
-                  { opacity: mode === "extracting" ? 0.4 : pressed ? 0.7 : 1 },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="Re-record"
-              >
-                <Text style={styles.secondaryLabel}>Re-record</Text>
-              </Pressable>
-            </View>
-          </Animated.View>
+          <ReviewMode
+            extracting={mode === "extracting"}
+            liveTranscript={liveTranscript}
+            editValue={editValue}
+            onEditChange={onEditChange}
+            onSave={onSave}
+            onReRecord={onReRecord}
+            error={error}
+            saveLabel={saveLabel}
+            blocked={blocked}
+          />
         )}
       </KeyboardAvoidingView>
     </View>
   );
 };
-
-// ── Recording dot ──────────────────────────────────────────────────
-
-const RecordingDot: React.FC = () => {
-  const reduced = useReducedMotion();
-  const pulse = useSharedValue(1);
-  useEffect(() => {
-    if (reduced) return;
-    pulse.value = withRepeat(
-      withSequence(
-        withTiming(0.45, { duration: 720, easing: Easing.out(Easing.sin) }),
-        withTiming(1, { duration: 720, easing: Easing.in(Easing.sin) }),
-      ),
-      -1,
-      false,
-    );
-  }, [reduced, pulse]);
-  const style = useAnimatedStyle(() => ({ opacity: pulse.value }));
-  return <Animated.View style={[dotStyles.dot, style]} />;
-};
-
-const dotStyles = StyleSheet.create({
-  dot: {
-    width: moderateScale(7),
-    height: moderateScale(7),
-    borderRadius: moderateScale(4),
-    backgroundColor: "#F06060",
-  },
-});
-
-// ── Waveform ────────────────────────────────────────────────────────
-
-const BAR_COUNT = 28;
-
-interface WaveformProps {
-  volume: SharedValue<number>;
-}
-
-const Waveform: React.FC<WaveformProps> = ({ volume }) => {
-  const smoothed = useSharedValue(0);
-  useEffect(() => {
-    const id = setInterval(() => {
-      smoothed.value = smoothed.value + (volume.value - smoothed.value) * 0.25;
-    }, 32);
-    return () => clearInterval(id);
-  }, [volume, smoothed]);
-  return (
-    <View style={waveStyles.row}>
-      {Array.from({ length: BAR_COUNT }, (_, i) => (
-        <WaveBar key={i} index={i} volume={smoothed} />
-      ))}
-    </View>
-  );
-};
-
-interface WaveBarProps {
-  index: number;
-  volume: SharedValue<number>;
-}
-
-const WaveBar: React.FC<WaveBarProps> = ({ index, volume }) => {
-  const reduced = useReducedMotion();
-  const t = useSharedValue(0);
-
-  useEffect(() => {
-    if (reduced) return;
-    const dur = 900 + (index % 4) * 140;
-    const startDelay = (index * 70) % 900;
-    const id = setTimeout(() => {
-      t.value = withRepeat(
-        withSequence(
-          withTiming(1, { duration: dur / 2, easing: Easing.inOut(Easing.sin) }),
-          withTiming(0, { duration: dur / 2, easing: Easing.inOut(Easing.sin) }),
-        ),
-        -1,
-        false,
-      );
-    }, startDelay);
-    return () => clearTimeout(id);
-  }, [index, reduced, t]);
-
-  const distFromCenter = Math.abs(index - (BAR_COUNT - 1) / 2) / ((BAR_COUNT - 1) / 2);
-  const envelope = 1 - distFromCenter * 0.55;
-
-  const style = useAnimatedStyle(() => {
-    const idleAmp = 0.18 + t.value * 0.22;
-    const liveAmp = volume.value * 1.1;
-    const h = Math.min(1, (idleAmp + liveAmp) * envelope);
-    return { transform: [{ scaleY: 0.15 + h }] };
-  });
-
-  return (
-    <View style={waveStyles.barWrap}>
-      <Animated.View style={[waveStyles.bar, style]} />
-    </View>
-  );
-};
-
-const waveStyles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    height: verticalScale(56),
-    gap: moderateScale(3),
-  },
-  barWrap: {
-    height: verticalScale(56),
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  bar: {
-    width: moderateScale(3),
-    height: verticalScale(56),
-    borderRadius: moderateScale(2),
-    backgroundColor: "rgba(255,255,255,0.85)",
-  },
-});
-
-// ── Helpers ────────────────────────────────────────────────────────
 
 const formatDuration = (s: number): string => {
   const m = Math.floor(s / 60);
@@ -371,7 +151,7 @@ const formatDuration = (s: number): string => {
   return `${m}:${r.toString().padStart(2, "0")}`;
 };
 
-const useStyles = makeStyles((theme) => ({
+const useStyles = makeStyles(() => ({
   flex: { flex: 1 },
   tint: {
     ...StyleSheet.absoluteFillObject,
@@ -384,202 +164,5 @@ const useStyles = makeStyles((theme) => ({
     right: 0,
     alignItems: "center",
     zIndex: 2,
-  },
-  timerPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(8),
-    paddingHorizontal: moderateScale(14),
-    paddingVertical: moderateScale(7),
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255,255,255,0.18)",
-    backgroundColor: "rgba(255,255,255,0.06)",
-  },
-  capturedDot: {
-    width: moderateScale(7),
-    height: moderateScale(7),
-    borderRadius: moderateScale(4),
-    backgroundColor: "#6FBDB6",
-  },
-  timerText: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: fontScale(12),
-    letterSpacing: 0.8,
-    color: "rgba(255,255,255,0.92)",
-  },
-  // ── Recording mode
-  transcriptWrap: {
-    position: "absolute",
-    top: "28%",
-    bottom: "32%",
-    left: 0,
-    right: 0,
-    paddingHorizontal: spacing.s6,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  transcript: {
-    fontFamily: "Fraunces_400Regular",
-    fontSize: fontScale(26),
-    lineHeight: fontScale(36),
-    letterSpacing: -0.4,
-    textAlign: "center",
-    color: "rgba(255,255,255,0.96)",
-    maxWidth: moderateScale(340),
-  },
-  waveformWrap: {
-    position: "absolute",
-    bottom: verticalScale(170),
-    left: 0,
-    right: 0,
-    alignItems: "center",
-  },
-  hintWrap: {
-    position: "absolute",
-    bottom: verticalScale(124),
-    left: 0,
-    right: 0,
-    alignItems: "center",
-  },
-  hintText: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: fontScale(11),
-    letterSpacing: 1.4,
-    textTransform: "uppercase",
-    color: "rgba(255,255,255,0.65)",
-  },
-  // ── Review / extracting modes
-  editWrap: {
-    position: "absolute",
-    top: verticalScale(130),
-    bottom: verticalScale(320),
-    left: 0,
-    right: 0,
-    paddingHorizontal: spacing.s6,
-  },
-  clinicianWrap: {
-    position: "absolute",
-    bottom: verticalScale(240),
-    left: 0,
-    right: 0,
-    gap: moderateScale(8),
-  },
-  clinicianLabel: {
-    fontFamily: "DMSans_700Bold",
-    fontSize: fontScale(10),
-    letterSpacing: 1.2,
-    color: "rgba(255,255,255,0.55)",
-    paddingHorizontal: spacing.s6,
-  },
-  clinicianChips: {
-    flexDirection: "row",
-    gap: moderateScale(8),
-    paddingHorizontal: spacing.s6,
-    paddingRight: scale(20),
-  },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(6),
-    paddingHorizontal: scale(12),
-    paddingVertical: verticalScale(7),
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  chipIdle: {
-    backgroundColor: "rgba(255,255,255,0.06)",
-    borderColor: "rgba(255,255,255,0.18)",
-  },
-  chipActive: {
-    backgroundColor: "rgba(127,224,214,0.16)",
-    borderColor: "#7FE0D6",
-  },
-  chipLabel: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: fontScale(12),
-    letterSpacing: 0.2,
-  },
-  editCaption: {
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: fontScale(11),
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    color: "rgba(255,255,255,0.55)",
-    textAlign: "center",
-    marginBottom: verticalScale(12),
-  },
-  editInput: {
-    flex: 1,
-    fontFamily: "Fraunces_400Regular",
-    fontSize: fontScale(20),
-    lineHeight: fontScale(30),
-    letterSpacing: -0.3,
-    color: "rgba(255,255,255,0.96)",
-    textAlign: "center",
-    padding: 0,
-    margin: 0,
-  },
-  errorBox: {
-    marginTop: verticalScale(12),
-    padding: moderateScale(12),
-    borderRadius: theme.radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(240,120,95,0.55)",
-    backgroundColor: "rgba(240,120,95,0.14)",
-  },
-  errorLabel: {
-    fontFamily: "DMSans_700Bold",
-    fontSize: fontScale(11),
-    letterSpacing: 0.8,
-    color: "#F4A99A",
-    textTransform: "uppercase",
-  },
-  errorBody: {
-    marginTop: 3,
-    fontFamily: "DMSans_500Medium",
-    fontSize: fontScale(13),
-    color: "rgba(255,255,255,0.9)",
-  },
-  actionsWrap: {
-    position: "absolute",
-    bottom: verticalScale(104),
-    left: 0,
-    right: 0,
-    paddingHorizontal: spacing.s6,
-    gap: moderateScale(10),
-  },
-  saveBtn: {
-    height: verticalScale(54),
-    borderRadius: 999,
-    backgroundColor: "#3BA79F",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#3BA79F",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  saveLabel: {
-    color: "#FFFFFF",
-    fontFamily: "DMSans_700Bold",
-    fontSize: fontScale(16),
-    letterSpacing: -0.15,
-  },
-  secondaryBtn: {
-    height: verticalScale(48),
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255,255,255,0.22)",
-    backgroundColor: "rgba(255,255,255,0.04)",
-  },
-  secondaryLabel: {
-    color: "rgba(255,255,255,0.88)",
-    fontFamily: "DMSans_600SemiBold",
-    fontSize: fontScale(14),
-    letterSpacing: 0.2,
   },
 }));
