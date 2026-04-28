@@ -10,6 +10,7 @@ import { hapticLight } from "@/services/haptics";
 import { useHomeDashboard } from "@/hooks/useHomeDashboard";
 import { useHoldToRecord } from "@/hooks/useHoldToRecord";
 import { usePaywallGate } from "@/hooks/usePaywallGate";
+import { JournalHero } from "@/components/home/JournalHero";
 import { UpNextCard } from "@/components/home/UpNextCard";
 import { TimelineCard } from "@/components/home/TimelineCard";
 import { TodayCheckIn } from "@/components/home/TodayCheckIn";
@@ -45,8 +46,6 @@ const TabHome: React.FC = () => {
     nextAppointment,
     todayEntries,
     nudge,
-    dateEyebrow,
-    greeting,
     recordingsCount,
     firstRecording,
     unresolvedVisit,
@@ -131,16 +130,7 @@ const TabHome: React.FC = () => {
     <SceneTransition mode="crossfade-parallax-up">
       <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
         <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-          <View style={styles.header}>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[typography.label, { color: colors.textTertiary }]}>{dateEyebrow}</Text>
-              <Text
-                style={[typography.h1, { color: colors.textPrimary, marginTop: 2 }]}
-                numberOfLines={1}
-              >
-                {greeting}
-              </Text>
-            </View>
+          <View style={styles.topBar}>
             <Pressable
               onPress={() => {
                 hapticLight();
@@ -151,11 +141,13 @@ const TabHome: React.FC = () => {
               hitSlop={10}
               style={styles.settingsBtn}
             >
-              <Settings size={moderateScale(28)} color={colors.textPrimary} strokeWidth={2} />
+              <Settings size={moderateScale(24)} color={colors.textPrimary} strokeWidth={2} />
             </Pressable>
           </View>
 
           <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+            <JournalHero />
+
             {unresolvedVisit && (
               <View style={{ marginBottom: spacing.s4 }}>
                 <PostVisitPrompt
@@ -278,18 +270,17 @@ const TabHome: React.FC = () => {
 export default TabHome;
 
 const useStyles = makeStyles((theme) => ({
-  header: {
-    paddingTop: theme.spacing.s3,
+  topBar: {
+    paddingTop: theme.spacing.s2,
     paddingHorizontal: theme.spacing.s6,
-    paddingBottom: theme.spacing.s3,
+    paddingBottom: theme.spacing.s1,
     flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: moderateScale(12),
+    alignItems: "center",
+    justifyContent: "flex-end",
   },
   settingsBtn: {
-    width: moderateScale(40),
-    height: moderateScale(40),
+    width: moderateScale(36),
+    height: moderateScale(36),
     alignItems: "center",
     justifyContent: "center",
   },
