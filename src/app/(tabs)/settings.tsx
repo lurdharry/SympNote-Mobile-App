@@ -4,7 +4,6 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Constants from "expo-constants";
 import { LogOut } from "lucide-react-native";
-import { BackButton } from "@/components/ui/BackButton";
 import {
   fontScale,
   makeStyles,
@@ -15,12 +14,13 @@ import {
   useTheme,
   verticalScale,
 } from "@/theme";
-import { hapticLight, hapticSuccess } from "@/services/haptics";
+import { hapticSuccess } from "@/services/haptics";
 import { resetAppState } from "@/utils/resetApp";
 import { useSettingsSections } from "@/hooks/useSettingsSections";
 import { SectionGroup } from "@/components/settings/SectionGroup";
 import { ThemeToggle } from "@/components/settings/ThemeToggle";
 import { ConditionsEditor } from "@/components/settings/ConditionsEditor";
+import { SceneTransition } from "@/components/navigation/SceneTransition";
 
 const ScreenSettings: React.FC = () => {
   const router = useRouter();
@@ -30,11 +30,6 @@ const ScreenSettings: React.FC = () => {
   const sections = useSettingsSections();
   const profileSection = sections.find((s) => s.title === "Profile");
   const otherSections = sections.filter((s) => s.title !== "Profile");
-
-  const close = () => {
-    hapticLight();
-    router.back();
-  };
 
   const resetApp = () => {
     Alert.alert(
@@ -56,91 +51,93 @@ const ScreenSettings: React.FC = () => {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
-      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
-        <View style={styles.header}>
-          <BackButton onPress={close} type="contained" />
-          <Text style={[typography.h1, styles.title, { color: colors.textPrimary }]}>Settings</Text>
-          <View style={styles.headerRightFiller} />
-        </View>
+    <SceneTransition mode="crossfade-parallax-up">
+      <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
+        <SafeAreaView style={styles.safe} edges={["top"]}>
+          <View style={styles.header}>
+            <Text style={[typography.h1, { color: colors.textPrimary }]}>Settings</Text>
+          </View>
 
-        <ScrollView
-          contentContainerStyle={{ paddingBottom: spacing.s10 }}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Profile group: Age + Care team + Focus, with the inline
-              expandable Conditions editor inserted into the same
-              card. Visually it reads as one section. */}
-          {profileSection && (
+          <ScrollView
+            contentContainerStyle={{ paddingBottom: verticalScale(120) }}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Profile group: Age + Care team + Focus, with the inline
+                expandable Conditions editor inserted into the same
+                card. Visually it reads as one section. */}
+            {profileSection && (
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>
+                  {profileSection.title.toUpperCase()}
+                </Text>
+                <View style={styles.profileStack}>
+                  <SectionGroupInline rows={profileSection.rows} />
+                  <ConditionsEditor />
+                </View>
+              </View>
+            )}
+
+            {/* Preferences — currently just the theme toggle. */}
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>
-                {profileSection.title.toUpperCase()}
+                PREFERENCES
               </Text>
-              <View style={styles.profileStack}>
-                <SectionGroupInline rows={profileSection.rows} />
-                <ConditionsEditor />
-              </View>
-            </View>
-          )}
-
-          {/* Preferences — currently just the theme toggle. */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>PREFERENCES</Text>
-            <View
-              style={[
-                styles.prefCard,
-                { backgroundColor: colors.bgSurface, borderColor: colors.border },
-                shadows.card,
-              ]}
-            >
-              <Text style={[styles.prefLabel, { color: colors.textPrimary }]}>Appearance</Text>
-              <Text style={[styles.prefHint, { color: colors.textTertiary }]}>
-                Light, Dark, or follow your device.
-              </Text>
-              <View style={styles.prefControlSlot}>
-                <ThemeToggle />
-              </View>
-            </View>
-          </View>
-
-          {otherSections.map((section) => (
-            <SectionGroup key={section.title} title={section.title} rows={section.rows} />
-          ))}
-
-          <View style={styles.signOutSlot}>
-            <Pressable
-              onPress={resetApp}
-              style={[
-                styles.signOut,
-                { backgroundColor: colors.bgSurface, borderColor: colors.border },
-              ]}
-            >
-              <LogOut size={16} color={colors.coral} strokeWidth={2} />
-              <Text
+              <View
                 style={[
-                  typography.label,
-                  { color: colors.coral, fontFamily: "DMSans_600SemiBold" },
+                  styles.prefCard,
+                  { backgroundColor: colors.bgSurface, borderColor: colors.border },
+                  shadows.card,
                 ]}
               >
-                Reset app
+                <Text style={[styles.prefLabel, { color: colors.textPrimary }]}>Appearance</Text>
+                <Text style={[styles.prefHint, { color: colors.textTertiary }]}>
+                  Light, Dark, or follow your device.
+                </Text>
+                <View style={styles.prefControlSlot}>
+                  <ThemeToggle />
+                </View>
+              </View>
+            </View>
+
+            {otherSections.map((section) => (
+              <SectionGroup key={section.title} title={section.title} rows={section.rows} />
+            ))}
+
+            <View style={styles.signOutSlot}>
+              <Pressable
+                onPress={resetApp}
+                style={[
+                  styles.signOut,
+                  { backgroundColor: colors.bgSurface, borderColor: colors.border },
+                ]}
+              >
+                <LogOut size={16} color={colors.coral} strokeWidth={2} />
+                <Text
+                  style={[
+                    typography.label,
+                    { color: colors.coral, fontFamily: "DMSans_600SemiBold" },
+                  ]}
+                >
+                  Reset app
+                </Text>
+              </Pressable>
+              <Text
+                style={[
+                  typography.caption,
+                  {
+                    color: colors.textTertiary,
+                    textAlign: "center",
+                    marginTop: spacing.s3,
+                  },
+                ]}
+              >
+                Sympnote v{Constants.expoConfig?.version ?? "1.0.0"}
               </Text>
-            </Pressable>
-            <Text
-              style={[
-                typography.caption,
-                {
-                  color: colors.textTertiary,
-                  textAlign: "center",
-                  marginTop: spacing.s3,
-                },
-              ]}
-            >
-              Sympnote v{Constants.expoConfig?.version ?? "1.0.0"}
-            </Text>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </View>
+    </SceneTransition>
   );
 };
 
@@ -175,23 +172,9 @@ export default ScreenSettings;
 const useStyles = makeStyles((theme) => ({
   safe: { flex: 1 },
   header: {
-    paddingTop: theme.spacing.s3,
-    paddingBottom: theme.spacing.s3,
-    paddingHorizontal: theme.spacing.s5,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: moderateScale(8),
-  },
-  title: {
-    flex: 1,
-    textAlign: "center",
-  },
-  headerRightFiller: {
-    width: moderateScale(40),
-  },
-  headerSlot: {
-    paddingHorizontal: spacing.s6,
-    paddingBottom: spacing.s5,
+    paddingTop: theme.spacing.s2,
+    paddingBottom: theme.spacing.s4,
+    paddingHorizontal: theme.spacing.s6,
   },
   section: {
     paddingHorizontal: spacing.s6,
