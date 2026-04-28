@@ -74,10 +74,6 @@ const RootLayout: React.FC = () => {
                   <Stack.Screen name="onboarding" options={{ animation: "fade" }} />
                   <Stack.Screen name="(tabs)" options={{ animation: "fade" }} />
                   <Stack.Screen name="recording/[id]" options={{ animation: "slide_from_right" }} />
-                  <Stack.Screen
-                    name="appointment/[id]"
-                    options={{ animation: "slide_from_right" }}
-                  />
                   <Stack.Screen name="clinician/[id]" options={{ animation: "slide_from_right" }} />
                   <Stack.Screen name="brief/[id]" options={{ animation: "slide_from_right" }} />
                   <Stack.Screen

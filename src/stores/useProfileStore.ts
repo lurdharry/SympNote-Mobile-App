@@ -55,11 +55,10 @@ type Actions = {
    *  strings into Clinician references. */
   findOrCreateClinicianByName: (name: string, role: string) => Clinician | null;
   /**
-   * Persist a freshly generated brief onto a clinician. Called by
-   * `useClinicianBrief` after a successful AI fetch. Preserves any
-   * user-curated questions on the existing brief by merging them in
-   * the same way the appointments store does — questions are user
-   * intent, AI shouldn't blow them away.
+   * Persist a freshly generated brief onto a clinician. Preserves any
+   * user-curated questions on the existing brief by merging them — the
+   * same pattern the appointments store uses, since questions are user
+   * intent and the AI shouldn't blow them away.
    */
   setClinicianBrief: (
     clinicianId: string,
