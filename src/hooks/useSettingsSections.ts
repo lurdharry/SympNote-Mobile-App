@@ -4,6 +4,7 @@ import {
   Download,
   Heart,
   Info,
+  LifeBuoy,
   Lock,
   RotateCcw,
   Shield,
@@ -12,7 +13,7 @@ import {
   User as UserIcon,
   Users,
 } from 'lucide-react-native';
-import { PRIVACY_POLICY_URL } from '@/constants/legal';
+import { PRIVACY_POLICY_URL, SUPPORT_URL } from '@/constants/legal';
 import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { usePendingRecordingStore } from '@/stores/usePendingRecordingStore';
 import { useRecordingsStore } from '@/stores/useRecordingsStore';
@@ -227,6 +228,24 @@ export const useSettingsSections = (): SettingsSection[] => {
           label: 'Restore purchases',
           value: 'Recover a previous subscription',
           onPress: handleRestore,
+        },
+      ],
+    },
+    {
+      title: 'Help',
+      rows: [
+        {
+          Icon: LifeBuoy,
+          label: 'Help & support',
+          value: 'FAQs and contact',
+          onPress: () => {
+            Linking.openURL(SUPPORT_URL).catch(() => {
+              Alert.alert(
+                "Couldn't open",
+                'Try again with a connection.',
+              );
+            });
+          },
         },
       ],
     },
