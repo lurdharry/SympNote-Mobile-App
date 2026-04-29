@@ -19,6 +19,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { useTheme, lightColors, darkColors } from "../theme";
 import { TransitionProvider } from "../components/navigation/TransitionContext";
 import { queryClient } from "../services/queryClient";
+import { initRevenueCat } from "../services/subscription";
 import { EntitlementProvider } from "../contexts/EntitlementContext";
 import { ToastHost, toastConfig } from "../components/ui/Toast";
 
@@ -38,6 +39,10 @@ const RootLayout: React.FC = () => {
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(colors.bgPrimary).catch(() => {});
   }, [colors.bgPrimary]);
+
+  useEffect(() => {
+    initRevenueCat();
+  }, []);
 
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
