@@ -9,8 +9,8 @@ web-build/
 *.key
 *.mobileprovision
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 npm-debug.*
 yarn-debug.*
 yarn-error.*
@@ -31,3 +31,5 @@ expo-env.d.ts
 # @end expo-cli
 
 /screenshots
+
+.env/*
