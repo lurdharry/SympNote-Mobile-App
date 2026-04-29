@@ -135,24 +135,11 @@ export const PlanCard: React.FC<PlanCardProps> = ({ plan, index, selected, onSel
                   accessibilityLabel={`Was ${plan.originalPrice}`}
                 >
                   {plan.originalPrice}
-                  {"  "}
                 </Text>
               ) : null}
-              <Text style={[styles.planPrice, { color: colors.textPrimary }]}>{plan.price}</Text>
+              <Text style={[styles.planPrice, { color: colors.textPrimary }]}> {plan.price}</Text>
             </Text>
             <Text style={[styles.planPer, { color: colors.textTertiary }]}>{plan.per}</Text>
-          </View>
-
-          {/* Right — radio / check */}
-          <View
-            style={[
-              styles.radio,
-              selected
-                ? { backgroundColor: colors.accent, borderColor: colors.accent }
-                : { borderColor: colors.border },
-            ]}
-          >
-            {selected && <Check size={moderateScale(13)} color="#FFFFFF" strokeWidth={3} />}
           </View>
         </View>
       </Pressable>
@@ -215,7 +202,7 @@ const useStyles = makeStyles((theme) => ({
   },
   planPrice: {
     fontFamily: "DMSans_700Bold",
-    fontSize: fontScale(20),
+    fontSize: fontScale(18),
     letterSpacing: -0.4,
   },
   planPer: {
@@ -236,7 +223,7 @@ const useStyles = makeStyles((theme) => ({
     top: 0,
     right: 0,
     paddingHorizontal: scale(10),
-    paddingVertical: verticalScale(3),
+    paddingVertical: verticalScale(1.5),
     borderTopRightRadius: theme.radius.lg,
     borderBottomLeftRadius: theme.radius.md,
     backgroundColor: "#5A8F6E",
@@ -247,5 +234,6 @@ const useStyles = makeStyles((theme) => ({
     fontFamily: "DMSans_700Bold",
     fontSize: fontScale(10),
     letterSpacing: 0.6,
+    textTransform: "uppercase",
   },
 }));
