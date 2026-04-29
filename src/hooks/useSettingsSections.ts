@@ -6,11 +6,13 @@ import {
   Info,
   Lock,
   RotateCcw,
+  Shield,
   Sparkles,
   Trash2,
   User as UserIcon,
   Users,
 } from 'lucide-react-native';
+import { PRIVACY_POLICY_URL } from '@/constants/legal';
 import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { usePendingRecordingStore } from '@/stores/usePendingRecordingStore';
 import { useRecordingsStore } from '@/stores/useRecordingsStore';
@@ -166,6 +168,19 @@ export const useSettingsSections = (): SettingsSection[] => {
               'Privacy',
               'Voice is transcribed on-device. Only text you approve is sent to AI for structuring.',
             ),
+        },
+        {
+          Icon: Shield,
+          label: 'Privacy policy',
+          value: 'Read in browser',
+          onPress: () => {
+            Linking.openURL(PRIVACY_POLICY_URL).catch(() => {
+              Alert.alert(
+                "Couldn't open",
+                'Try again with a connection.',
+              );
+            });
+          },
         },
         {
           Icon: Download,
