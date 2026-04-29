@@ -134,7 +134,3 @@ export function isEntitled(): boolean {
   const { subscriptionStatus } = useProfileStore.getState();
   return subscriptionStatus === 'trial' || subscriptionStatus === 'active';
 }
-
-export function bypassForDev(): boolean {
-  return __DEV__;
-}

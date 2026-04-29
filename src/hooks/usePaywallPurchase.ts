@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import { showError } from "../components/ui/Toast";
-import { addDays } from "date-fns";
 import { Plan, purchase } from "../services/subscription";
 import { structureTranscript } from "../services/ai";
 import { useProfileStore } from "../stores/useProfileStore";
@@ -147,27 +146,5 @@ export function usePaywallPurchase(mode: PaywallMode = "onboarding") {
     }
   };
 
-  const skipDev = async () => {
-    if (!__DEV__) return;
-    // Grant a 3-day trial so the skipped session lands in an entitled
-    // state — otherwise every dev who taps this hits the in-app gate
-    // on the next brief generation, which isn't what "skip paywall"
-    // should mean during local development.
-    useProfileStore
-      .getState()
-      .setSubscription("trial", addDays(new Date(), 3).toISOString());
-    if (mode === "onboarding") {
-      setCrafting(true);
-      // Same fresh-slate semantics as buy() — see comment there.
-      useRecordingsStore.setState({ recordings: [] });
-      useBriefsStore.setState({ briefs: [] });
-      await commitDraft();
-      complete();
-      router.replace("/(tabs)/home");
-    } else if (router.canGoBack()) {
-      router.back();
-    }
-  };
-
-  return { loading, crafting, buy, skipDev };
+  return { loading, crafting, buy };
 }
