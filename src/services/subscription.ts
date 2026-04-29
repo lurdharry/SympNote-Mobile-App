@@ -1,10 +1,10 @@
 import Purchases, {
   CustomerInfo,
+  LOG_LEVEL,
   PACKAGE_TYPE,
   PurchasesError,
   PurchasesPackage,
 } from "react-native-purchases";
-import { Platform } from "react-native";
 import { useProfileStore } from "../stores/useProfileStore";
 
 /**
@@ -16,13 +16,7 @@ import { useProfileStore } from "../stores/useProfileStore";
  */
 const ENTITLEMENT_ID = "plus";
 
-const apiKey =
-  Platform.OS === "ios"
-    ? process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY
-    : process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY;
-
-const isRealKey = (key: string | undefined): key is string =>
-  !!key && !key.toLowerCase().includes("dummy");
+const apiKey = process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY;
 
 let configured = false;
 
@@ -36,14 +30,10 @@ let configured = false;
  */
 export function initRevenueCat(): void {
   if (configured) return;
-  if (!isRealKey(apiKey)) {
-    if (__DEV__) {
-      console.warn(
-        "[RevenueCat] No real API key in env — purchases will fail until EXPO_PUBLIC_REVENUECAT_IOS_KEY is set.",
-      );
-    }
+  if (!apiKey) {
     return;
   }
+  if (__DEV__) Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
   Purchases.configure({ apiKey });
   Purchases.addCustomerInfoUpdateListener(syncCustomerInfo);
   configured = true;
