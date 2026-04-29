@@ -1,8 +1,9 @@
 export const PRIVACY_POLICY_URL =
   "https://horn-trader-755.notion.site/Sympnote-Privacy-Policy-3511eaf95c4380109b42e6b9e833c470";
 
-// TODO: replace with the real hosted Terms of Use before submission.
-// Apple guideline 3.1.2 requires a working Terms link on every paywall.
+// Apple's Standard EULA — explicitly permitted in lieu of a custom Terms
+// of Use under App Store Connect's licensing options. Satisfies the
+// guideline 3.1.2 requirement to surface Terms on every paywall.
 export const TERMS_URL = "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
 
 export const SUPPORT_URL =

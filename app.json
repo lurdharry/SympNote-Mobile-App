@@ -13,7 +13,8 @@
       "icon": "./assets/icon.png",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Sympnote uses the microphone so we can transcribe what you're saying about your symptoms.",
-        "NSSpeechRecognitionUsageDescription": "Sympnote transcribes your voice on-device so your symptoms are ready to share with your doctor."
+        "NSSpeechRecognitionUsageDescription": "Sympnote transcribes your voice on-device so your symptoms are ready to share with your doctor.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
