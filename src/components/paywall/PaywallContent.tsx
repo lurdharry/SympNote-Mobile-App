@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Check, X as XIcon } from "lucide-react-native";
@@ -11,7 +11,8 @@ import { PaywallFooter } from "@/components/onboarding/paywall/PaywallFooter";
 import { Plan } from "@/services/subscription";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { usePaywallPurchase } from "@/hooks/usePaywallPurchase";
-import { KEEP_FEATURES, PAYWALL_PLANS, composePaywallHero } from "@/constants/plans";
+import { usePaywallPlans } from "@/hooks/usePaywallPlans";
+import { KEEP_FEATURES, composePaywallHero } from "@/constants/plans";
 import { useBriefsStore } from "@/stores/useBriefsStore";
 import { useProfileStore } from "@/stores/useProfileStore";
 import { usePendingRecordingStore } from "@/stores/usePendingRecordingStore";
@@ -51,8 +52,11 @@ export const PaywallContent: React.FC<PaywallContentProps> = ({ mode }) => {
   // toggle to monthly with one tap.
   const [selected, setSelected] = useState<Plan["id"]>("annual");
   const { loading, crafting, buy } = usePaywallPurchase(purchaseMode);
+  const { plans, isLoading: plansLoading, isError: plansError, refetch } = usePaywallPlans();
 
-  const selectedPlan = PAYWALL_PLANS.find((p) => p.id === selected);
+  const selectedPlan = plans.find((p) => p.id === selected);
+  const showPlansLoader = plans.length === 0 && (plansLoading || !plansError);
+  const showPlansError = plans.length === 0 && plansError;
 
   // Brief lookup: draft store first (onboarding — brief just generated
   // on first-brief, not yet committed), then persisted store (gate
@@ -133,9 +137,30 @@ export const PaywallContent: React.FC<PaywallContentProps> = ({ mode }) => {
           </View>
 
           {/* Plans visible early — the user shouldn't have to scroll
-              past three trust elements to find the choice. */}
+              past three trust elements to find the choice. Prices
+              come from RevenueCat (localized + ASC-truth), prefetched
+              at app boot so cards usually render instantly. Loader
+              only shows on cold start with a slow network. */}
           <View style={styles.plans}>
-            {PAYWALL_PLANS.map((p, i) => (
+            {showPlansLoader && (
+              <View style={styles.plansLoader}>
+                <ActivityIndicator size="small" color={colors.textTertiary} />
+                <Text style={[styles.plansLoaderText, { color: colors.textTertiary }]}>
+                  Loading plans…
+                </Text>
+              </View>
+            )}
+            {showPlansError && (
+              <View style={styles.plansLoader}>
+                <Text style={[styles.plansLoaderText, { color: colors.textTertiary }]}>
+                  Couldn't load plans.
+                </Text>
+                <Pressable onPress={refetch} hitSlop={8}>
+                  <Text style={[styles.plansRetry, { color: colors.accent }]}>Try again</Text>
+                </Pressable>
+              </View>
+            )}
+            {plans.map((p, i) => (
               <PlanCard
                 key={p.id}
                 plan={p}
@@ -153,10 +178,13 @@ export const PaywallContent: React.FC<PaywallContentProps> = ({ mode }) => {
           <Text style={[styles.trustLine, { color: colors.textTertiary }]}>
             Private · Built with practicing clinicians · Cancel anytime
           </Text>
-
         </ScrollView>
 
-        <PaywallFooter selectedPlan={selectedPlan} loading={loading} onBuy={() => buy(selected)} />
+        <PaywallFooter
+          selectedPlan={selectedPlan}
+          loading={loading }
+          onBuy={() => buy(selected)}
+        />
       </SafeAreaView>
 
       {crafting && <CraftingOverlay reduced={reduced} />}
@@ -202,6 +230,20 @@ const useStyles = makeStyles((theme) => ({
   plans: {
     marginTop: theme.spacing.s5,
     gap: moderateScale(12),
+  },
+  plansLoader: {
+    paddingVertical: moderateScale(28),
+    alignItems: "center",
+    gap: moderateScale(8),
+  },
+  plansLoaderText: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: fontScale(13),
+  },
+  plansRetry: {
+    fontFamily: "DMSans_600SemiBold",
+    fontSize: fontScale(13),
+    textDecorationLine: "underline",
   },
   heroEyebrow: {
     fontFamily: "DMSans_700Bold",

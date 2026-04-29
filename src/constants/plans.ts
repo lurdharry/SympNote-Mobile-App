@@ -5,6 +5,7 @@ import {
   Users,
 } from "lucide-react-native";
 import type { ComponentType } from "react";
+import type { PurchasesPackage } from "react-native-purchases";
 import { Plan } from "../services/subscription";
 import type { PrepGap } from "../stores/types";
 
@@ -33,39 +34,137 @@ export type PlanDef = {
 };
 
 /**
- * Two plans, monthly + annual. Weekly was dropped — at the price
- * point and trial duration we're offering, three SKUs flattened the
- * decision instead of clarifying it. The annual plan still carries
- * the best-value framing.
+ * Marketing-only decoration for each plan. Prices, periods, and trial
+ * details come from RevenueCat at runtime so they stay localized and
+ * in sync with App Store Connect — never hardcode money here.
+ *
+ * What lives here:
+ *  - label, badges (trial / value / save), and any derivation helpers
+ *    that turn live price data into copy ("Just $4.99/month").
+ *
+ * What does NOT live here:
+ *  - Price strings, currency symbols, period units, trial duration —
+ *    every one of those would drift from App Store Connect and break
+ *    localization. They come from `PurchasesPackage.product.*` via
+ *    `usePaywallPlans()`.
  */
-export const PAYWALL_PLANS: PlanDef[] = [
-  {
+type PlanPresentation = {
+  id: Plan["id"];
+  label: string;
+  trialBadge?: string;
+  valueBadge?: string;
+  /**
+   * Build the subline that sits under the plan label. Receives the
+   * live price string (already localized) so we can compose copy like
+   * "$9.99/month after trial" or "Just $4.99/month" without baking
+   * the currency symbol into a constant.
+   */
+  formatSubline?: (priceString: string) => string;
+  /**
+   * Annual plans show a strikethrough "what you'd pay billed monthly"
+   * to visualise the discount. Receives the live monthly price (or
+   * undefined if monthly hasn't loaded yet).
+   */
+  formatOriginalPrice?: (monthlyPriceString: string | undefined) => string | undefined;
+  saveBadge?: string;
+};
+
+const PLAN_PRESENTATIONS: Record<Plan["id"], PlanPresentation> = {
+  monthly: {
     id: "monthly",
     label: "Monthly",
-    price: "$9.99",
-    per: "per month",
-    subline: "$9.99/month after trial",
-    trialBadge: "3-Day Free Trial",
+    trialBadge: "7-Day Free Trial",
+    formatSubline: (price) => `${price}/month after trial`,
   },
-  {
+  annual: {
     id: "annual",
     label: "Annual",
-    price: "$59.99",
-    per: "per year",
-    subline: "Just $4.99/month",
     valueBadge: "Best Value",
-    saveBadge: "Save 50%",
-    // $9.99 × 12 = $119.88, what they'd pay billed monthly.
-    originalPrice: "$119.88",
+    saveBadge: "Save 37%",
+    formatSubline: (price) => `Just ${perMonthFromAnnual(price)}/month`,
+    formatOriginalPrice: (monthly) => annualizedPriceFromMonthly(monthly),
   },
-];
+};
+
+const PLAN_ORDER: Plan["id"][] = ["monthly", "annual"];
 
 /**
- * Feature list kept around in case any future surface (a comparison
- * sheet, marketing page) wants to use it. The new minimal paywall
- * doesn't render it — mascot + plan cards + CTA carry the screen.
+ * Given a live RevenueCat package + the plan id, build the PlanDef
+ * the UI consumes. Always reads price + period from the package so
+ * what the user sees matches what App Store will charge — never
+ * hardcoded. Caller must only invoke this once a package is loaded;
+ * the paywall shows a loading state until then.
  */
-export const PLAN_FEATURES = [] as Array<{ Icon: never; t: string }>;
+export const buildPlanDef = (
+  id: Plan["id"],
+  pkg: PurchasesPackage,
+  monthlyPriceForOriginal?: string,
+): PlanDef => {
+  const presentation = PLAN_PRESENTATIONS[id];
+  const price = pkg.product.priceString;
+  const per = perFromPackage(pkg);
+
+  return {
+    id,
+    label: presentation.label,
+    price,
+    per,
+    trialBadge: presentation.trialBadge,
+    valueBadge: presentation.valueBadge,
+    saveBadge: presentation.saveBadge,
+    subline: presentation.formatSubline?.(price),
+    originalPrice: presentation.formatOriginalPrice?.(monthlyPriceForOriginal),
+  };
+};
+
+export const PLAN_IDS = PLAN_ORDER;
+
+/** Naive per-month from an annual price string. Strips non-numeric
+ *  chars, divides by 12, formats to 2 decimals, restores the original
+ *  currency prefix. Good enough for the marketing subline; we never
+ *  charge based on this number. */
+function perMonthFromAnnual(annualPriceString: string): string {
+  const numeric = parseFloat(annualPriceString.replace(/[^\d.]/g, ""));
+  if (!isFinite(numeric)) return annualPriceString;
+  const monthly = (numeric / 12).toFixed(2);
+  const symbol = annualPriceString.replace(/[\d.,\s]/g, "").trim() || "$";
+  return `${symbol}${monthly}`;
+}
+
+/** Strikethrough "what you'd pay billed monthly" displayed above the
+ *  annual price. Computes monthly × 12 with the same currency symbol.
+ *  Returns undefined if the input is missing or unparseable so the
+ *  PlanCard skips rendering the strikethrough rather than show junk. */
+function annualizedPriceFromMonthly(monthlyPriceString: string | undefined): string | undefined {
+  if (!monthlyPriceString) return undefined;
+  const numeric = parseFloat(monthlyPriceString.replace(/[^\d.]/g, ""));
+  if (!isFinite(numeric)) return undefined;
+  const total = (numeric * 12).toFixed(2);
+  const symbol = monthlyPriceString.replace(/[\d.,\s]/g, "").trim() || "$";
+  return `${symbol}${total}`;
+}
+
+function perFromPackage(pkg: PurchasesPackage): string {
+  // packageType is more reliable than parsing subscriptionPeriod.
+  switch (pkg.packageType) {
+    case "MONTHLY":
+      return "per month";
+    case "ANNUAL":
+      return "per year";
+    case "WEEKLY":
+      return "per week";
+    case "SIX_MONTH":
+      return "per 6 months";
+    case "THREE_MONTH":
+      return "per 3 months";
+    case "TWO_MONTH":
+      return "per 2 months";
+    case "LIFETIME":
+      return "lifetime";
+    default:
+      return "";
+  }
+}
 
 type LucideIcon = ComponentType<{
   size?: number;

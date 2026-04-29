@@ -19,7 +19,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { useTheme, lightColors, darkColors } from "../theme";
 import { TransitionProvider } from "../components/navigation/TransitionContext";
 import { queryClient } from "../services/queryClient";
-import { initRevenueCat } from "../services/subscription";
+import { getOfferingPackages, initRevenueCat } from "../services/subscription";
 import { EntitlementProvider } from "../contexts/EntitlementContext";
 import { ToastHost, toastConfig } from "../components/ui/Toast";
 
@@ -42,6 +42,15 @@ const RootLayout: React.FC = () => {
 
   useEffect(() => {
     initRevenueCat();
+    // Prefetch the offering so the paywall renders with live prices
+    // immediately rather than waiting for the first paywall view to
+    // trigger the fetch. Same query key as usePaywallPlans so the
+    // hook reads from cache the moment a paywall mounts.
+    queryClient.prefetchQuery({
+      queryKey: ["paywall-offerings"],
+      queryFn: getOfferingPackages,
+      staleTime: 1000 * 60 * 5,
+    });
   }, []);
 
   useEffect(() => {
