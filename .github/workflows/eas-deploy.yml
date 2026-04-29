@@ -1,0 +1,68 @@
+name: EAS Deploy
+
+on:
+  pull_request:
+    branches: [main]
+    types: [closed]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      # Auto-decide whether to ship a native binary or an OTA JS update.
+      # Manual runs always do a full build. Merged PRs trigger a build
+      # only when something native or env-affecting changed; pure JS
+      # changes ride out as OTA updates which land in seconds and skip
+      # App Review entirely.
+      - name: Decide deployment type
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "type=build" >> $GITHUB_OUTPUT
+          elif git diff --name-only HEAD^ HEAD | grep -qE '^(package\.json|package-lock\.json|app\.json|eas\.json|ios/|android/)'; then
+            echo "type=build" >> $GITHUB_OUTPUT
+          else
+            echo "type=update" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # Write the ASC API key to disk so EAS submit can use it for
+      # automatic upload to App Store Connect after the build finishes.
+      - name: Configure ASC API Key
+        if: steps.mode.outputs.type == 'build'
+        run: |
+          mkdir -p ~/private_keys
+          echo "${{ secrets.ASC_API_KEY_P8 }}" > ~/private_keys/AuthKey.p8
+
+      - name: Native build + submit
+        if: steps.mode.outputs.type == 'build'
+        run: eas build --platform ios --profile production --non-interactive --auto-submit --no-wait
+        env:
+          EXPO_APPLE_APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          EXPO_APPLE_APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.ASC_API_KEY_ISSUER_ID }}
+          EXPO_APPLE_APP_STORE_CONNECT_API_KEY_PATH: ~/private_keys/AuthKey.p8
+
+      - name: OTA update
+        if: steps.mode.outputs.type == 'update'
+        run: eas update --branch production --message "${{ github.event.pull_request.title }}" --non-interactive
