@@ -1,9 +1,66 @@
-// Mock RevenueCat integration. Wire up react-native-purchases here once
-// RevenueCat project IDs are provisioned; the shape of this module is
-// designed to swap in without changing callers.
-
-import { addDays } from 'date-fns';
+import Purchases, { CustomerInfo, PurchasesError } from 'react-native-purchases';
+import { Platform } from 'react-native';
 import { useProfileStore } from '../stores/useProfileStore';
+
+/**
+ * RevenueCat entitlement identifier. Set in the RevenueCat dashboard
+ * under Project → Entitlements. The dashboard binds this string to
+ * one or more App Store Connect product IDs (the monthly + annual
+ * subscriptions). The app only ever talks about "plus" — the
+ * dashboard handles the product mapping.
+ */
+const ENTITLEMENT_ID = 'plus';
+
+const apiKey =
+  Platform.OS === 'ios'
+    ? process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY
+    : process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY;
+
+const isRealKey = (key: string | undefined): key is string =>
+  !!key && !key.toLowerCase().includes('dummy');
+
+let configured = false;
+
+/**
+ * Configure the RevenueCat SDK. Must be called once on app boot
+ * (root layout). Idempotent — safe to call from a useEffect.
+ *
+ * Bails silently when the key is the placeholder so local dev
+ * without a RevenueCat account doesn't crash. The paywall will
+ * still render; purchase / restore will throw with a clear message.
+ */
+export function initRevenueCat(): void {
+  if (configured) return;
+  if (!isRealKey(apiKey)) {
+    if (__DEV__) {
+      console.warn(
+        '[RevenueCat] No real API key in env — purchases will fail until EXPO_PUBLIC_REVENUECAT_IOS_KEY is set.',
+      );
+    }
+    return;
+  }
+  Purchases.configure({ apiKey });
+  Purchases.addCustomerInfoUpdateListener(syncCustomerInfo);
+  configured = true;
+  // Best-effort sync of any existing entitlement on boot. Fires and
+  // forgets — the listener above takes over for live updates.
+  Purchases.getCustomerInfo().then(syncCustomerInfo).catch(() => {});
+}
+
+/**
+ * Mirror RevenueCat's customer state into the local profile store.
+ * Called from the SDK listener (renewal, expiration, change-of-plan)
+ * and after every purchase / restore so the UI flips immediately.
+ */
+function syncCustomerInfo(info: CustomerInfo): void {
+  const ent = info.entitlements.active[ENTITLEMENT_ID];
+  if (!ent) {
+    useProfileStore.getState().setSubscription('none', null);
+    return;
+  }
+  const status = ent.periodType === 'TRIAL' ? 'trial' : 'active';
+  useProfileStore.getState().setSubscription(status, ent.expirationDate ?? null);
+}
 
 export type Plan = {
   id: 'monthly' | 'annual';
@@ -24,12 +81,31 @@ export const PLANS: Plan[] = [
   },
 ];
 
-export async function purchase(planId: Plan['id']): Promise<{ ok: true }> {
-  // Simulate latency and then set a 3-day trial.
-  await new Promise((r) => setTimeout(r, 1400));
-  const trialEnds = addDays(new Date(), 3).toISOString();
-  useProfileStore.getState().setSubscription('trial', trialEnds);
-  return { ok: true };
+export type PurchaseResult = { ok: true } | { cancelled: true };
+
+/**
+ * Trigger a RevenueCat purchase for the given plan. The plan id
+ * ('monthly' / 'annual') must match the package identifier configured
+ * in the RevenueCat dashboard offering.
+ *
+ * Returns `{ cancelled: true }` if the user dismissed the system
+ * sheet — callers should treat that as a quiet exit, not an error.
+ * Throws on any other failure.
+ */
+export async function purchase(planId: Plan['id']): Promise<PurchaseResult> {
+  if (!configured) throw new Error('Subscriptions are not available right now.');
+  const offerings = await Purchases.getOfferings();
+  const pkg = offerings.current?.availablePackages.find((p) => p.identifier === planId);
+  if (!pkg) throw new Error(`Plan "${planId}" is not available.`);
+  try {
+    const { customerInfo } = await Purchases.purchasePackage(pkg);
+    syncCustomerInfo(customerInfo);
+    return { ok: true };
+  } catch (e) {
+    const err = e as PurchasesError & { userCancelled?: boolean };
+    if (err.userCancelled) return { cancelled: true };
+    throw new Error(err.message ?? 'Purchase failed.');
+  }
 }
 
 export type RestoreResult =
@@ -39,30 +115,22 @@ export type RestoreResult =
 /**
  * Restore previously-purchased subscription. App Store / Play Store
  * require this affordance on every paywall — without it, App Review
- * will reject the submission. Currently mocked to "no purchases
- * found" because the RevenueCat SDK is not yet wired; this matches
- * the shape the real call will return so swap-in is mechanical.
- *
- * Real implementation when RevenueCat lands:
- *   const customerInfo = await Purchases.restorePurchases();
- *   const sub = customerInfo.entitlements.active['plus'];
- *   if (sub) {
- *     setSubscription(sub.willRenew ? 'active' : 'trial', sub.expirationDate);
- *     return { restored: true, status: ..., trialEndsAt: ... };
- *   }
- *   return { restored: false };
+ * will reject the submission.
  */
 export async function restorePurchases(): Promise<RestoreResult> {
-  await new Promise((r) => setTimeout(r, 1200));
-  // Mocked. The real RevenueCat call goes here. See comment above.
-  return { restored: false };
+  if (!configured) return { restored: false };
+  const info = await Purchases.restorePurchases();
+  const ent = info.entitlements.active[ENTITLEMENT_ID];
+  if (!ent) {
+    useProfileStore.getState().setSubscription('none', null);
+    return { restored: false };
+  }
+  const status = ent.periodType === 'TRIAL' ? 'trial' : 'active';
+  useProfileStore.getState().setSubscription(status, ent.expirationDate ?? null);
+  return { restored: true, status, trialEndsAt: ent.expirationDate ?? null };
 }
 
 export function isEntitled(): boolean {
-  // No dev bypass: the in-app paywall gate has to be testable in
-  // development. Use the dev "skip paywall" affordance on the
-  // onboarding paywall (which sets the trial status) when seeding
-  // an entitled state for local testing.
   const { subscriptionStatus } = useProfileStore.getState();
   return subscriptionStatus === 'trial' || subscriptionStatus === 'active';
 }

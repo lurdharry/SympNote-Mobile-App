@@ -115,7 +115,10 @@ export function usePaywallPurchase(mode: PaywallMode = "onboarding") {
   const buy = async (planId: Plan["id"]) => {
     setLoading(true);
     try {
-      await purchase(planId);
+      const result = await purchase(planId);
+      // User dismissed the system sheet — quiet exit, no toast, no
+      // navigation. They stay on the paywall and can try again.
+      if ("cancelled" in result) return;
       hapticHeavy();
       if (mode === "onboarding") {
         setCrafting(true);
