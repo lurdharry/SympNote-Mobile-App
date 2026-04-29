@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Check, X as XIcon } from "lucide-react-native";
-import { fontScale, makeStyles, moderateScale, spacing, typography, useTheme } from "@/theme";
+import { fontScale, makeStyles, moderateScale, useTheme } from "@/theme";
 import { PocketbookMascot } from "@/components/onboarding/PocketbookMascot";
 import { PlanCard } from "@/components/onboarding/paywall/PlanCard";
 import { CraftingOverlay } from "@/components/onboarding/paywall/CraftingOverlay";
@@ -50,7 +50,7 @@ export const PaywallContent: React.FC<PaywallContentProps> = ({ mode }) => {
   // hit to trial-start rate. Users still see both options and can
   // toggle to monthly with one tap.
   const [selected, setSelected] = useState<Plan["id"]>("annual");
-  const { loading, crafting, buy, skipDev } = usePaywallPurchase(purchaseMode);
+  const { loading, crafting, buy } = usePaywallPurchase(purchaseMode);
 
   const selectedPlan = PAYWALL_PLANS.find((p) => p.id === selected);
 
@@ -154,25 +154,6 @@ export const PaywallContent: React.FC<PaywallContentProps> = ({ mode }) => {
             Private · Built with practicing clinicians · Cancel anytime
           </Text>
 
-          {__DEV__ && (
-            <Pressable
-              onPress={skipDev}
-              style={{ marginTop: spacing.s4, alignSelf: "center" }}
-              hitSlop={12}
-            >
-              <Text
-                style={[
-                  typography.caption,
-                  {
-                    color: colors.textTertiary,
-                    textDecorationLine: "underline",
-                  },
-                ]}
-              >
-                Dev: skip paywall
-              </Text>
-            </Pressable>
-          )}
         </ScrollView>
 
         <PaywallFooter selectedPlan={selectedPlan} loading={loading} onBuy={() => buy(selected)} />
