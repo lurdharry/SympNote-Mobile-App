@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Alert, ScrollView, Share, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,6 +17,7 @@ import { useCareTeam, useProfileStore } from "@/stores/useProfileStore";
 import { useRecordingsStore } from "@/stores/useRecordingsStore";
 import { usePendingRecordingStore } from "@/stores/usePendingRecordingStore";
 import { generateBrief } from "@/services/ai";
+import { maybeRequestReviewAtBriefPeak } from "@/services/review";
 import { formatBriefAsHtml, formatBriefAsText, isBriefContentEmpty } from "@/utils/briefExport";
 import { hapticLight, hapticMedium } from "@/services/haptics";
 import { usePaywallGate } from "@/hooks/usePaywallGate";
@@ -56,10 +57,24 @@ const BriefDetail: React.FC = () => {
   const setContent = useBriefsStore((s) => s.setContent);
   const remove = useBriefsStore((s) => s.remove);
   const recordings = useRecordingsStore((s) => s.recordings);
+  const briefCount = useBriefsStore((s) => s.briefs.length);
 
   const [retrying, setRetrying] = useState(false);
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
   const { requireEntitlement } = usePaywallGate();
+
+  // Ask for an App Store review at the user's emotional peak: a
+  // successfully rendered brief on a milestone count (1 / 3 / 7).
+  // Helper handles the once-per-milestone dedupe via MMKV. Skipped
+  // for the onboarding draft and for any brief that came back empty
+  // — never bait a 1-star with a failure prompt.
+  useEffect(() => {
+    if (!persistedBrief || isBriefContentEmpty(persistedBrief)) return;
+    const t = setTimeout(() => {
+      maybeRequestReviewAtBriefPeak(briefCount);
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [persistedBrief, briefCount]);
 
   if (!brief) {
     return (
