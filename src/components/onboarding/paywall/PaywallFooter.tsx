@@ -3,6 +3,7 @@ import { Linking, Pressable, Text, View } from "react-native";
 import { fontScale, makeStyles, moderateScale, useTheme, verticalScale } from "../../../theme";
 import { PrimaryButton } from "../../ui/PrimaryButton";
 import { PlanDef } from "../../../constants/plans";
+import { PRIVACY_POLICY_URL, TERMS_URL } from "../../../constants/legal";
 import { restorePurchases } from "../../../services/subscription";
 import { useProfileStore } from "../../../stores/useProfileStore";
 import { hapticLight } from "../../../services/haptics";
@@ -56,13 +57,13 @@ export const PaywallFooter: React.FC<PaywallFooterProps> = ({ selectedPlan, load
     }
   };
   const onTerms = () => {
-    Linking.openURL("https://sympnote.app/terms").catch(() => {
-      showInfo("Couldn't open Terms", { body: "Visit sympnote.app/terms in your browser." });
+    Linking.openURL(TERMS_URL).catch(() => {
+      showInfo("Couldn't open Terms", { body: "Try again with a connection." });
     });
   };
   const onPrivacy = () => {
-    Linking.openURL("https://sympnote.app/privacy").catch(() => {
-      showInfo("Couldn't open Privacy", { body: "Visit sympnote.app/privacy in your browser." });
+    Linking.openURL(PRIVACY_POLICY_URL).catch(() => {
+      showInfo("Couldn't open Privacy", { body: "Try again with a connection." });
     });
   };
 
