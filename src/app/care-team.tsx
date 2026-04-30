@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { showInfo } from "@/components/ui/Toast";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Lock, Plus } from "lucide-react-native";
@@ -67,13 +68,11 @@ const ScreenCareTeamManage: React.FC = () => {
 
     if (upcomingLinked.length > 0) {
       const visitWord = upcomingLinked.length === 1 ? "appointment" : "appointments";
-      Alert.alert(
-        `Can't remove ${c.name}`,
-        `${c.name} still has ${upcomingLinked.length} upcoming ${visitWord}. Delete ${
+      showInfo(`Can't remove ${c.name}`, {
+        body: `${c.name} still has ${upcomingLinked.length} upcoming ${visitWord}. Delete ${
           upcomingLinked.length === 1 ? "that appointment" : "those appointments"
         } first, then you can remove this clinician.`,
-        [{ text: "OK", style: "default" }],
-      );
+      });
       return;
     }
 

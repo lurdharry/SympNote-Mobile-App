@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert } from "react-native";
 import { useSharedValue, SharedValue } from "react-native-reanimated";
 import {
   ensureSpeechPermission,
@@ -7,6 +6,7 @@ import {
   SpeechHandle,
 } from "../services/speech";
 import { hapticHeavy, hapticLight, hapticMedium } from "../services/haptics";
+import { showError } from "../components/ui/Toast";
 
 export interface HoldToRecordState {
   /** True once the hold has been held long enough to begin recording. */
@@ -151,11 +151,10 @@ export function useHoldToRecord(opts: HoldToRecordOptions = {}): {
     const perm = await ensureSpeechPermission();
     if (!perm.granted) {
       // On denial we bail quietly; the caller's short-tap fallback will
-      // still fire for subsequent taps, so surface a one-time alert.
-      Alert.alert(
-        "Microphone needed",
-        perm.reason ?? "Enable microphone and speech in Settings.",
-      );
+      // still fire for subsequent taps, so surface a one-time toast.
+      showError("Microphone needed", {
+        body: perm.reason ?? "Enable microphone and speech in Settings.",
+      });
       pressActiveRef.current = false;
       return;
     }
@@ -192,10 +191,9 @@ export function useHoldToRecord(opts: HoldToRecordOptions = {}): {
       }, 500);
     } catch {
       resetLocalState();
-      Alert.alert(
-        "Could not start recording",
-        "Try again in a moment, or tap the mic to open the recorder manually.",
-      );
+      showError("Could not start recording", {
+        body: "Try again in a moment, or tap the mic to open the recorder manually.",
+      });
     }
   }, [resetLocalState, volume]);
 
