@@ -25,8 +25,8 @@ export const SettingsRowItem: React.FC<SettingsRowItemProps> = ({ row, isLast })
         },
       ]}
     >
-      <View style={[styles.icon, { backgroundColor: (row.tint ?? colors.accent) + '1A' }]}>
-        <row.Icon size={18} color={row.tint ?? colors.accent} strokeWidth={2} />
+      <View style={styles.mascot}>
+        <row.Mascot size={moderateScale(36)} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={styles.labelRow}>
@@ -94,10 +94,9 @@ const useStyles = makeStyles(() => ({
     paddingVertical: verticalScale(12),
     minHeight: verticalScale(56),
   },
-  icon: {
+  mascot: {
     width: moderateScale(36),
     height: moderateScale(36),
-    borderRadius: moderateScale(10),
     alignItems: 'center',
     justifyContent: 'center',
   },

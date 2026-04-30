@@ -58,7 +58,7 @@ const TabsLayout: React.FC = () => {
                       accessibilityState={{ selected: isActive }}
                       style={styles.tab}
                     >
-                      <cfg.Icon size={moderateScale(22)} color={tint} strokeWidth={2} />
+                      <cfg.Glyph size={moderateScale(22)} color={tint} />
                       <Text
                         style={[
                           styles.label,
