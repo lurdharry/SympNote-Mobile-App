@@ -2,14 +2,11 @@ import React, { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { type Router, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import {
-  ChevronRight,
-  FileText,
-  Mic,
-  Sparkles,
-  TrendingUp,
-} from "lucide-react-native";
+import { ChevronRight } from "lucide-react-native";
 import { CheckInMascot } from "./CheckInMascot";
+import { AllCaughtUpMascot } from "./AllCaughtUpMascot";
+import { BriefMascot } from "../briefs/BriefMascot";
+import { RecordMascot } from "../recording/RecordMascot";
 import {
   fontScale,
   makeStyles,
@@ -60,7 +57,7 @@ const buildSlot = (state: ReadyState): Slot => {
         headline: "Capture your first note.",
         sub: "Hold the mic below to record. Sympnote turns it into a doctor-ready brief.",
         ctaLabel: "Start now",
-        Icon: Mic,
+        Icon: RecordMascot,
         onPress: (router) => router.push("/record"),
       };
 
@@ -69,13 +66,10 @@ const buildSlot = (state: ReadyState): Slot => {
       const count = state.unbriefedCount ?? 0;
       return {
         eyebrow: `${visitTitle(state.visit?.specialty).toUpperCase()} · ${daysLabel(days).toUpperCase()}`,
-        headline:
-          count === 1
-            ? "1 note ready to brief."
-            : `${count} notes ready to brief.`,
+        headline: count === 1 ? "1 note ready to brief." : `${count} notes ready to brief.`,
         sub: "Synthesise them into a one-page brief tailored for this visit.",
         ctaLabel: "Generate brief",
-        Icon: Sparkles,
+        Icon: BriefMascot,
         onPress: (router) => router.push("/brief/new"),
       };
     }
@@ -86,7 +80,7 @@ const buildSlot = (state: ReadyState): Slot => {
         headline: "Your brief is ready.",
         sub: "Open it to review concerns, questions, and patterns before you go.",
         ctaLabel: "Open brief",
-        Icon: FileText,
+        Icon: BriefMascot,
         onPress: (router) => {
           if (state.brief) router.push(`/brief/${state.brief.id}`);
         },
@@ -98,7 +92,7 @@ const buildSlot = (state: ReadyState): Slot => {
         headline: "Anything you want to mention?",
         sub: "A short voice note now becomes a clinician-ready summary at the visit.",
         ctaLabel: "Capture a note",
-        Icon: Mic,
+        Icon: RecordMascot,
         onPress: (router) => router.push("/record"),
       };
 
@@ -112,7 +106,7 @@ const buildSlot = (state: ReadyState): Slot => {
             : `${count} notes waiting to be synthesised.`,
         sub: "Generate a brief now and it'll be ready for whichever clinician you tag it with.",
         ctaLabel: "Generate brief",
-        Icon: Sparkles,
+        Icon: BriefMascot,
         onPress: (router) => router.push("/brief/new"),
       };
     }
@@ -134,7 +128,7 @@ const buildSlot = (state: ReadyState): Slot => {
         headline: "You're current.",
         sub: "Add an upcoming visit and Sympnote will prep a brief when it's near.",
         ctaLabel: "Add a visit",
-        Icon: TrendingUp,
+        Icon: AllCaughtUpMascot,
         onPress: (router) => router.push("/appointment-new"),
       };
   }
@@ -212,10 +206,7 @@ export const ReadyStateCard: React.FC = () => {
           hapticLight();
           slot.onPress(router);
         }}
-        style={({ pressed }) => [
-          styles.cta,
-          { backgroundColor: tint, opacity: pressed ? 0.9 : 1 },
-        ]}
+        style={({ pressed }) => [styles.cta, { backgroundColor: tint, opacity: pressed ? 0.9 : 1 }]}
         accessibilityRole="button"
         accessibilityLabel={slot.ctaLabel}
       >

@@ -38,11 +38,11 @@ const useStyles = makeStyles((theme) => ({
   },
   text: {
     fontFamily: "DMSans_700Bold",
-    fontSize: fontScale(10),
+    fontSize: fontScale(12),
     letterSpacing: 1.6,
   },
   rule: {
     flex: 1,
-    height: StyleSheet.hairlineWidth,
+    height: 1,
   },
 }));
