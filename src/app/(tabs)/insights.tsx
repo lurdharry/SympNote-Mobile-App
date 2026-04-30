@@ -27,6 +27,7 @@ import { Heatmap } from '@/components/insights/Heatmap';
 import { InsightsEmpty } from '@/components/insights/InsightsEmpty';
 import { useEntitlement } from '@/contexts/EntitlementContext';
 import { LockedView } from '@/components/paywall/LockedView';
+import { InsightsMascot } from '@/components/insights/InsightsMascot';
 
 const INSIGHTS_THRESHOLD = 3;
 
@@ -60,8 +61,16 @@ const TabInsights: React.FC = () => {
   if (!entitled) {
     return (
       <LockedView
-        title="Insights are paid"
-        description="Pattern detection, trend analysis, and red-flag rollups across your notes — built for prep nights, not casual reads."
+        eyebrow="INSIGHTS"
+        Icon={InsightsMascot}
+        title="See the patterns in your notes."
+        description="Weeks of voice notes turn into the trends, triggers, and red-flag rollups you'll actually use the night before a visit."
+        bullets={[
+          "Severity trends across the weeks",
+          "Triggers and patterns from your own words",
+          "Red-flag rollups so nothing slips",
+        ]}
+        ctaLabel="View insights"
       />
     );
   }

@@ -1,55 +1,94 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { Lock, Sparkles } from "lucide-react-native";
-import {
-  fontScale,
-  makeStyles,
-  moderateScale,
-  shadows,
-  typography,
-  useTheme,
-  verticalScale,
-} from "@/theme";
+import { Check, X as XIcon } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
+import { fontScale, makeStyles, moderateScale, typography, useTheme, verticalScale } from "@/theme";
 import { hapticLight } from "@/services/haptics";
 
-/**
- * View-level paywall gate. Used where blocking at the action level
- * would be too late — the user has already navigated to the screen
- * and would see something they shouldn't have access to. Examples:
- *
- *   - Insights tab (entire screen is paid)
- *   - Recording surface (mounting the screen implies "you can record")
- *
- * Renders a centered lock pitch with the feature title, a one-liner
- * pitch, and a primary CTA that opens the in-app paywall modal. The
- * EntitlementContext flips `entitled` back to true on successful
- * purchase, and the consumer screen re-renders with its real content.
- *
- * Keep the surface visually distinct from the rest of the app (soft
- * accent wash, large lock glyph, editorial headline) so it reads as
- * "feature is paid" rather than "something broke."
- */
+type LucideIcon = React.ComponentType<{
+  size?: number;
+  color?: string;
+  strokeWidth?: number;
+}>;
+
 export interface LockedViewProps {
-  /** Big italic Fraunces headline ("Insights are paid", "Record is paid"). */
+  /** Screen-name eyebrow in caps (e.g. "INSIGHTS"). Optional. */
+  eyebrow?: string;
+  /** Aspirational headline. What this screen does, in the user's voice. */
   title: string;
-  /** One-line pitch under the headline. */
+  /** One-line pitch under the headline. Sell the moment, not the gate. */
   description: string;
-  /** Optional CTA label override. Defaults to "Unlock with Sympnote". */
-  ctaLabel?: string;
+  /** Optional 2–3 bullets — what the user will see in this screen. */
+  bullets?: readonly string[];
+  /** Mascot or glyph for the top of the screen. Renders at ~moderateScale(140)
+   *  and animates with a gentle bob + breath. Pass a mascot, not a flat icon. */
+  Icon: LucideIcon;
+  /** Action label, in the screen's natural verb ("View insights",
+   *  "Start recording"). Never subscription-y ("Try Plus", "Unlock"). */
+  ctaLabel: string;
+  /** Optional dismiss handler. When set, renders a top-right X button
+   *  so modal-presented gates have an escape hatch. Tab-presented
+   *  gates (insights) leave this undefined — the tab bar handles nav. */
+  onClose?: () => void;
 }
 
+const MASCOT_SIZE = moderateScale(140);
+
 export const LockedView: React.FC<LockedViewProps> = ({
+  eyebrow,
   title,
   description,
-  ctaLabel = "Unlock with Sympnote",
+  bullets,
+  Icon,
+  ctaLabel,
+  onClose,
 }) => {
   const router = useRouter();
   const { colors } = useTheme();
   const styles = useStyles();
+  const insets = useSafeAreaInsets();
 
-  const onUnlock = () => {
+  // Bob: gentle vertical float, ~2s round trip.
+  const bob = useSharedValue(0);
+  // Breath: subtle scale, slightly faster than bob so the two cycles
+  // drift in/out of sync — gives the character a more organic feel
+  // than a single periodic motion.
+  const breath = useSharedValue(1);
+
+  useEffect(() => {
+    bob.value = withRepeat(
+      withSequence(
+        withTiming(-6, { duration: 1100, easing: Easing.inOut(Easing.quad) }),
+        withTiming(0, { duration: 1100, easing: Easing.inOut(Easing.quad) }),
+      ),
+      -1,
+      false,
+    );
+    breath.value = withRepeat(
+      withSequence(
+        withTiming(1.04, { duration: 1500, easing: Easing.inOut(Easing.sin) }),
+        withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      false,
+    );
+  }, [bob, breath]);
+
+  const mascotStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: bob.value }, { scale: breath.value }],
+  }));
+
+  const onPress = () => {
     hapticLight();
     router.push("/paywall");
   };
@@ -65,40 +104,55 @@ export const LockedView: React.FC<LockedViewProps> = ({
         />
       </View>
 
-      <View style={styles.center}>
-        <View
+      {onClose ? (
+        <Pressable
+          onPress={() => {
+            hapticLight();
+            onClose();
+          }}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
           style={[
-            styles.lockTile,
-            { backgroundColor: colors.bgSurface, borderColor: colors.accent + "55" },
-            shadows.card,
+            styles.closeBtn,
+            {
+              top: insets.top + moderateScale(8),
+              backgroundColor: colors.bgMuted,
+            },
           ]}
         >
-          <LinearGradient
-            colors={[colors.accent + "20", colors.accent + "00"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <Lock
-            size={moderateScale(28)}
-            color={colors.accent}
-            strokeWidth={2}
-          />
-        </View>
+          <XIcon size={moderateScale(18)} color={colors.textPrimary} strokeWidth={2} />
+        </Pressable>
+      ) : null}
 
-        <Text style={[styles.eyebrow, { color: colors.accent }]}>PAID FEATURE</Text>
+      <View style={styles.center}>
+        <Animated.View style={[styles.mascotSlot, mascotStyle]}>
+          <Icon size={MASCOT_SIZE} color={colors.accent} strokeWidth={2} />
+        </Animated.View>
+
+        {eyebrow ? <Text style={[styles.eyebrow, { color: colors.accent }]}>{eyebrow}</Text> : null}
         <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
-        <Text style={[styles.description, { color: colors.textSecondary }]}>
-          {description}
-        </Text>
+        <Text style={[styles.description, { color: colors.textSecondary }]}>{description}</Text>
+
+        {bullets && bullets.length > 0 && (
+          <View style={styles.bullets}>
+            {bullets.map((b) => (
+              <View key={b} style={styles.bulletRow}>
+                <View style={[styles.bulletDot, { backgroundColor: colors.accent + "26" }]}>
+                  <Check size={moderateScale(11)} color={colors.accent} strokeWidth={2.6} />
+                </View>
+                <Text style={[styles.bulletText, { color: colors.textSecondary }]}>{b}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         <Pressable
-          onPress={onUnlock}
+          onPress={onPress}
           style={[styles.cta, { backgroundColor: colors.accent }]}
           accessibilityRole="button"
           accessibilityLabel={ctaLabel}
         >
-          <Sparkles size={moderateScale(14)} color="#FFFFFF" strokeWidth={2.4} />
           <Text style={styles.ctaText}>{ctaLabel}</Text>
         </Pressable>
       </View>
@@ -125,15 +179,22 @@ const useStyles = makeStyles((theme) => ({
     paddingHorizontal: theme.spacing.s8,
     gap: moderateScale(12),
   },
-  lockTile: {
-    width: moderateScale(72),
-    height: moderateScale(72),
-    borderRadius: moderateScale(20),
-    borderWidth: 1,
+  mascotSlot: {
+    width: MASCOT_SIZE,
+    height: MASCOT_SIZE,
     alignItems: "center",
     justifyContent: "center",
-    overflow: "hidden",
-    marginBottom: moderateScale(8),
+    marginBottom: moderateScale(4),
+  },
+  closeBtn: {
+    position: "absolute",
+    right: moderateScale(16),
+    width: moderateScale(36),
+    height: moderateScale(36),
+    borderRadius: moderateScale(18),
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
   },
   eyebrow: {
     fontFamily: "DMSans_700Bold",
@@ -156,11 +217,35 @@ const useStyles = makeStyles((theme) => ({
     textAlign: "center",
     maxWidth: moderateScale(300),
   },
+  bullets: {
+    width: "100%",
+    maxWidth: moderateScale(320),
+    gap: moderateScale(10),
+    marginTop: moderateScale(6),
+  },
+  bulletRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: moderateScale(10),
+  },
+  bulletDot: {
+    width: moderateScale(20),
+    height: moderateScale(20),
+    borderRadius: moderateScale(7),
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: moderateScale(1),
+  },
+  bulletText: {
+    flex: 1,
+    fontFamily: "DMSans_500Medium",
+    fontSize: fontScale(13.5),
+    lineHeight: fontScale(19),
+  },
   cta: {
     flexDirection: "row",
     alignItems: "center",
-    gap: moderateScale(8),
-    paddingHorizontal: moderateScale(20),
+    paddingHorizontal: moderateScale(24),
     paddingVertical: moderateScale(13),
     borderRadius: theme.radius.full,
     marginTop: moderateScale(8),
