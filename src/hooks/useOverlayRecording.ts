@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { GeminiQuotaError } from "@/services/aiQuota";
+import { LLMQuotaError } from "@/services/aiQuota";
 import { hapticHeavy } from "@/services/haptics";
 import { useStructureTranscript } from "./useStructureTranscript";
 import { uuid } from "@/utils/uuid";
@@ -68,30 +68,42 @@ export const useOverlayRecording = ({ showToast }: UseOverlayRecordingProps) => 
     }
     setAiError(null);
     setIsExtracting(true);
-    structureMutation.mutate(text, {
-      onSuccess: (structured) => {
-        const tags = Array.from(new Set(structured.symptoms.slice(0, 2).filter(Boolean)));
-        useRecordingsStore.getState().add({
-          id: uuid(),
+    // Mutation upserts the recording into the store on success
+    // (creates because no row with this id exists yet). We pass an
+    // empty `tags` in meta and patch in symptom-derived tags inside
+    // the per-call onSuccess — the tag rule depends on the result
+    // we don't have until the mutation resolves.
+    const id = uuid();
+    structureMutation.mutate(
+      {
+        id,
+        transcript: text,
+        meta: {
           createdAt: postCapture.createdAt,
           durationSec: postCapture.durationSec,
-          transcript: text,
-          structured,
-          tags,
-        });
-        hapticHeavy();
-        dismissOverlay();
+          tags: [],
+        },
       },
-      onError: (e) => {
-        setIsExtracting(false);
-        if (e instanceof GeminiQuotaError) {
-          setAiError(e.message);
-          setRetryInSec(e.retryAfterSec ?? 0);
-        } else {
-          setAiError(e instanceof Error ? e.message : "Could not structure transcript.");
-        }
+      {
+        onSuccess: (structured) => {
+          const tags = Array.from(new Set(structured.symptoms.slice(0, 2).filter(Boolean)));
+          if (tags.length > 0) {
+            useRecordingsStore.getState().update(id, { tags });
+          }
+          hapticHeavy();
+          dismissOverlay();
+        },
+        onError: (e) => {
+          setIsExtracting(false);
+          if (e instanceof LLMQuotaError) {
+            setAiError(e.message);
+            setRetryInSec(e.retryAfterSec ?? 0);
+          } else {
+            setAiError(e instanceof Error ? e.message : "Could not structure transcript.");
+          }
+        },
       },
-    });
+    );
   }, [postCapture, editValue, structureMutation, showToast, dismissOverlay]);
 
   return {

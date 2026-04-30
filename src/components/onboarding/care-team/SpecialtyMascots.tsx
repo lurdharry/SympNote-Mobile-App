@@ -449,3 +449,57 @@ export const OtherSpecialtyMascot: React.FC<MascotProps> = ({
     </Svg>
   </View>
 );
+
+// ─── 11. Gastro — soft stomach pouch with face ─────────────────────────
+
+export const GastroMascot: React.FC<MascotProps> = ({ size = moderateScale(64) }) => (
+  <View style={wrap(size)}>
+    <Svg width="100%" height="100%" viewBox="0 0 80 80">
+      <Defs>
+        <SvgLinearGradient id="gi-body" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#FCE7C5" />
+          <Stop offset="1" stopColor="#E5B888" />
+        </SvgLinearGradient>
+      </Defs>
+      {/* Stomach pouch silhouette — soft bean with a slight neck on the right */}
+      <Path
+        d="M 22 24 C 22 14, 32 14, 40 16 C 50 18, 58 16, 60 26 C 62 36, 56 42, 58 48 C 60 56, 50 60, 38 58 C 26 56, 18 50, 20 38 C 22 30, 22 28, 22 24 Z"
+        fill="url(#gi-body)"
+        stroke="#A4744A"
+        strokeWidth={2}
+        strokeLinejoin="round"
+      />
+      {/* Faint digestion ripples — bottom of the pouch */}
+      <Path
+        d="M 28 46 Q 36 48 44 46"
+        stroke="#A4744A"
+        strokeWidth={1.2}
+        fill="none"
+        strokeLinecap="round"
+        opacity={0.35}
+      />
+      <Path
+        d="M 30 51 Q 36 52 42 51"
+        stroke="#A4744A"
+        strokeWidth={1.2}
+        fill="none"
+        strokeLinecap="round"
+        opacity={0.3}
+      />
+      {/* Eyes */}
+      <Circle cx={32} cy={32} r={2.2} fill="#1F504E" />
+      <Circle cx={46} cy={32} r={2.2} fill="#1F504E" />
+      {/* Smile */}
+      <Path
+        d="M 33 38 Q 39 42 45 38"
+        stroke="#1F504E"
+        strokeWidth={1.8}
+        fill="none"
+        strokeLinecap="round"
+      />
+      {/* Cheek blush */}
+      <Circle cx={28} cy={36} r={1.6} fill="#E07A5F" opacity={0.35} />
+      <Circle cx={50} cy={36} r={1.6} fill="#E07A5F" opacity={0.35} />
+    </Svg>
+  </View>
+);

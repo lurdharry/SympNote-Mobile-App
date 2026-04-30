@@ -11,6 +11,7 @@ import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { format, parseISO } from "date-fns";
 import { ArrowLeft, X as XIcon } from "lucide-react-native";
+import { RecordMascot } from "../components/recording/RecordMascot";
 import { makeStyles, moderateScale, useTheme, verticalScale } from "../theme";
 import { ReviewPhase } from "../components/recording/ReviewPhase";
 import { ExtractingPhase } from "../components/recording/ExtractingPhase";
@@ -74,7 +75,7 @@ const RecordModal: React.FC = () => {
       new Set(flow.structured.symptoms.slice(0, 2).filter(Boolean)),
     );
     useRecordingsStore.getState().add({
-      id: uuid(),
+      id: flow.recordingId,
       createdAt: new Date().toISOString(),
       durationSec: 0,
       transcript: flow.reviewText.trim(),
@@ -123,8 +124,17 @@ const RecordModal: React.FC = () => {
   if (!entitled) {
     return (
       <LockedView
-        title="Recording is paid"
-        description="Capture new notes — voice or text — with a Sympnote subscription. Your existing notes stay readable."
+        eyebrow="RECORD"
+        Icon={RecordMascot}
+        title="Capture every symptom in your own voice."
+        description="Hold the mic, talk through what's going on, and Sympnote turns it into a clinician-ready brief by your next visit."
+        bullets={[
+          "Voice or typed notes, anytime",
+          "AI-structured for the next visit",
+          "Share as a one-page brief",
+        ]}
+        ctaLabel="Start recording"
+        onClose={() => router.back()}
       />
     );
   }

@@ -1,7 +1,7 @@
 import React from "react";
 import { Text, View } from "react-native";
-import { FileText } from "lucide-react-native";
 import { fontScale, makeStyles, moderateScale, useTheme } from "@/theme";
+import { BriefMascot } from "../briefs/BriefMascot";
 
 /**
  * Recovery state on /clinician/[id] when no briefs feed this clinician
@@ -14,8 +14,8 @@ export const ClinicianBriefsEmpty: React.FC = () => {
 
   return (
     <View style={styles.empty}>
-      <View style={[styles.icon, { backgroundColor: colors.accent + "1A" }]}>
-        <FileText size={moderateScale(28)} color={colors.accent} strokeWidth={2} />
+      <View style={styles.mascotSlot}>
+        <BriefMascot size={moderateScale(120)} color={colors.accent} />
       </View>
       <Text style={[styles.title, { color: colors.textPrimary }]}>No briefs yet</Text>
       <Text style={[styles.sub, { color: colors.textSecondary }]}>
@@ -32,13 +32,12 @@ const useStyles = makeStyles((theme) => ({
     paddingTop: theme.spacing.s8,
     paddingHorizontal: theme.spacing.s6,
   },
-  icon: {
-    width: moderateScale(56),
-    height: moderateScale(56),
-    borderRadius: moderateScale(16),
+  mascotSlot: {
+    width: moderateScale(120),
+    height: moderateScale(120),
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: theme.spacing.s4,
+    marginBottom: theme.spacing.s3,
   },
   title: {
     fontFamily: "Fraunces_500Medium",

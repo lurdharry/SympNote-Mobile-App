@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Alert, ScrollView, Share, Text, View } from "react-native";
+import { Alert, Share, Text, View } from "react-native";
+import Animated, { useAnimatedScrollHandler, useSharedValue } from "react-native-reanimated";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Print from "expo-print";
@@ -7,6 +8,7 @@ import * as Sharing from "expo-sharing";
 import { makeStyles, typography, useTheme } from "@/theme";
 import { BackButton } from "@/components/ui/BackButton";
 import { BriefTopBar } from "@/components/brief/BriefTopBar";
+import { RegenBanner } from "@/components/ui/RegenBanner";
 import { BriefMasthead } from "@/components/brief/BriefMasthead";
 import { BriefAudienceTags } from "@/components/brief/BriefAudienceTags";
 import { BriefSections } from "@/components/brief/BriefSections";
@@ -63,6 +65,13 @@ const BriefDetail: React.FC = () => {
   const [retrying, setRetrying] = useState(false);
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
   const { requireEntitlement } = usePaywallGate();
+
+  // Drives the BriefTopBar's scroll-triggered title swap. Updated on
+  // the UI thread via a reanimated worklet — no JS bridge cost.
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((evt) => {
+    scrollY.value = evt.contentOffset.y;
+  });
 
   // Ask for an App Store review at the user's emotional peak: a
   // successfully rendered brief on a milestone count (1 / 3 / 7).
@@ -195,7 +204,7 @@ const BriefDetail: React.FC = () => {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bgPrimary }]}>
-      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+      <SafeAreaView style={styles.safe} edges={["top"]}>
         <BriefTopBar
           onBack={() => router.back()}
           onRegenerate={onRegenerate}
@@ -204,9 +213,18 @@ const BriefDetail: React.FC = () => {
           onDelete={onDelete}
           showShare={!empty}
           retrying={retrying}
+          title={brief.title ?? "Brief"}
+          scrollY={scrollY}
         />
 
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <RegenBanner visible={retrying} label="Regenerating brief…" />
+
+        <Animated.ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+        >
           <BriefMasthead brief={brief} />
 
           <BriefAudienceTags
@@ -230,7 +248,7 @@ const BriefDetail: React.FC = () => {
           )}
 
           <View style={styles.footerSpace} />
-        </ScrollView>
+        </Animated.ScrollView>
       </SafeAreaView>
 
       <BriefShareSheet

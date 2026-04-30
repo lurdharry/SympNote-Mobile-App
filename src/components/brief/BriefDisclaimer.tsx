@@ -20,7 +20,7 @@ export const BriefDisclaimer: React.FC = () => {
     <View style={styles.wrap}>
       <View style={[styles.divider, { backgroundColor: colors.border }]} />
       <Text style={[styles.body, { color: colors.textTertiary }]}>
-        Not medical advice. Sympnote organizes your notes; confirm any decisions with your doctor.
+        Not medical advice. Sympnote organizes your notes, confirm any decisions with your doctor.
       </Text>
     </View>
   );
