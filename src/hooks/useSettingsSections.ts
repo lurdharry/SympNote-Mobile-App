@@ -10,7 +10,6 @@ import {
   ExportMascot,
   HelpMascot,
   PlusMascot,
-  PrivacyMascot,
   PrivacyPolicyMascot,
   RestoreMascot,
   TermsMascot,

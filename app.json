@@ -8,7 +8,7 @@
     "userInterfaceStyle": "automatic",
     "icon": "./assets/icon.png",
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.sympnote.app",
       "icon": "./assets/icon.png",
       "infoPlist": {
