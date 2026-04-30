@@ -350,7 +350,22 @@ export type UserProfile = {
    */
   onboardingAnswers?: Record<string, unknown>;
   subscriptionStatus: SubscriptionStatus;
+  /** Expiration date for the active entitlement — used for both
+   *  trial-end and active-plan renewal display. ISO string or null
+   *  when not subscribed. The field name is historical; it covers
+   *  both trial and paid lifecycles. */
   trialEndsAt: string | null;
+  /** Which plan the user is on, derived from RevenueCat's
+   *  productIdentifier on customer-info sync. Null when not
+   *  subscribed. Used by Settings to surface plan + price. */
+  planId: 'monthly' | 'annual' | null;
+  /** ISO timestamp of when the user accepted the AI data-sharing
+   *  consent. Null before consent has been granted; non-null after.
+   *  Required by App Review guideline 5.1.2(i): the user must
+   *  explicitly accept that transcripts and structured fields are
+   *  sent to third-party AI providers (Google Gemini, OpenAI)
+   *  before any such call fires. The LLM layer enforces this gate. */
+  aiConsentAcceptedAt: string | null;
   /** Derived profile — set once the analyzing screen runs. Null before. */
   personalization: PersonalizationProfile | null;
 };

@@ -45,6 +45,19 @@ export function initRevenueCat(): void {
 }
 
 /**
+ * Map App Store product identifier → internal plan id. The IDs come
+ * from RevenueCat's CustomerInfo so they match what's configured in
+ * the dashboard. Loose matching (substring) so changes to the
+ * product-id naming convention don't break the lookup.
+ */
+const planIdFor = (productIdentifier: string): "monthly" | "annual" | null => {
+  const id = productIdentifier.toLowerCase();
+  if (id.includes("annual") || id.includes("yearly") || id.includes("year")) return "annual";
+  if (id.includes("monthly") || id.includes("month")) return "monthly";
+  return null;
+};
+
+/**
  * Mirror RevenueCat's customer state into the local profile store.
  * Called from the SDK listener (renewal, expiration, change-of-plan)
  * and after every purchase / restore so the UI flips immediately.
@@ -52,11 +65,12 @@ export function initRevenueCat(): void {
 function syncCustomerInfo(info: CustomerInfo): void {
   const ent = info.entitlements.active[ENTITLEMENT_ID];
   if (!ent) {
-    useProfileStore.getState().setSubscription("none", null);
+    useProfileStore.getState().setSubscription("none", null, null);
     return;
   }
   const status = ent.periodType === "TRIAL" ? "trial" : "active";
-  useProfileStore.getState().setSubscription(status, ent.expirationDate ?? null);
+  const planId = planIdFor(ent.productIdentifier);
+  useProfileStore.getState().setSubscription(status, ent.expirationDate ?? null, planId);
 }
 
 export type Plan = {
