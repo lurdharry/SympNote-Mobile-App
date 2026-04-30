@@ -1,12 +1,12 @@
 /** Typed error so the UI can distinguish rate limits from real failures. */
-export class GeminiQuotaError extends Error {
+export class LLMQuotaError extends Error {
   constructor(
     message: string,
     public readonly retryAfterSec: number | null,
     public readonly scope: 'minute' | 'day' | 'unknown',
   ) {
     super(message);
-    this.name = 'GeminiQuotaError';
+    this.name = 'LLMQuotaError';
   }
 }
 
@@ -36,7 +36,7 @@ const retrySeconds = (details: QuotaDetail[]): number | null => {
   return Number.isFinite(n) ? Math.ceil(n) : null;
 };
 
-const buildMessage = (
+const buildGeminiMessage = (
   scope: 'minute' | 'day' | 'unknown',
   retry: number | null,
 ): string => {
@@ -47,7 +47,12 @@ const buildMessage = (
   return 'Gemini rate limit reached. Please wait and try again.';
 };
 
-export const parseQuotaError = (errText: string): GeminiQuotaError => {
+/**
+ * Parse a Gemini 429 error body. Accepts the JSON the REST API returns
+ * (or the SDK surfaces in `.message`). Falls back to a generic quota
+ * message when the structure isn't recognised.
+ */
+export const parseGeminiQuotaError = (errText: string): LLMQuotaError => {
   let details: QuotaDetail[] = [];
   try {
     const parsed = JSON.parse(errText);
@@ -57,5 +62,35 @@ export const parseQuotaError = (errText: string): GeminiQuotaError => {
   }
   const scope = quotaScope(details);
   const retry = retrySeconds(details);
-  return new GeminiQuotaError(buildMessage(scope, retry), retry, scope);
+  return new LLMQuotaError(buildGeminiMessage(scope, retry), retry, scope);
+};
+
+interface OpenAI429Like {
+  message?: string;
+  status?: number;
+  headers?: Record<string, string | undefined>;
+}
+
+/**
+ * Parse an OpenAI 429 error. Reads the `retry-after` / `retry-after-ms`
+ * response headers (the SDK surfaces them on the thrown `APIError`).
+ * Scope is always 'unknown' — OpenAI doesn't distinguish minute-vs-day
+ * limits in the error shape the way Gemini does.
+ */
+export const parseOpenAIQuotaError = (err: OpenAI429Like): LLMQuotaError => {
+  const headers = err.headers ?? {};
+  const seconds = headers['retry-after'];
+  const millis = headers['retry-after-ms'];
+  let retry: number | null = null;
+  if (millis) {
+    const n = parseFloat(millis);
+    if (Number.isFinite(n)) retry = Math.ceil(n / 1000);
+  } else if (seconds) {
+    const n = parseFloat(seconds);
+    if (Number.isFinite(n)) retry = Math.ceil(n);
+  }
+  const message = retry
+    ? `OpenAI rate limit. Try again in ${retry}s.`
+    : 'OpenAI rate limit reached. Please wait and try again.';
+  return new LLMQuotaError(message, retry, 'unknown');
 };

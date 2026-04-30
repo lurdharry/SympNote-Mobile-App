@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { GeminiQuotaError } from "@/services/aiQuota";
+import { LLMQuotaError } from "@/services/aiQuota";
 import { hapticHeavy } from "@/services/haptics";
 import { useStructureTranscript } from "./useStructureTranscript";
 import { uuid } from "@/utils/uuid";
@@ -84,7 +84,7 @@ export const useOverlayRecording = ({ showToast }: UseOverlayRecordingProps) => 
       },
       onError: (e) => {
         setIsExtracting(false);
-        if (e instanceof GeminiQuotaError) {
+        if (e instanceof LLMQuotaError) {
           setAiError(e.message);
           setRetryInSec(e.retryAfterSec ?? 0);
         } else {

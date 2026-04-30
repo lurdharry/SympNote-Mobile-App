@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { GeminiQuotaError } from "../../services/ai";
+import { LLMQuotaError } from "../../services/ai";
 import { hapticLight, hapticMedium } from "../../services/haptics";
 import { useStructureTranscript } from "../../hooks/useStructureTranscript";
 import { showInfo } from "../ui/Toast";
@@ -79,7 +79,7 @@ export function useRecordingFlow(): RecordingFlow {
       },
       onError: (e) => {
         log("extracting: failed", e);
-        if (e instanceof GeminiQuotaError) {
+        if (e instanceof LLMQuotaError) {
           setReviewError(e.message);
           setRetryInSec(e.retryAfterSec ?? 0);
         } else {
