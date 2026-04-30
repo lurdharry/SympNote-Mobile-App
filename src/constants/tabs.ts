@@ -1,9 +1,24 @@
-import { Clipboard, History, Home, LineChart, Settings } from 'lucide-react-native';
+import type React from 'react';
+import {
+  BriefsGlyph,
+  HistoryGlyph,
+  HomeGlyph,
+  InsightsGlyph,
+  SettingsGlyph,
+} from '../components/tabs/TabGlyphs';
 
-export const TABS = [
-  { name: 'home',     label: 'Home',     Icon: Home },
-  { name: 'prep',     label: 'Briefs',   Icon: Clipboard },
-  { name: 'insights', label: 'Insights', Icon: LineChart },
-  { name: 'history',  label: 'History',  Icon: History },
-  { name: 'settings', label: 'Settings', Icon: Settings },
+type TabGlyph = React.FC<{ size?: number; color?: string }>;
+
+export interface TabConfig {
+  name: string;
+  label: string;
+  Glyph: TabGlyph;
+}
+
+export const TABS: readonly TabConfig[] = [
+  { name: 'home',     label: 'Home',     Glyph: HomeGlyph },
+  { name: 'prep',     label: 'Briefs',   Glyph: BriefsGlyph },
+  { name: 'insights', label: 'Insights', Glyph: InsightsGlyph },
+  { name: 'history',  label: 'History',  Glyph: HistoryGlyph },
+  { name: 'settings', label: 'Settings', Glyph: SettingsGlyph },
 ] as const;

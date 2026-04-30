@@ -1,19 +1,20 @@
+import type React from 'react';
 import { Alert, Linking, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import { PRIVACY_POLICY_URL, SUPPORT_URL, TERMS_URL } from '@/constants/legal';
 import {
-  Download,
-  Heart,
-  Info,
-  LifeBuoy,
-  Lock,
-  RotateCcw,
-  Shield,
-  Sparkles,
-  Trash2,
-  User as UserIcon,
-  Users,
-} from 'lucide-react-native';
-import { PRIVACY_POLICY_URL, SUPPORT_URL } from '@/constants/legal';
+  AgeMascot,
+  CareTeamMascot,
+  ClearMascot,
+  DisclaimerMascot,
+  ExportMascot,
+  HelpMascot,
+  PlusMascot,
+  PrivacyMascot,
+  PrivacyPolicyMascot,
+  RestoreMascot,
+  TermsMascot,
+} from '@/components/settings/SettingsMascots';
 import { useAppointmentsStore } from '@/stores/useAppointmentsStore';
 import { usePendingRecordingStore } from '@/stores/usePendingRecordingStore';
 import { useRecordingsStore } from '@/stores/useRecordingsStore';
@@ -28,18 +29,19 @@ import type {
 import { exportUserData } from '@/services/export';
 import { restorePurchases } from '@/services/subscription';
 
-type IconRef = typeof UserIcon;
+type Mascot = React.FC<{ size?: number }>;
 
 export interface SettingsRow {
-  Icon: IconRef;
+  /** Bespoke SVG mascot rendered as the row's leading element. */
+  Mascot: Mascot;
   label: string;
   value?: string;
   badge?: string;
   onPress?: () => void;
-  /** Optional override for the row's icon tile and icon tint. Used
-   *  by destructive rows to signal consequence without painting the
-   *  whole row red. */
-  tint?: string;
+  /** Marks the row as destructive — the row item uses this to dim
+   *  the label tone slightly. The mascot itself already carries its
+   *  own palette (e.g. ClearMascot is coral), so no icon tint needed. */
+  destructive?: boolean;
 }
 
 export interface SettingsSection {
@@ -116,7 +118,7 @@ const profileRows = (
   personalization: PersonalizationProfile | null,
 ): SettingsRow[] => [
   {
-    Icon: UserIcon,
+    Mascot: AgeMascot,
     label: 'Age',
     value: personalization ? AGE_LABELS[personalization.ageBand] : 'Not set',
     onPress: () =>
@@ -128,7 +130,7 @@ const profileRows = (
   // Conditions row is rendered separately by ConditionsEditor — it
   // expands inline and edits the list without leaving Settings.
   {
-    Icon: Users,
+    Mascot: CareTeamMascot,
     label: 'Care team',
     value:
       personalization && personalization.careTeam.length > 0
@@ -161,7 +163,7 @@ export const useSettingsSections = (): SettingsSection[] => {
       title: 'Privacy & data',
       rows: [
         {
-          Icon: Lock,
+          Mascot: PrivacyMascot,
           label: 'Privacy',
           value: 'On-device transcription',
           onPress: () =>
@@ -171,7 +173,7 @@ export const useSettingsSections = (): SettingsSection[] => {
             ),
         },
         {
-          Icon: Shield,
+          Mascot: PrivacyPolicyMascot,
           label: 'Privacy policy',
           value: 'Read in browser',
           onPress: () => {
@@ -184,13 +186,26 @@ export const useSettingsSections = (): SettingsSection[] => {
           },
         },
         {
-          Icon: Download,
+          Mascot: TermsMascot,
+          label: 'Terms of use',
+          value: 'Read in browser',
+          onPress: () => {
+            Linking.openURL(TERMS_URL).catch(() => {
+              Alert.alert(
+                "Couldn't open",
+                'Try again with a connection.',
+              );
+            });
+          },
+        },
+        {
+          Mascot: ExportMascot,
           label: `Export your data`,
           value: `${recordings.length} ${recordings.length === 1 ? 'recording' : 'recordings'} · JSON`,
           onPress: exportUserData,
         },
         {
-          Icon: Info,
+          Mascot: DisclaimerMascot,
           label: 'Medical disclaimer',
           onPress: () =>
             Alert.alert(
@@ -199,10 +214,10 @@ export const useSettingsSections = (): SettingsSection[] => {
             ),
         },
         {
-          Icon: Trash2,
+          Mascot: ClearMascot,
           label: 'Clear all data',
           value: 'Recordings, appointments, briefs',
-          tint: '#E07A5F',
+          destructive: true,
           onPress: clearAllContent,
         },
       ],
@@ -211,7 +226,7 @@ export const useSettingsSections = (): SettingsSection[] => {
       title: 'Subscription',
       rows: [
         {
-          Icon: Sparkles,
+          Mascot: PlusMascot,
           label: 'Sympnote Plus',
           value: subscriptionLabel(subscriptionStatus),
           badge: isEntitled ? 'PLUS' : undefined,
@@ -224,7 +239,7 @@ export const useSettingsSections = (): SettingsSection[] => {
           },
         },
         {
-          Icon: RotateCcw,
+          Mascot: RestoreMascot,
           label: 'Restore purchases',
           value: 'Recover a previous subscription',
           onPress: handleRestore,
@@ -235,7 +250,7 @@ export const useSettingsSections = (): SettingsSection[] => {
       title: 'Help',
       rows: [
         {
-          Icon: LifeBuoy,
+          Mascot: HelpMascot,
           label: 'Help & support',
           value: 'FAQs and contact',
           onPress: () => {
