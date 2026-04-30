@@ -3,13 +3,13 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { type Router, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import {
-  Calendar,
   ChevronRight,
   FileText,
   Mic,
   Sparkles,
   TrendingUp,
 } from "lucide-react-native";
+import { CheckInMascot } from "./CheckInMascot";
 import {
   fontScale,
   makeStyles,
@@ -123,7 +123,7 @@ const buildSlot = (state: ReadyState): Slot => {
         headline: "How are you feeling today?",
         sub: "A quick check-in — even one sentence — keeps your brief sharp.",
         ctaLabel: "Capture",
-        Icon: Calendar,
+        Icon: CheckInMascot,
         onPress: (router) => router.push("/record"),
       };
 
