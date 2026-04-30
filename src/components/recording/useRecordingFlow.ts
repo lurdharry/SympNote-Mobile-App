@@ -1,7 +1,8 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { LLMQuotaError } from "../../services/ai";
 import { hapticLight, hapticMedium } from "../../services/haptics";
 import { useStructureTranscript } from "../../hooks/useStructureTranscript";
+import { uuid } from "../../utils/uuid";
 import { showInfo } from "../ui/Toast";
 import { Phase, StructuredWithSources } from "./types";
 
@@ -15,6 +16,11 @@ export type RecordingFlow = {
   reviewText: string;
   setReviewText: (v: string) => void;
   structured: StructuredWithSources | null;
+  /** Stable recording id generated at hook init. The same id is
+   *  passed to `useStructureTranscript` and used by the consumer
+   *  when committing the recording to the store, so the typed-flow
+   *  call shape matches detail / overlay flows. */
+  recordingId: string;
   /** Human-readable error for the review phase (e.g. quota exhausted). */
   reviewError: string | null;
   /** Seconds until retry is allowed. 0 = allowed now. */
@@ -40,6 +46,10 @@ export function useRecordingFlow(): RecordingFlow {
   const [structured, setStructured] = useState<StructuredWithSources | null>(null);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [retryInSec, setRetryInSec] = useState(0);
+  // Generated once per mount so re-extractions update the same in-flight
+  // record (no meta passed → mutation no-ops on the store; commit in
+  // record.tsx persists with this same id).
+  const recordingIdRef = useRef<string>(uuid());
 
   const setPhase = useCallback((next: Phase) => {
     setPhaseRaw((prev) => {
@@ -70,7 +80,7 @@ export function useRecordingFlow(): RecordingFlow {
     setRetryInSec(0);
     setPhase("extracting");
     log("extracting: calling Gemini");
-    structureMutation.mutate(text, {
+    structureMutation.mutate({ id: recordingIdRef.current, transcript: text }, {
       onSuccess: (s) => {
         log("extracting: done");
         setStructured(s);
@@ -106,6 +116,7 @@ export function useRecordingFlow(): RecordingFlow {
     reviewText,
     setReviewText,
     structured,
+    recordingId: recordingIdRef.current,
     reviewError,
     retryInSec,
     discardAndRetry,

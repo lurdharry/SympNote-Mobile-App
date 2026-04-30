@@ -16,7 +16,7 @@ import {
 import { useProfileStore } from '@/stores/useProfileStore';
 import { LLMQuotaError } from './aiQuota';
 import { parseStructured, type StructuredWithSources } from './aiParse';
-import { callLLM, DEFAULT_PROVIDER, type LLMProvider } from './llm';
+import { callLLM, callLLMWithFallback, providerFor, type LLMProvider } from './llm';
 import { EMPTY_BRIEF, parseBrief } from './aiBriefParse';
 
 const FALLBACK_STRUCTURED: Omit<StructuredWithSources, 'notes'> = {
@@ -56,9 +56,9 @@ Medications: ${s.medications.join(', ') || '—'}`;
 export async function structureTranscript(
   transcript: string,
   profile?: PersonalizationProfile | null,
-  provider: LLMProvider = DEFAULT_PROVIDER,
+  provider?: LLMProvider,
 ): Promise<StructuredWithSources> {
-  const text = await callLLM(provider, 'structure', {
+  const text = await callLLMWithFallback(provider ?? providerFor('structure'), 'structure', {
     systemPrompt: STRUCTURE_SYSTEM_PROMPT,
     userPrompt: withContext(`Transcript:\n${transcript}`, profile),
     temperature: 0.2,
@@ -75,13 +75,13 @@ export async function structureTranscript(
 export async function generateAppointmentSummary(
   recordings: Recording[],
   profile?: PersonalizationProfile | null,
-  provider: LLMProvider = DEFAULT_PROVIDER,
+  provider?: LLMProvider,
 ): Promise<string> {
   const logs = sortBy(recordings, (r) => parseISO(r.createdAt).getTime())
     .map(formatLog)
     .join('\n\n');
 
-  return callLLM(provider, 'summary', {
+  return callLLM(provider ?? providerFor('summary'), 'summary', {
     systemPrompt: SUMMARY_SYSTEM_PROMPT,
     userPrompt: withContext(`Patient symptom logs:\n\n${logs}`, profile),
     temperature: 0.4,
@@ -102,7 +102,7 @@ export async function generateAppointmentBrief(
   appointment: Appointment,
   recordings: Recording[],
   profile?: PersonalizationProfile | null,
-  provider: LLMProvider = DEFAULT_PROVIDER,
+  provider?: LLMProvider,
 ): Promise<BriefContent> {
   if (recordings.length === 0) {
     return EMPTY_BRIEF;
@@ -113,7 +113,7 @@ export async function generateAppointmentBrief(
 
   const body = `${formatAppointmentHeader(appointment)}\n\nEntries the patient has logged since starting to track:\n\n${logs}`;
 
-  const text = await callLLM(provider, 'summary', {
+  const text = await callLLMWithFallback(provider ?? providerFor('summary'), 'summary', {
     systemPrompt: BRIEF_SYSTEM_PROMPT,
     userPrompt: withContext(body, profile),
     temperature: 0.3,
@@ -138,7 +138,7 @@ export async function generateClinicianBrief(
   clinician: Clinician,
   recordings: Recording[],
   profile?: PersonalizationProfile | null,
-  provider: LLMProvider = DEFAULT_PROVIDER,
+  provider?: LLMProvider,
 ): Promise<BriefContent> {
   if (recordings.length === 0) {
     return EMPTY_BRIEF;
@@ -149,7 +149,7 @@ export async function generateClinicianBrief(
 
   const body = `${formatClinicianHeader(clinician)}\n\nEntries the patient has logged since starting to track:\n\n${logs}`;
 
-  const text = await callLLM(provider, 'summary', {
+  const text = await callLLMWithFallback(provider ?? providerFor('summary'), 'summary', {
     systemPrompt: BRIEF_SYSTEM_PROMPT,
     userPrompt: withContext(body, profile),
     temperature: 0.3,
@@ -186,7 +186,7 @@ export async function generateBrief(args: {
   profile?: PersonalizationProfile | null;
   provider?: LLMProvider;
 }): Promise<BriefContent> {
-  const { recordings, windowLabel, clinicians, profile, provider = DEFAULT_PROVIDER } = args;
+  const { recordings, windowLabel, clinicians, profile, provider = providerFor('summary') } = args;
   if (recordings.length === 0) {
     return EMPTY_BRIEF;
   }
@@ -196,7 +196,7 @@ export async function generateBrief(args: {
 
   const body = `${formatBriefHeader({ clinicians, windowLabel })}\n\nNotes the patient logged in this window:\n\n${logs}`;
 
-  const text = await callLLM(provider, 'summary', {
+  const text = await callLLMWithFallback(provider, 'summary', {
     systemPrompt: BRIEF_SYSTEM_PROMPT,
     userPrompt: withContext(body, profile),
     temperature: 0.3,

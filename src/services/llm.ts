@@ -10,10 +10,23 @@ const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY ?? '';
 export type LLMProvider = 'gemini' | 'openai';
 export type LLMTask = 'structure' | 'summary';
 
-// Provider used when a call site doesn't override it. Switch by setting
-// EXPO_PUBLIC_LLM_PROVIDER=openai in .env (no code change needed).
-export const DEFAULT_PROVIDER: LLMProvider =
-  process.env.EXPO_PUBLIC_LLM_PROVIDER === 'openai' ? 'openai' : 'gemini';
+// Per-task preferred provider — picked based on observed quality, not
+// price. Briefs (the user-facing prose moment) go to Gemini because
+// it follows the system prompt's schema more faithfully (e.g. always
+// returns the `flags` array; OpenAI's loose json_object mode silently
+// drops fields). High-volume invisible JSON structuring goes to
+// OpenAI because gpt-4o-mini is cheap and dependable.
+//
+// Resilience comes from `callLLMWithFallback` — when the preferred
+// provider fails, the call automatically retries on the other one
+// (see below). No env-level override needed.
+const TASK_PREFERRED: Record<LLMTask, LLMProvider> = {
+  structure: 'openai',
+  summary: 'gemini',
+};
+
+/** Resolve which provider should run a given task. */
+export const providerFor = (task: LLMTask): LLMProvider => TASK_PREFERRED[task];
 
 // Per-provider model selection.
 //   • Gemini 2.5-flash-lite has the highest free-tier RPD — fine for JSON structuring.
@@ -72,7 +85,52 @@ export async function callLLM(
   return provider === 'openai' ? callOpenAI(model, req) : callGemini(model, req);
 }
 
-async function callGemini(model: string, req: LLMRequest): Promise<string> {
+/**
+ * Try `primary`, fall back to the other provider on any error. Use
+ * this for high-value calls (briefs) where the user prefers a
+ * degraded result over a hard failure. Structuring should stay on
+ * plain `callLLM` — silently swapping the structuring backend would
+ * mask real bugs.
+ *
+ * Heads-up: when fallback fires for a brief, the result may be lower
+ * quality than the primary (e.g. OpenAI's loose json_object mode
+ * sometimes drops the `flags` field that Gemini honours). Acceptable
+ * trade-off: a degraded brief beats a "couldn't generate" error
+ * during a prep-night session.
+ *
+ * If *both* providers fail, the primary's error is rethrown — that's
+ * the one most likely to be actionable (placeholder key, quota, etc).
+ */
+export async function callLLMWithFallback(
+  primary: LLMProvider,
+  task: LLMTask,
+  req: LLMRequest,
+): Promise<string> {
+  const fallback: LLMProvider = primary === 'gemini' ? 'openai' : 'gemini';
+  try {
+    return await callLLM(primary, task, req);
+  } catch (primaryErr) {
+    if (__DEV__) {
+      console.warn(
+        `[llm] ${primary} failed for task '${task}', falling back to ${fallback}:`,
+        primaryErr,
+      );
+    }
+    try {
+      return await callLLM(fallback, task, req);
+    } catch {
+      throw primaryErr;
+    }
+  }
+}
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+async function callGemini(
+  model: string,
+  req: LLMRequest,
+  attempt = 0,
+): Promise<string> {
   if (!geminiClient) {
     throw new Error(
       'EXPO_PUBLIC_GEMINI_API_KEY is missing or still set to the placeholder. ' +
@@ -95,6 +153,14 @@ async function callGemini(model: string, req: LLMRequest): Promise<string> {
     return text;
   } catch (err) {
     const apiErr = err as { status?: number; message?: string };
+    // 503 UNAVAILABLE / "model overloaded" is transient capacity flap on
+    // Google's side — retry once after 1.5s before bubbling. Briefs hit
+    // this most often during prep-night peaks, which is exactly when
+    // the user can least afford a hard failure.
+    if (apiErr.status === 503 && attempt < 1) {
+      await sleep(1500);
+      return callGemini(model, req, attempt + 1);
+    }
     if (apiErr.status === 429) throw parseGeminiQuotaError(apiErr.message ?? '');
     throw err;
   }

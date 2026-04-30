@@ -75,7 +75,7 @@ const RecordModal: React.FC = () => {
       new Set(flow.structured.symptoms.slice(0, 2).filter(Boolean)),
     );
     useRecordingsStore.getState().add({
-      id: uuid(),
+      id: flow.recordingId,
       createdAt: new Date().toISOString(),
       durationSec: 0,
       transcript: flow.reviewText.trim(),
