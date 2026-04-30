@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -8,7 +8,6 @@ import {
   moderateScale,
   typography,
   useTheme,
-  verticalScale,
 } from "@/theme";
 import { SceneTransition } from "@/components/navigation/SceneTransition";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
@@ -211,12 +210,6 @@ const ScreenFirstBrief: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const onSeeBrief = () => {
-    if (!briefId) return;
-    hapticLight();
-    router.push(`/brief/${briefId}`);
-  };
-
   const onContinue = () => {
     hapticLight();
     router.push("/onboarding/paywall");
@@ -278,19 +271,7 @@ const ScreenFirstBrief: React.FC = () => {
 
           {phase === "ready" && (
             <View style={styles.cta}>
-              {previewContent && briefId && (
-                <Pressable
-                  onPress={onSeeBrief}
-                  style={styles.seeBrief}
-                  accessibilityRole="button"
-                  accessibilityLabel="See full brief"
-                >
-                  <Text style={[styles.seeBriefText, { color: colors.accent }]}>
-                    See the full brief ›
-                  </Text>
-                </Pressable>
-              )}
-              <PrimaryButton label="Save my brief" onPress={onContinue} />
+              <PrimaryButton label="Continue" onPress={onContinue} />
             </View>
           )}
         </SafeAreaView>
@@ -345,14 +326,5 @@ const useStyles = makeStyles((theme) => ({
     paddingTop: theme.spacing.s2,
     paddingBottom: theme.spacing.s4,
     gap: theme.spacing.s2,
-  },
-  seeBrief: {
-    alignItems: "center",
-    paddingVertical: verticalScale(6),
-  },
-  seeBriefText: {
-    fontFamily: "DMSans_700Bold",
-    fontSize: fontScale(13),
-    letterSpacing: 0.2,
   },
 }));
