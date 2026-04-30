@@ -79,9 +79,7 @@ const ScreenSettings: React.FC = () => {
 
             {/* Preferences — currently just the theme toggle. */}
             <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>
-                PREFERENCES
-              </Text>
+              <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>PREFERENCES</Text>
               <View
                 style={[
                   styles.prefCard,

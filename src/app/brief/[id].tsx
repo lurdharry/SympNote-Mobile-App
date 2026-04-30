@@ -10,6 +10,7 @@ import { BriefTopBar } from "@/components/brief/BriefTopBar";
 import { BriefMasthead } from "@/components/brief/BriefMasthead";
 import { BriefAudienceTags } from "@/components/brief/BriefAudienceTags";
 import { BriefSections } from "@/components/brief/BriefSections";
+import { BriefDisclaimer } from "@/components/brief/BriefDisclaimer";
 import { BriefEmptyState } from "@/components/brief/BriefEmptyState";
 import { BriefShareSheet } from "@/components/brief/BriefShareSheet";
 import { useBriefsStore } from "@/stores/useBriefsStore";
@@ -222,7 +223,10 @@ const BriefDetail: React.FC = () => {
               onDelete={onDelete}
             />
           ) : (
-            <BriefSections content={brief.content} />
+            <>
+              <BriefSections content={brief.content} />
+              <BriefDisclaimer />
+            </>
           )}
 
           <View style={styles.footerSpace} />
