@@ -1,14 +1,12 @@
 name: EAS Deploy
 
 on:
-  pull_request:
+  push:
     branches: [main]
-    types: [closed]
   workflow_dispatch:
 
 jobs:
   deploy:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -65,4 +63,4 @@ jobs:
 
       - name: OTA update
         if: steps.mode.outputs.type == 'update'
-        run: eas update --branch production --message "${{ github.event.pull_request.title }}" --non-interactive
+        run: eas update --branch production --message "${{ github.event.head_commit.message }}" --non-interactive
