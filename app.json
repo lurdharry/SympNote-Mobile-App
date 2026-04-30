@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Sympnote — Symptom Tracker",
+    "name": "Sympnote: Symptom Tracker",
     "slug": "sympnote",
     "version": "1.0.1",
     "orientation": "portrait",
@@ -24,10 +24,7 @@
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#FEF8EE"
       },
-      "permissions": [
-        "RECORD_AUDIO",
-        "android.permission.RECORD_AUDIO"
-      ]
+      "permissions": ["RECORD_AUDIO", "android.permission.RECORD_AUDIO"]
     },
     "plugins": [
       "expo-router",
@@ -37,9 +34,7 @@
         {
           "microphonePermission": "Sympnote uses the microphone so we can transcribe what you're saying about your symptoms.",
           "speechRecognitionPermission": "Sympnote transcribes your voice on-device so your symptoms are ready to share with your doctor.",
-          "androidSpeechServicePackages": [
-            "com.google.android.googlequicksearchbox"
-          ]
+          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
         }
       ],
       [
