@@ -1,33 +1,14 @@
-import { GoogleGenAI } from '@google/genai';
-import OpenAI from 'openai';
-import { parseGeminiQuotaError, parseOpenAIQuotaError } from './aiQuota';
-import { useProfileStore } from '../stores/useProfileStore';
-
-/** Thrown when the user has not yet granted the AI data-sharing
- *  consent. Caught at the UI layer to redirect to the in-app
- *  consent screen. App Review guideline 5.1.2(i) requires explicit
- *  permission before sending data to third-party AI providers. */
-export class AIConsentRequiredError extends Error {
-  constructor() {
-    super(
-      "Sympnote needs your permission before sending notes to its AI providers. Open Settings → Privacy & data → AI data sharing to grant access.",
-    );
-    this.name = "AIConsentRequiredError";
-  }
-}
-
-const requireAiConsent = (): void => {
-  if (useProfileStore.getState().aiConsentAcceptedAt) return;
-  throw new AIConsentRequiredError();
-};
+import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
+import { LLMQuotaError, parseGeminiQuotaError, parseOpenAIQuotaError } from "./aiQuota";
 
 // TODO: Move these calls to a server-side proxy before production launch.
 // Bundling API keys in a mobile binary is not safe.
-const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY ?? '';
-const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY ?? '';
+const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY ?? "";
+const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY ?? "";
 
-export type LLMProvider = 'gemini' | 'openai';
-export type LLMTask = 'structure' | 'summary';
+export type LLMProvider = "gemini" | "openai";
+export type LLMTask = "structure" | "summary";
 
 // Per-task preferred provider — picked based on observed quality, not
 // price. Briefs (the user-facing prose moment) go to Gemini because
@@ -40,8 +21,8 @@ export type LLMTask = 'structure' | 'summary';
 // provider fails, the call automatically retries on the other one
 // (see below). No env-level override needed.
 const TASK_PREFERRED: Record<LLMTask, LLMProvider> = {
-  structure: 'openai',
-  summary: 'gemini',
+  structure: "openai",
+  summary: "gemini",
 };
 
 /** Resolve which provider should run a given task. */
@@ -53,12 +34,12 @@ export const providerFor = (task: LLMTask): LLMProvider => TASK_PREFERRED[task];
 //   • gpt-4o-mini for both on OpenAI — closest to Gemini Flash on price.
 const MODELS: Record<LLMProvider, Record<LLMTask, string>> = {
   gemini: {
-    structure: 'gemini-2.5-flash-lite',
-    summary: 'gemini-2.5-flash',
+    structure: "gemini-2.5-flash-lite",
+    summary: "gemini-2.5-flash",
   },
   openai: {
-    structure: 'gpt-4o-mini',
-    summary: 'gpt-4o-mini',
+    structure: "gpt-4o-mini",
+    summary: "gpt-4o-mini",
   },
 };
 
@@ -75,7 +56,7 @@ export interface LLMRequest {
 }
 
 const isPlaceholderKey = (key: string): boolean =>
-  !key || key === 'your-gemini-api-key-here' || key.startsWith('your-');
+  !key || key === "your-gemini-api-key-here" || key.startsWith("your-");
 
 // Lazily instantiated SDK clients. Skipped entirely when the matching
 // key is a placeholder so module load doesn't fail in dev.
@@ -93,19 +74,15 @@ const openaiClient = !isPlaceholderKey(OPENAI_API_KEY)
 
 /**
  * Single entry point. Routes to the configured provider's adapter so
- * call sites stay free of provider conditionals. Hard-gated on
- * AI data-sharing consent — throws `AIConsentRequiredError`
- * synchronously before any network call fires so callers can
- * redirect to the in-app consent screen (App Review 5.1.2(i)).
+ * call sites stay free of provider conditionals.
  */
 export async function callLLM(
   provider: LLMProvider,
   task: LLMTask,
   req: LLMRequest,
 ): Promise<string> {
-  requireAiConsent();
   const model = MODELS[provider][task];
-  return provider === 'openai' ? callOpenAI(model, req) : callGemini(model, req);
+  return provider === "openai" ? callOpenAI(model, req) : callGemini(model, req);
 }
 
 /**
@@ -129,7 +106,8 @@ export async function callLLMWithFallback(
   task: LLMTask,
   req: LLMRequest,
 ): Promise<string> {
-  const fallback: LLMProvider = primary === 'gemini' ? 'openai' : 'gemini';
+  const fallback: LLMProvider = primary === "gemini" ? "openai" : "gemini";
+
   try {
     return await callLLM(primary, task, req);
   } catch (primaryErr) {
@@ -149,15 +127,11 @@ export async function callLLMWithFallback(
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-async function callGemini(
-  model: string,
-  req: LLMRequest,
-  attempt = 0,
-): Promise<string> {
+async function callGemini(model: string, req: LLMRequest, attempt = 0): Promise<string> {
   if (!geminiClient) {
     throw new Error(
-      'EXPO_PUBLIC_GEMINI_API_KEY is missing or still set to the placeholder. ' +
-        'Add a real key to .env and restart Expo with `npx expo start -c`.',
+      "EXPO_PUBLIC_GEMINI_API_KEY is missing or still set to the placeholder. " +
+        "Add a real key to .env and restart Expo with `npx expo start -c`.",
     );
   }
   try {
@@ -168,47 +142,52 @@ async function callGemini(
         systemInstruction: req.systemPrompt,
         temperature: req.temperature,
         maxOutputTokens: req.maxOutputTokens,
-        ...(req.jsonMode ? { responseMimeType: 'application/json' } : {}),
+        ...(req.jsonMode ? { responseMimeType: "application/json" } : {}),
       },
     });
     const text = response.text;
-    if (!text) throw new Error('Gemini returned no text');
+    if (!text) throw new Error("Request failed. Please try again.");
     return text;
   } catch (err) {
     const apiErr = err as { status?: number; message?: string };
-    // 503 UNAVAILABLE / "model overloaded" is transient capacity flap on
-    // Google's side — retry once after 1.5s before bubbling. Briefs hit
-    // this most often during prep-night peaks, which is exactly when
-    // the user can least afford a hard failure.
+    // 503 UNAVAILABLE / "model overloaded" is transient capacity flap.
+    // Retry once after 1.5s before bubbling. Briefs hit this most
+    // often during prep-night peaks, which is exactly when the user
+    // can least afford a hard failure.
     if (apiErr.status === 503 && attempt < 1) {
       await sleep(1500);
       return callGemini(model, req, attempt + 1);
     }
-    if (apiErr.status === 429) throw parseGeminiQuotaError(apiErr.message ?? '');
-    throw err;
+    if (apiErr.status === 429) throw parseGeminiQuotaError(apiErr.message ?? "");
+    if (err instanceof LLMQuotaError) throw err;
+    // Anything else: re-wrap with a provider-agnostic message so
+    // failure toasts don't leak provider names to the user. The raw
+    // error is still in __DEV__ logs above the catch.
+    if (__DEV__) console.warn("[llm] gemini error:", err);
+    throw new Error("Couldn't complete the request. Please try again.");
   }
 }
 
 async function callOpenAI(model: string, req: LLMRequest): Promise<string> {
   if (!openaiClient) {
     throw new Error(
-      'EXPO_PUBLIC_OPENAI_API_KEY is missing or still set to the placeholder. ' +
-        'Add a real key to .env and restart Expo with `npx expo start -c`.',
+      "EXPO_PUBLIC_OPENAI_API_KEY is missing or still set to the placeholder. " +
+        "Add a real key to .env and restart Expo with `npx expo start -c`.",
     );
   }
   try {
     const completion = await openaiClient.chat.completions.create({
       model,
       messages: [
-        { role: 'system', content: req.systemPrompt },
-        { role: 'user', content: req.userPrompt },
+        { role: "system", content: req.systemPrompt },
+        { role: "user", content: req.userPrompt },
       ],
       temperature: req.temperature,
       max_completion_tokens: req.maxOutputTokens,
-      ...(req.jsonMode ? { response_format: { type: 'json_object' } } : {}),
+      ...(req.jsonMode ? { response_format: { type: "json_object" } } : {}),
     });
     const text = completion.choices[0]?.message?.content;
-    if (!text) throw new Error('OpenAI returned no text');
+    if (!text) throw new Error("Request failed. Please try again.");
     return text;
   } catch (err) {
     const apiErr = err as {
@@ -217,6 +196,8 @@ async function callOpenAI(model: string, req: LLMRequest): Promise<string> {
       headers?: Record<string, string | undefined>;
     };
     if (apiErr.status === 429) throw parseOpenAIQuotaError(apiErr);
-    throw err;
+    if (err instanceof LLMQuotaError) throw err;
+    if (__DEV__) console.warn("[llm] openai error:", err);
+    throw new Error("Couldn't complete the request. Please try again.");
   }
 }

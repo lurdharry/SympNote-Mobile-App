@@ -36,15 +36,20 @@ const retrySeconds = (details: QuotaDetail[]): number | null => {
   return Number.isFinite(n) ? Math.ceil(n) : null;
 };
 
+// User-facing strings here are deliberately neutral endpoint-style
+// — no provider names, no "AI" in the message — so transient
+// failure toasts don't telegraph the upstream service. The provider
+// names are surfaced once, and only once, in the consent disclosure
+// where Apple requires them.
 const buildGeminiMessage = (
   scope: 'minute' | 'day' | 'unknown',
   retry: number | null,
 ): string => {
   if (scope === 'day') {
-    return 'Daily Gemini free-tier limit reached. Try again tomorrow or upgrade your API plan.';
+    return 'Server is busy. Please wait and try again.';
   }
-  if (retry) return `Gemini rate limit. Try again in ${retry}s.`;
-  return 'Gemini rate limit reached. Please wait and try again.';
+  if (retry) return `Server is busy. Try again in ${retry}s.`;
+  return 'Server is busy. Please wait and try again.';
 };
 
 /**
@@ -90,7 +95,7 @@ export const parseOpenAIQuotaError = (err: OpenAI429Like): LLMQuotaError => {
     if (Number.isFinite(n)) retry = Math.ceil(n);
   }
   const message = retry
-    ? `OpenAI rate limit. Try again in ${retry}s.`
-    : 'OpenAI rate limit reached. Please wait and try again.';
+    ? `Server is busy. Try again in ${retry}s.`
+    : 'Server is busy. Please wait and try again.';
   return new LLMQuotaError(message, retry, 'unknown');
 };

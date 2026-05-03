@@ -27,7 +27,6 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
 import { TranscriptQuote } from "@/components/onboarding/review/TranscriptQuote";
 import { usePendingRecordingStore } from "@/stores/usePendingRecordingStore";
-import { ensureAiConsent } from "@/services/aiConsent";
 import { hapticLight } from "@/services/haptics";
 
 /**
@@ -65,19 +64,13 @@ const ScreenFirstRecordingReview: React.FC = () => {
 
   if (!draft) return null;
 
-  const onContinue = async () => {
+  const onContinue = () => {
     const text = editValue.trim() || draft.transcript;
     usePendingRecordingStore.getState().setDraft({
       transcript: text,
       durationSec: draft.durationSec,
       createdAt: draft.createdAt,
     });
-    // first-brief is the first place AI actually fires, so prompt
-    // for the data-sharing disclosure here (App Review 5.1.2(i)).
-    // Idempotent — re-entries after a previous accept skip the
-    // alert and resolve true immediately.
-    const consented = await ensureAiConsent();
-    if (!consented) return;
     router.push("/onboarding/first-brief");
   };
 

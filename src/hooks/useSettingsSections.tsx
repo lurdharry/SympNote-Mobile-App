@@ -9,7 +9,6 @@ import {
   DisclaimerMascot,
   ExportMascot,
   HelpMascot,
-  PrivacyMascot,
   PrivacyPolicyMascot,
   TermsMascot,
 } from "@/components/settings/SettingsMascots";
@@ -20,7 +19,6 @@ import { useProfileStore } from "@/stores/useProfileStore";
 import { hapticSuccess } from "@/services/haptics";
 import { exportUserData } from "@/services/export";
 import { getOfferingPackages } from "@/services/subscription";
-import { ensureAiConsent, showAiConsentInfo } from "@/services/aiConsent";
 import { showError, showInfo, showSuccess } from "@/components/ui/Toast";
 import { buildProfileRows } from "./settings/buildProfileRows";
 import { buildSubscriptionRows } from "./settings/buildSubscriptionRows";
@@ -88,7 +86,6 @@ export const useSettingsSections = (): SettingsSection[] => {
   const trialEndsAt = useProfileStore((s) => s.trialEndsAt);
   const planId = useProfileStore((s) => s.planId);
   const personalization = useProfileStore((s) => s.personalization);
-  const aiConsentAcceptedAt = useProfileStore((s) => s.aiConsentAcceptedAt);
   const isEntitled = subscriptionStatus === "trial" || subscriptionStatus === "active";
 
   // Live offerings — same cache the paywall uses (prefetched in
@@ -129,18 +126,6 @@ export const useSettingsSections = (): SettingsSection[] => {
               showError("Couldn't open", { body: "Try again with a connection." });
             });
           },
-        },
-        {
-          Mascot: PrivacyMascot,
-          label: "AI data sharing",
-          value: aiConsentAcceptedAt ? "Granted" : "Not granted",
-          // Granted users get a read-only re-disclosure; ungranted
-          // users get the same disclosure with an "I agree" affordance.
-          onPress: aiConsentAcceptedAt
-            ? showAiConsentInfo
-            : () => {
-                ensureAiConsent();
-              },
         },
         {
           Mascot: ExportMascot,
