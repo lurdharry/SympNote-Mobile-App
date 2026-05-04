@@ -27,6 +27,7 @@ import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress";
 import { TranscriptQuote } from "@/components/onboarding/review/TranscriptQuote";
 import { usePendingRecordingStore } from "@/stores/usePendingRecordingStore";
+import { useProfileStore } from "@/stores/useProfileStore";
 import { hapticLight } from "@/services/haptics";
 
 /**
@@ -71,7 +72,15 @@ const ScreenFirstRecordingReview: React.FC = () => {
       durationSec: draft.durationSec,
       createdAt: draft.createdAt,
     });
-    router.push("/onboarding/first-brief");
+    // first-brief is the first place AI actually fires. Route to the
+    // dedicated consent page (App Review 5.1.2(i)). Skip past it when
+    // the user has already accepted in a prior run, so re-entry feels
+    // continuous instead of re-prompting.
+    if (useProfileStore.getState().aiConsentAcceptedAt) {
+      router.push("/onboarding/first-brief");
+    } else {
+      router.push("/onboarding/ai-consent");
+    }
   };
 
   // Tapping the back arrow on this screen used to silently dump the

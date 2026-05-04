@@ -33,6 +33,9 @@ type Actions = {
     trialEndsAt?: string | null,
     planId?: 'monthly' | 'annual' | null,
   ) => void;
+  /** Record the user's acceptance of the AI data-sharing disclosure.
+   *  Called from the in-app consent prompt. */
+  acceptAiConsent: () => void;
   setPersonalization: (profile: PersonalizationProfile) => void;
   setThemePreference: (pref: ThemePreference) => void;
   setHapticsEnabled: (enabled: boolean) => void;
@@ -78,6 +81,7 @@ const initial: State = {
   subscriptionStatus: "none",
   trialEndsAt: null,
   planId: null,
+  aiConsentAcceptedAt: null,
   personalization: null,
   themePreference: "light",
   hapticsEnabled: true,
@@ -93,6 +97,8 @@ export const useProfileStore = create<State & Actions>()(
       resetOnboarding: () => set(() => ({ ...initial })),
       setSubscription: (status, trialEndsAt = null, planId = null) =>
         set(() => ({ subscriptionStatus: status, trialEndsAt, planId })),
+      acceptAiConsent: () =>
+        set(() => ({ aiConsentAcceptedAt: new Date().toISOString() })),
       setPersonalization: (profile) => set(() => ({ personalization: profile })),
 
       setThemePreference: (pref) => set(() => ({ themePreference: pref })),

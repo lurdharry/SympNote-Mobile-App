@@ -159,7 +159,7 @@ const ScreenHook: React.FC = () => {
           </View>
 
           <Animated.View style={[styles.ctaArea, cta]}>
-            <PrimaryButton label="Let's begin" onPress={handleGetStarted} />
+            <PrimaryButton label="Prepare notes" onPress={handleGetStarted} />
           </Animated.View>
         </SafeAreaView>
       </View>

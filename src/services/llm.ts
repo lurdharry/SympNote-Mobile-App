@@ -1,6 +1,25 @@
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 import { LLMQuotaError, parseGeminiQuotaError, parseOpenAIQuotaError } from "./aiQuota";
+import { useProfileStore } from "../stores/useProfileStore";
+
+/** Thrown when the user has not yet granted the AI data-sharing
+ *  consent. Caught at the UI layer to redirect to the in-app
+ *  consent screen. App Review guideline 5.1.2(i) requires explicit
+ *  permission before sending data to third-party AI providers. */
+export class AIConsentRequiredError extends Error {
+  constructor() {
+    super(
+      "Sympnote needs your permission before sending notes to its AI providers. Open Settings → Privacy & data → AI data sharing to grant access.",
+    );
+    this.name = "AIConsentRequiredError";
+  }
+}
+
+const requireAiConsent = (): void => {
+  if (useProfileStore.getState().aiConsentAcceptedAt) return;
+  throw new AIConsentRequiredError();
+};
 
 // TODO: Move these calls to a server-side proxy before production launch.
 // Bundling API keys in a mobile binary is not safe.
@@ -74,13 +93,17 @@ const openaiClient = !isPlaceholderKey(OPENAI_API_KEY)
 
 /**
  * Single entry point. Routes to the configured provider's adapter so
- * call sites stay free of provider conditionals.
+ * call sites stay free of provider conditionals. Hard-gated on
+ * AI data-sharing consent — throws `AIConsentRequiredError`
+ * synchronously before any network call fires so callers can
+ * redirect to the in-app consent screen (App Review 5.1.2(i)).
  */
 export async function callLLM(
   provider: LLMProvider,
   task: LLMTask,
   req: LLMRequest,
 ): Promise<string> {
+  requireAiConsent();
   const model = MODELS[provider][task];
   return provider === "openai" ? callOpenAI(model, req) : callGemini(model, req);
 }

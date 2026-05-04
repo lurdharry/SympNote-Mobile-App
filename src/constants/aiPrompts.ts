@@ -272,12 +272,12 @@ export const buildPatientContext = (profile: PersonalizationProfile | null): str
     }
   }
 
-  if (profile.careTeam.length > 0) {
-    const team = profile.careTeam
-      .map((c) => `${c.name}${c.role ? ` (${c.role})` : ''}`)
-      .join(', ');
-    lines.push(`- Care team: ${team}`);
-  }
+  // Care-team data is intentionally NOT included in the AI prompt.
+  // Brief calls already carry the relevant role in their per-call
+  // header (e.g. "Brief for a Cardiologist"), and structuring should
+  // stay neutral — the model shouldn't bias symptom classification
+  // based on which specialists the patient happens to see. Names
+  // never leave the device under any circumstance.
 
   lines.push('');
   lines.push(

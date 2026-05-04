@@ -89,8 +89,11 @@ export async function generateAppointmentSummary(
   });
 }
 
+// Doctor name is intentionally omitted from the prompt — the model
+// only needs the specialty to frame the brief, and we don't want to
+// send personally-identifying clinician info to the AI.
 const formatAppointmentHeader = (appt: Appointment): string =>
-  `Upcoming appointment: ${appt.doctorName} (${appt.specialty}) on ${format(parseISO(appt.date), 'PPPP')}.`;
+  `Upcoming appointment with a ${appt.specialty || 'clinician'} on ${format(parseISO(appt.date), 'PPPP')}.`;
 
 /**
  * Generate a structured visit brief from a list of recordings for a
@@ -124,8 +127,9 @@ export async function generateAppointmentBrief(
   return parseBrief(text) ?? { ...EMPTY_BRIEF };
 }
 
+// Clinician name is intentionally omitted — only the role is sent.
 const formatClinicianHeader = (clinician: Clinician): string =>
-  `Brief for ${clinician.name} (${clinician.role}). The patient may not have a scheduled visit yet — focus on what's been going on so they can act when ready.`;
+  `Brief for a ${clinician.role || 'clinician'}. The patient may not have a scheduled visit yet — focus on what's been going on so they can act when ready.`;
 
 /**
  * Generate a structured brief for a clinician — independent of any
@@ -167,8 +171,11 @@ interface BriefHeaderArgs {
 
 const formatBriefHeader = ({ clinicians, windowLabel }: BriefHeaderArgs): string => {
   if (clinicians && clinicians.length > 0) {
-    const names = clinicians.map((c) => `${c.name} (${c.role})`).join(', ');
-    return `Brief for ${names}. Window: ${windowLabel}.`;
+    // Clinician names are intentionally omitted — only roles are sent
+    // to the AI. The model needs specialty context for framing; it
+    // does not need to know who the clinicians are.
+    const roles = clinicians.map((c) => c.role || 'clinician').join(', ');
+    return `Brief for: ${roles}. Window: ${windowLabel}.`;
   }
   return `General brief. Window: ${windowLabel}. Audience is unspecified — write so any clinician could read it.`;
 };

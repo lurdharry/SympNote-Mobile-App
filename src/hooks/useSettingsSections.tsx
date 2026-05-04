@@ -9,6 +9,7 @@ import {
   DisclaimerMascot,
   ExportMascot,
   HelpMascot,
+  PrivacyMascot,
   PrivacyPolicyMascot,
   TermsMascot,
 } from "@/components/settings/SettingsMascots";
@@ -86,6 +87,7 @@ export const useSettingsSections = (): SettingsSection[] => {
   const trialEndsAt = useProfileStore((s) => s.trialEndsAt);
   const planId = useProfileStore((s) => s.planId);
   const personalization = useProfileStore((s) => s.personalization);
+  const aiConsentAcceptedAt = useProfileStore((s) => s.aiConsentAcceptedAt);
   const isEntitled = subscriptionStatus === "trial" || subscriptionStatus === "active";
 
   // Live offerings — same cache the paywall uses (prefetched in
@@ -126,6 +128,16 @@ export const useSettingsSections = (): SettingsSection[] => {
               showError("Couldn't open", { body: "Try again with a connection." });
             });
           },
+        },
+        {
+          Mascot: PrivacyMascot,
+          label: "AI data sharing",
+          value: aiConsentAcceptedAt ? "Granted" : "Not granted",
+          // Routes to the dedicated consent page. The page renders a
+          // read-only re-disclosure for users who have already
+          // accepted, and the full agree/decline flow for those who
+          // haven't.
+          onPress: () => router.push("/onboarding/ai-consent?from=settings"),
         },
         {
           Mascot: ExportMascot,
