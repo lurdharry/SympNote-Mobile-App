@@ -14,6 +14,7 @@
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Sympnote uses the microphone so we can transcribe what you're saying about your symptoms.",
         "NSSpeechRecognitionUsageDescription": "Sympnote transcribes your voice on-device so your symptoms are ready to share with your doctor.",
+        "NSPhotoLibraryUsageDescription": "Sympnote only accesses your photo library if you choose to save an exported brief to Photos from the system share sheet.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
